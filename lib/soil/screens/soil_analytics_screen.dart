@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'dart:math';
 import '../../../theme/color_palette.dart';
 import '../../../theme/text_styles.dart';
 import '../../../utils/responsive.dart';
 import '../models/soil_measurement.dart';
 import '../widgets/chart_container.dart';
+import '../data/soil_repository.dart';
+import 'soil_measurements_list_screen.dart';
 
 /// Screen displaying soil analytics and AI predictions
 /// Route: /soil/analytics
@@ -18,6 +21,7 @@ class SoilAnalyticsScreen extends StatefulWidget {
 class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
   List<SoilMeasurement> historicalData = [];
   bool isLoading = false;
+  final SoilRepository _repository = SoilRepository();
 
   @override
   void initState() {
@@ -29,13 +33,28 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
   Future<void> _loadHistoricalData() async {
     setState(() => isLoading = true);
 
-    // Simulate API call
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    setState(() {
-      historicalData = SoilMeasurement.getHistoricalData();
-      isLoading = false;
-    });
+    try {
+      // Fetch ALL measurements (use high limit to get all data)
+      final response = await _repository.getMeasurements(
+        page: 1,
+        limit: 1000, // High limit to get all measurements
+        sortBy: 'createdAt',
+        order: 'ASC', // Oldest first for charts
+      );
+      
+      if (!mounted) return;
+      
+      setState(() {
+        historicalData = response.data;
+        isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        historicalData = [];
+        isLoading = false;
+      });
+    }
   }
 
   @override
@@ -50,18 +69,23 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
               'Soil Analytics',
               style: AppTextStyles.h3(),
             ),
-            Text(
-              '13-week analysis',
-              style: AppTextStyles.caption(
-                color: AppColorPalette.softSlate,
+            if (!isLoading && historicalData.isNotEmpty)
+              Text(
+                '${historicalData.length} measurements',
+                style: AppTextStyles.caption(
+                  color: AppColorPalette.softSlate,
+                ),
               ),
-            ),
           ],
         ),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Responsive.constrainedContent(
+          : historicalData.isEmpty
+              ? _buildEmptyState()
+              : historicalData.length < 3
+                  ? _buildInsufficientDataState()
+                  : Responsive.constrainedContent(
               context: context,
               child: SingleChildScrollView(
                 padding: EdgeInsets.symmetric(
@@ -78,7 +102,7 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
                   // pH Evolution Chart
                   ChartContainer(
                     title: 'pH Level Evolution',
-                    subtitle: 'Last 13 weeks',
+                    subtitle: _getDateRangeSubtitle(),
                     height: Responsive.chartHeight(context),
                     chart: _PhChart(data: historicalData),
                     legend: ChartLegend(
@@ -98,7 +122,7 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
                   // Soil Moisture Evolution Chart
                   ChartContainer(
                     title: 'Soil Moisture Evolution',
-                    subtitle: 'Last 13 weeks',
+                    subtitle: _getDateRangeSubtitle(),
                     height: Responsive.chartHeight(context),
                     chart: _MoistureChart(data: historicalData),
                     legend: ChartLegend(
@@ -118,7 +142,7 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
                   // Sunlight Evolution Chart
                   ChartContainer(
                     title: 'Sunlight Exposure',
-                    subtitle: 'Last 13 weeks',
+                    subtitle: _getDateRangeSubtitle(),
                     height: Responsive.chartHeight(context),
                     chart: _SunlightChart(data: historicalData),
                     legend: ChartLegend(
@@ -142,6 +166,95 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
             ),
           ),
     );
+  }
+
+  /// Build empty state when no measurements
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.show_chart,
+              size: 80,
+              color: AppColorPalette.softSlate.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No Measurements Yet',
+              style: AppTextStyles.h3(),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add soil measurements to see analytics and trends',
+              style: AppTextStyles.bodyMedium(
+                color: AppColorPalette.softSlate,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build insufficient data state when too few measurements
+  Widget _buildInsufficientDataState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.data_usage,
+              size: 80,
+              color: AppColorPalette.info.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Insufficient Data',
+              style: AppTextStyles.h3(),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add at least ${3 - historicalData.length} more measurement${3 - historicalData.length > 1 ? 's' : ''} to view trends',
+              style: AppTextStyles.bodyMedium(
+                color: AppColorPalette.softSlate,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Current measurements: ${historicalData.length}',
+              style: AppTextStyles.caption(
+                color: AppColorPalette.softSlate,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Get date range subtitle for charts
+  String _getDateRangeSubtitle() {
+    if (historicalData.isEmpty) return '';
+    if (historicalData.length == 1) return 'Single measurement';
+    
+    final oldest = historicalData.first.createdAt;
+    final newest = historicalData.last.createdAt;
+    final daysDiff = newest.difference(oldest).inDays;
+    
+    if (daysDiff == 0) return 'Same day';
+    if (daysDiff == 1) return 'Last 2 days';
+    if (daysDiff < 7) return 'Last $daysDiff days';
+    if (daysDiff < 14) return 'Last week';
+    if (daysDiff < 30) return 'Last ${(daysDiff / 7).round()} weeks';
+    if (daysDiff < 60) return 'Last month';
+    return 'Last ${(daysDiff / 30).round()} months';
   }
 
   /// Build summary cards
@@ -485,6 +598,7 @@ class _PhChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
+      size: Size.infinite,
       painter: _LineChartPainter(
         data: data.map((m) => m.ph).toList(),
         color: AppColorPalette.mistyBlue,
@@ -506,6 +620,7 @@ class _MoistureChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
+      size: Size.infinite,
       painter: _LineChartPainter(
         data: data.map((m) => m.soilMoisture).toList(),
         color: AppColorPalette.info,
@@ -527,11 +642,12 @@ class _SunlightChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
+      size: Size.infinite,
       painter: _LineChartPainter(
         data: data.map((m) => m.sunlight).toList(),
         color: AppColorPalette.warning,
         minValue: 2000,
-        maxValue: 8000,
+        maxValue: 10000,
       ),
     );
   }
@@ -558,6 +674,12 @@ class _LineChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (data.isEmpty) return;
+    if (size.width <= 0 || size.height <= 0) return;
+
+    // Add padding to avoid clipping at edges
+    const padding = 10.0;
+    final chartWidth = size.width - (2 * padding);
+    final chartHeight = size.height - (2 * padding);
 
     // Draw optimal range background
     if (optimalMin != null && optimalMax != null) {
@@ -565,11 +687,11 @@ class _LineChartPainter extends CustomPainter {
         ..color = AppColorPalette.success.withOpacity(0.1)
         ..style = PaintingStyle.fill;
 
-      final minY = size.height * (1 - (optimalMin! - minValue) / (maxValue - minValue));
-      final maxY = size.height * (1 - (optimalMax! - minValue) / (maxValue - minValue));
+      final minY = chartHeight * (1 - (optimalMin! - minValue) / (maxValue - minValue)) + padding;
+      final maxY = chartHeight * (1 - (optimalMax! - minValue) / (maxValue - minValue)) + padding;
 
       canvas.drawRect(
-        Rect.fromLTRB(0, maxY, size.width, minY),
+        Rect.fromLTRB(padding, maxY, size.width - padding, minY),
         optimalPaint,
       );
     }
@@ -580,10 +702,10 @@ class _LineChartPainter extends CustomPainter {
       ..strokeWidth = 1;
 
     for (int i = 0; i <= 4; i++) {
-      final y = size.height * i / 4;
+      final y = (chartHeight * i / 4) + padding;
       canvas.drawLine(
-        Offset(0, y),
-        Offset(size.width, y),
+        Offset(padding, y),
+        Offset(size.width - padding, y),
         gridPaint,
       );
     }
@@ -591,17 +713,26 @@ class _LineChartPainter extends CustomPainter {
     // Draw line chart
     final linePaint = Paint()
       ..color = color
-      ..strokeWidth = 3
+      ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
 
     final path = Path();
-    final stepX = size.width / (data.length - 1);
+    
+    // Calculate step - handle single data point case
+    final stepX = data.length > 1 
+        ? chartWidth / (data.length - 1)
+        : chartWidth / 2; // Center single point
 
     for (int i = 0; i < data.length; i++) {
-      final x = i * stepX;
+      final x = data.length > 1 
+          ? (i * stepX) + padding
+          : (chartWidth / 2) + padding; // Center single point
+          
       final normalizedValue = (data[i] - minValue) / (maxValue - minValue);
-      final y = size.height * (1 - normalizedValue);
+      // Clamp normalized value between 0 and 1
+      final clampedValue = normalizedValue.clamp(0.0, 1.0);
+      final y = (chartHeight * (1 - clampedValue)) + padding;
 
       if (i == 0) {
         path.moveTo(x, y);
@@ -612,12 +743,12 @@ class _LineChartPainter extends CustomPainter {
       // Draw data points
       canvas.drawCircle(
         Offset(x, y),
-        4,
+        6,
         Paint()..color = color,
       );
       canvas.drawCircle(
         Offset(x, y),
-        2,
+        3,
         Paint()..color = AppColorPalette.white,
       );
     }

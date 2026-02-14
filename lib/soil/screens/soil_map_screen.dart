@@ -161,7 +161,7 @@ class _SoilMapScreenState extends State<SoilMapScreen> {
               child: _MapMarker(
                 measurement: measurement,
                 onTap: () => _showMeasurementDetails(measurement),
-                isSelected: selectedMeasurement?.idMesure == measurement.idMesure,
+                isSelected: selectedMeasurement?.id == measurement.id,
               ),
             );
           }).toList(),
@@ -315,7 +315,7 @@ class _MapMarker extends StatelessWidget {
                     ],
                   ),
                   child: Text(
-                    measurement.idMesure.split('-').last,
+                    measurement.id.split('-').last,
                     style: AppTextStyles.caption().copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -363,21 +363,24 @@ class _MeasurementBottomSheet extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    measurement.idMesure,
-                    style: AppTextStyles.h3(),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    measurement.formattedDateTime,
-                    style: AppTextStyles.caption(
-                      color: AppColorPalette.softSlate,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ID: ...${measurement.id.split('-').last}',
+                      style: AppTextStyles.h3(),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      measurement.formattedDateTime,
+                      style: AppTextStyles.caption(
+                        color: AppColorPalette.softSlate,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               StatusBadge.health(
                 isHealthy: measurement.isHealthy,

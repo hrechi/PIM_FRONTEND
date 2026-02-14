@@ -72,7 +72,7 @@ class MeasurementTile extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          measurement.idMesure,
+                          'ID: ...${measurement.id.split('-').last}',
                           style: AppTextStyles.bodyLarge().copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -186,7 +186,7 @@ class MeasurementTile extends StatelessWidget {
     // Wrap with dismissible for swipe to delete
     if (showActions && onDelete != null) {
       return Dismissible(
-        key: Key(measurement.idMesure),
+        key: Key(measurement.id),
         direction: DismissDirection.endToStart,
         background: Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -209,7 +209,7 @@ class MeasurementTile extends StatelessWidget {
               return AlertDialog(
                 title: const Text('Confirm Delete'),
                 content: Text(
-                  'Are you sure you want to delete measurement ${measurement.idMesure}?',
+                  'Are you sure you want to delete measurement ${measurement.id}?',
                 ),
                 actions: [
                   TextButton(

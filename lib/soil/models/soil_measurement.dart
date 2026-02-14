@@ -1,20 +1,35 @@
 import 'dart:math';
 
+/// pH Status enum
+enum PhStatus {
+  acidic,
+  neutral,
+  alkaline,
+}
+
+/// Moisture Status enum
+enum MoistureStatus {
+  dry,
+  optimal,
+  wet,
+}
+
 /// Data model representing a soil measurement
 /// Contains all environmental and soil parameters for a specific location
 class SoilMeasurement {
-  final String idMesure;
+  final String id;
   final double ph;
   final double soilMoisture; // percentage 0-100
   final double sunlight; // lux
-  final Map<String, double> nutrients; // e.g., {'N': 20, 'P': 15, 'K': 25}
+  final Map<String, dynamic> nutrients; // e.g., {'nitrogen': 20, 'phosphorus': 15, 'potassium': 25}
   final double temperature; // Celsius
   final double latitude;
   final double longitude;
   final DateTime createdAt;
+  final DateTime updatedAt;
 
   const SoilMeasurement({
-    required this.idMesure,
+    required this.id,
     required this.ph,
     required this.soilMoisture,
     required this.sunlight,
@@ -23,6 +38,7 @@ class SoilMeasurement {
     required this.latitude,
     required this.longitude,
     required this.createdAt,
+    required this.updatedAt,
   });
 
   /// Get pH status: Acidic, Neutral, or Alkaline
@@ -93,18 +109,19 @@ class SoilMeasurement {
 
   /// Copy with method
   SoilMeasurement copyWith({
-    String? idMesure,
+    String? id,
     double? ph,
     double? soilMoisture,
     double? sunlight,
-    Map<String, double>? nutrients,
+    Map<String, dynamic>? nutrients,
     double? temperature,
     double? latitude,
     double? longitude,
     DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return SoilMeasurement(
-      idMesure: idMesure ?? this.idMesure,
+      id: id ?? this.id,
       ph: ph ?? this.ph,
       soilMoisture: soilMoisture ?? this.soilMoisture,
       sunlight: sunlight ?? this.sunlight,
@@ -113,13 +130,14 @@ class SoilMeasurement {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
-  /// Convert to JSON (for future API integration)
+  /// Convert to JSON
   Map<String, dynamic> toJson() {
     return {
-      'idMesure': idMesure,
+      'id': id,
       'ph': ph,
       'soilMoisture': soilMoisture,
       'sunlight': sunlight,
@@ -128,44 +146,49 @@ class SoilMeasurement {
       'latitude': latitude,
       'longitude': longitude,
       'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
     };
   }
 
-  /// Create from JSON (for future API integration)
+  /// Create from JSON (backend API response)
   factory SoilMeasurement.fromJson(Map<String, dynamic> json) {
     return SoilMeasurement(
-      idMesure: json['idMesure'] as String,
+      id: json['id'] as String,
       ph: (json['ph'] as num).toDouble(),
       soilMoisture: (json['soilMoisture'] as num).toDouble(),
       sunlight: (json['sunlight'] as num).toDouble(),
-      nutrients: Map<String, double>.from(json['nutrients'] as Map),
+      nutrients: Map<String, dynamic>.from(json['nutrients'] as Map),
       temperature: (json['temperature'] as num).toDouble(),
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
       createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
   }
 
-  /// Generate mock data for testing
+  /// Generate mock data for testing (deprecated - use API instead)
+  @Deprecated('Use API instead')
   static List<SoilMeasurement> getMockData() {
     final random = Random();
     final now = DateTime.now();
 
     return List.generate(15, (index) {
+      final createdAt = now.subtract(Duration(days: index * 2, hours: random.nextInt(24)));
       return SoilMeasurement(
-        idMesure: 'SM-${(1000 + index).toString()}',
+        id: 'SM-${(1000 + index).toString()}',
         ph: 5.5 + random.nextDouble() * 3.0, // 5.5 to 8.5
         soilMoisture: 20.0 + random.nextDouble() * 70.0, // 20 to 90
         sunlight: 2000.0 + random.nextDouble() * 8000.0, // 2000 to 10000 lux
         nutrients: {
-          'N': 10.0 + random.nextDouble() * 40.0, // Nitrogen
-          'P': 5.0 + random.nextDouble() * 30.0, // Phosphorus
-          'K': 10.0 + random.nextDouble() * 40.0, // Potassium
+          'nitrogen': 10.0 + random.nextDouble() * 40.0,
+          'phosphorus': 5.0 + random.nextDouble() * 30.0,
+          'potassium': 10.0 + random.nextDouble() * 40.0,
         },
         temperature: 15.0 + random.nextDouble() * 20.0, // 15 to 35°C
         latitude: 37.7749 + (random.nextDouble() - 0.5) * 0.1,
         longitude: -122.4194 + (random.nextDouble() - 0.5) * 0.1,
-        createdAt: now.subtract(Duration(days: index * 2, hours: random.nextInt(24))),
+        createdAt: createdAt,
+        updatedAt: createdAt,
       );
     });
   }
@@ -177,66 +200,57 @@ class SoilMeasurement {
 
     return List.generate(13, (index) {
       final weeksAgo = 12 - index;
+      final createdAt = now.subtract(Duration(days: weeksAgo * 7));
       return SoilMeasurement(
-        idMesure: 'SM-HIST-${index}',
+        id: 'SM-HIST-$index',
         ph: 6.5 + (random.nextDouble() - 0.5) * 1.5, // 5.75 to 7.25
         soilMoisture: 50.0 + (random.nextDouble() - 0.5) * 40.0, // 30 to 70
         sunlight: 5000.0 + (random.nextDouble() - 0.5) * 4000.0, // 3000 to 7000
         nutrients: {
-          'N': 25.0 + (random.nextDouble() - 0.5) * 20.0,
-          'P': 15.0 + (random.nextDouble() - 0.5) * 15.0,
-          'K': 30.0 + (random.nextDouble() - 0.5) * 20.0,
+          'nitrogen': 25.0 + (random.nextDouble() - 0.5) * 20.0,
+          'phosphorus': 15.0 + (random.nextDouble() - 0.5) * 15.0,
+          'potassium': 30.0 + (random.nextDouble() - 0.5) * 20.0,
         },
         temperature: 22.0 + (random.nextDouble() - 0.5) * 10.0,
         latitude: 37.7749,
         longitude: -122.4194,
-        createdAt: now.subtract(Duration(days: weeksAgo * 7)),
+        createdAt: createdAt,
+        updatedAt: createdAt,
       );
     });
   }
 
   /// Generate specific measurement
   factory SoilMeasurement.generate({
-    required String idMesure,
+    required String id,
     double? ph,
     double? soilMoisture,
     double? sunlight,
-    Map<String, double>? nutrients,
+    Map<String, dynamic>? nutrients,
     double? temperature,
     double? latitude,
     double? longitude,
     DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     final random = Random();
+    final created = createdAt ?? DateTime.now();
     return SoilMeasurement(
-      idMesure: idMesure,
+      id: id,
       ph: ph ?? 6.5 + (random.nextDouble() - 0.5) * 2.0,
       soilMoisture: soilMoisture ?? 50.0 + (random.nextDouble() - 0.5) * 40.0,
       sunlight: sunlight ?? 5000.0 + random.nextDouble() * 3000.0,
       nutrients: nutrients ??
           {
-            'N': 20.0 + random.nextDouble() * 30.0,
-            'P': 10.0 + random.nextDouble() * 25.0,
-            'K': 20.0 + random.nextDouble() * 30.0,
+            'nitrogen': 20.0 + random.nextDouble() * 30.0,
+            'phosphorus': 10.0 + random.nextDouble() * 25.0,
+            'potassium': 20.0 + random.nextDouble() * 30.0,
           },
       temperature: temperature ?? 20.0 + random.nextDouble() * 10.0,
       latitude: latitude ?? 37.7749,
       longitude: longitude ?? -122.4194,
-      createdAt: createdAt ?? DateTime.now(),
+      createdAt: created,
+      updatedAt: updatedAt ?? created,
     );
   }
-}
-
-/// pH Status enum
-enum PhStatus {
-  acidic,
-  neutral,
-  alkaline,
-}
-
-/// Moisture Status enum
-enum MoistureStatus {
-  dry,
-  optimal,
-  wet,
 }

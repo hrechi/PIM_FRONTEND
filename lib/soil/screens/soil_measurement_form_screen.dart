@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../../theme/color_palette.dart';
 import '../../../theme/text_styles.dart';
 import '../../../utils/responsive.dart';
 import '../models/soil_measurement.dart';
+import 'soil_measurements_list_screen.dart';
 
 /// Screen for adding or editing soil measurements
 /// Route: /soil/add or /soil/edit/:id
@@ -53,9 +55,9 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
     _temperatureController.text = measurement.temperature.toString();
     _latitudeController.text = measurement.latitude.toString();
     _longitudeController.text = measurement.longitude.toString();
-    _nitrogenController.text = (measurement.nutrients['N'] ?? 0).toString();
-    _phosphorusController.text = (measurement.nutrients['P'] ?? 0).toString();
-    _potassiumController.text = (measurement.nutrients['K'] ?? 0).toString();
+    _nitrogenController.text = (measurement.nutrients['nitrogen'] ?? 0).toString();
+    _phosphorusController.text = (measurement.nutrients['phosphorus'] ?? 0).toString();
+    _potassiumController.text = (measurement.nutrients['potassium'] ?? 0).toString();
   }
 
   @override
@@ -80,43 +82,76 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
 
     setState(() => isSaving = true);
 
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final provider = context.read<SoilMeasurementsProvider>();
+      bool success;
 
-    // In production, save to backend
-    final newMeasurement = SoilMeasurement(
-      idMesure: isEditing
-          ? widget.measurement!.idMesure
-          : 'SM-${DateTime.now().millisecondsSinceEpoch}',
-      ph: double.parse(_phController.text),
-      soilMoisture: double.parse(_moistureController.text),
-      sunlight: double.parse(_sunlightController.text),
-      nutrients: {
-        'N': double.parse(_nitrogenController.text),
-        'P': double.parse(_phosphorusController.text),
-        'K': double.parse(_potassiumController.text),
-      },
-      temperature: double.parse(_temperatureController.text),
-      latitude: double.parse(_latitudeController.text),
-      longitude: double.parse(_longitudeController.text),
-      createdAt: isEditing ? widget.measurement!.createdAt : DateTime.now(),
-    );
+      final nutrients = {
+        'nitrogen': double.parse(_nitrogenController.text),
+        'phosphorus': double.parse(_phosphorusController.text),
+        'potassium': double.parse(_potassiumController.text),
+      };
 
-    setState(() => isSaving = false);
+      if (isEditing) {
+        // Update existing measurement
+        success = await provider.updateMeasurement(
+          id: widget.measurement!.id,
+          ph: double.parse(_phController.text),
+          soilMoisture: double.parse(_moistureController.text),
+          sunlight: double.parse(_sunlightController.text),
+          nutrients: nutrients,
+          temperature: double.parse(_temperatureController.text),
+          latitude: double.parse(_latitudeController.text),
+          longitude: double.parse(_longitudeController.text),
+        );
+      } else {
+        // Create new measurement
+        success = await provider.createMeasurement(
+          ph: double.parse(_phController.text),
+          soilMoisture: double.parse(_moistureController.text),
+          sunlight: double.parse(_sunlightController.text),
+          nutrients: nutrients,
+          temperature: double.parse(_temperatureController.text),
+          latitude: double.parse(_latitudeController.text),
+          longitude: double.parse(_longitudeController.text),
+        );
+      }
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isEditing
-                ? 'Measurement updated successfully'
-                : 'Measurement saved successfully',
+      setState(() => isSaving = false);
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                isEditing
+                    ? 'Measurement updated successfully'
+                    : 'Measurement saved successfully',
+              ),
+              backgroundColor: AppColorPalette.success,
+            ),
+          );
+          Navigator.pop(context, true);
+        } else {
+          // Show error from provider
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(provider.error ?? 'Failed to save measurement'),
+              backgroundColor: AppColorPalette.alertError,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => isSaving = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColorPalette.alertError,
           ),
-          backgroundColor: AppColorPalette.success,
-        ),
-      );
-
-      Navigator.pop(context, true); // Return true to indicate success
+        );
+      }
     }
   }
 

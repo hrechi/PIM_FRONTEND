@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../theme/color_palette.dart';
 import '../../../theme/text_styles.dart';
 import '../../../utils/responsive.dart';
@@ -6,6 +7,7 @@ import '../models/soil_measurement.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/soil_metric_card.dart';
 import 'soil_measurement_form_screen.dart';
+import 'soil_measurements_list_screen.dart';
 
 /// Screen displaying detailed information about a soil measurement
 /// Route: /soil/:id
@@ -37,18 +39,31 @@ class _SoilMeasurementDetailsScreenState
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SoilMeasurementFormScreen(
-          measurement: measurement,
+        builder: (context) => ChangeNotifierProvider.value(
+          value: context.read<SoilMeasurementsProvider>(),
+          child: SoilMeasurementFormScreen(
+            measurement: measurement,
+          ),
         ),
       ),
     );
 
     // Reload if measurement was edited
     if (result == true && mounted) {
-      // In production, reload from API
+      // Get updated measurement from provider
+      final provider = context.read<SoilMeasurementsProvider>();
+      final updated = provider.measurements.firstWhere(
+        (m) => m.id == measurement.id,
+        orElse: () => measurement,
+      );
+      setState(() {
+        measurement = updated;
+      });
+      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Measurement updated'),
+          backgroundColor: AppColorPalette.success,
         ),
       );
     }
@@ -61,7 +76,7 @@ class _SoilMeasurementDetailsScreenState
       builder: (context) => AlertDialog(
         title: const Text('Delete Measurement'),
         content: Text(
-          'Are you sure you want to delete measurement ${measurement.idMesure}? This action cannot be undone.',
+          'Are you sure you want to delete measurement ${measurement.id}? This action cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -80,14 +95,25 @@ class _SoilMeasurementDetailsScreenState
     );
 
     if (confirmed == true && mounted) {
-      // In production, delete from API
-      Navigator.pop(context, 'deleted');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Measurement ${measurement.idMesure} deleted'),
-          backgroundColor: AppColorPalette.alertError,
-        ),
-      );
+      final provider = context.read<SoilMeasurementsProvider>();
+      final success = await provider.deleteMeasurement(measurement.id);
+      
+      if (success && mounted) {
+        Navigator.pop(context, 'deleted');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Measurement ${measurement.id} deleted'),
+            backgroundColor: AppColorPalette.success,
+          ),
+        );
+      } else if (mounted && provider.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(provider.error!),
+            backgroundColor: AppColorPalette.alertError,
+          ),
+        );
+      }
     }
   }
 
@@ -97,7 +123,7 @@ class _SoilMeasurementDetailsScreenState
       backgroundColor: AppColorPalette.wheatWarmClay,
       appBar: AppBar(
         title: Text(
-          measurement.idMesure,
+          measurement.id,
           style: AppTextStyles.h3(),
         ),
         actions: [
@@ -460,7 +486,7 @@ class _SoilMeasurementDetailsScreenState
           const SizedBox(height: 16),
           _MetadataRow(
             label: 'Measurement ID',
-            value: measurement.idMesure,
+            value: measurement.id,
           ),
           const SizedBox(height: 8),
           _MetadataRow(
