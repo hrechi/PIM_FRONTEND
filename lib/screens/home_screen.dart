@@ -11,6 +11,8 @@ import '../widgets/metric_card.dart';
 import '../widgets/alert_tile.dart';
 import '../widgets/gradient_container.dart';
 import 'profile_screen.dart';
+import 'fields_management_screen.dart';
+import 'mission_list_screen.dart';
 
 /// Main home screen displaying the farm dashboard
 /// Provides overview of weather, soil, livestock health, and alerts
@@ -54,6 +56,11 @@ class _HomeScreenState extends State<HomeScreen> {
             slivers: [
             // A) Header Section
             _buildHeader(),
+
+            // A1) Fields & Missions Quick Access
+            SliverToBoxAdapter(
+              child: _buildQuickAccessButtons(),
+            ),
 
             // B) Weather & Soil Card
             SliverToBoxAdapter(
@@ -185,6 +192,57 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Build quick access buttons for Fields & Missions
+  Widget _buildQuickAccessButtons() {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+        vertical: 12,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const FieldsManagementScreen(),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColorPalette.mistyBlue,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              icon: const Icon(Icons.landscape),
+              label: const Text('Fields'),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MissionListScreen(),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColorPalette.mistyBlue,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              icon: const Icon(Icons.task),
+              label: const Text('Missions'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
