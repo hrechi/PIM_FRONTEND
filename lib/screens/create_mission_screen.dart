@@ -3,7 +3,7 @@ import '../models/mission_model.dart';
 import '../models/field_model.dart';
 import '../services/mission_service.dart';
 import '../services/field_service.dart';
-import '../theme/color_palette.dart';
+import '../utils/constants.dart';
 
 class CreateMissionScreen extends StatefulWidget {
   final String? fieldId;

@@ -3,7 +3,7 @@ import '../models/mission_model.dart';
 import '../models/field_model.dart';
 import '../services/mission_service.dart';
 import '../services/field_service.dart';
-import '../theme/color_palette.dart';
+import '../utils/constants.dart';
 import 'create_mission_screen.dart';
 import 'mission_detail_screen.dart';
 
@@ -234,11 +234,10 @@ class _MissionListScreenState extends State<MissionListScreen> {
                                           value: mission.progress / 100,
                                           minHeight: 6,
                                           backgroundColor:
-                                              AppColors.sageGreen
-                                                  .withOpacity(0.3),
+                                            AppColors.sageGreen.withOpacity(0.3),
                                           valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                            AppColors.mistBlue,
+                                            AlwaysStoppedAnimation<Color>(
+                                              AppColors.mistBlue,
                                           ),
                                         ),
                                       ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/mission_model.dart';
 import '../services/mission_service.dart';
-import '../theme/color_palette.dart';
+import '../utils/constants.dart';
 
 class MissionDetailScreen extends StatefulWidget {
   final MissionModel mission;

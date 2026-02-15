@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import '../theme/color_palette.dart';
+import '../utils/constants.dart';
 
 class MapPickerScreen extends StatefulWidget {
   final List<List<double>>? initialCoordinates;
@@ -129,7 +129,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                     Polygon(
                       points: polygonPoints,
                       isFilled: true,
-                      fillColor:
+                      color:
                           AppColors.sageGreen.withOpacity(0.3),
                       borderColor: AppColors.mistBlue,
                       borderStrokeWidth: 2,
@@ -252,7 +252,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                         child: ElevatedButton(
                           onPressed: _confirm,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.mistBlue,
+                              backgroundColor: AppColors.mistBlue,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                           child: const Text(

@@ -66,6 +66,30 @@ class ApiService {
     return prefs.getBool('rememberMe') ?? false;
   }
 
+  // ── Public Header Methods ──────────────────────────────────
+
+  static Future<Map<String, String>> getAuthHeaders() async {
+    return _headers(withAuth: true);
+  }
+
+  static Future<void> refreshToken() async {
+    try {
+      final refreshToken = await getRefreshToken();
+      if (refreshToken == null) return;
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/refresh'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'refreshToken': refreshToken}),
+      );
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        await saveTokens(data['accessToken'], data['refreshToken']);
+      }
+    } catch (e) {
+      // Silent fail for token refresh
+    }
+  }
+
   // ── HTTP Methods ───────────────────────────────────────────
 
   static Future<Map<String, String>> _headers({bool withAuth = false}) async {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/field_model.dart';
 import '../services/field_service.dart';
-import '../theme/color_palette.dart';
+import '../utils/constants.dart';
 import 'map_picker_screen.dart';
 
 class FieldsManagementScreen extends StatefulWidget {
