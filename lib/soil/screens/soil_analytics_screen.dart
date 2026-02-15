@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'dart:math';
 import '../../../theme/color_palette.dart';
 import '../../../theme/text_styles.dart';
 import '../../../utils/responsive.dart';
 import '../models/soil_measurement.dart';
+import '../models/ai_prediction.dart';
 import '../widgets/chart_container.dart';
+import '../widgets/ai_prediction_card.dart';
 import '../data/soil_repository.dart';
-import 'soil_measurements_list_screen.dart';
+import '../data/soil_api_service.dart';
 
 /// Screen displaying soil analytics and AI predictions
 /// Route: /soil/analytics
@@ -21,7 +21,11 @@ class SoilAnalyticsScreen extends StatefulWidget {
 class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
   List<SoilMeasurement> historicalData = [];
   bool isLoading = false;
+  bool _loadingPrediction = false;
+  AiPrediction? _prediction;
+  String? _predictionError;
   final SoilRepository _repository = SoilRepository();
+  final SoilApiService _apiService = SoilApiService();
 
   @override
   void initState() {
@@ -48,12 +52,47 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
         historicalData = response.data;
         isLoading = false;
       });
+
+      // Load AI prediction for the latest measurement
+      if (historicalData.isNotEmpty) {
+        _loadLatestPrediction();
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         historicalData = [];
         isLoading = false;
       });
+    }
+  }
+
+  /// Load AI prediction for the latest measurement
+  Future<void> _loadLatestPrediction() async {
+    if (historicalData.isEmpty) return;
+
+    setState(() {
+      _loadingPrediction = true;
+      _predictionError = null;
+    });
+
+    try {
+      // Get the latest measurement (last in the sorted list)
+      final latestMeasurement = historicalData.last;
+      final prediction = await _apiService.getPrediction(latestMeasurement.id);
+      
+      if (mounted) {
+        setState(() {
+          _prediction = prediction;
+          _loadingPrediction = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _predictionError = e.toString();
+          _loadingPrediction = false;
+        });
+      }
     }
   }
 
@@ -307,224 +346,113 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
 
   /// Build AI prediction section
   Widget _buildAIPredictionSection() {
-    // Mock AI prediction
-    final random = Random();
-    final wiltingRisk = 15 + random.nextDouble() * 60; // 15-75%
-    final riskLevel = wiltingRisk < 30
-        ? 'Low'
-        : wiltingRisk < 60
-            ? 'Medium'
-            : 'High';
-    final riskColor = wiltingRisk < 30
-        ? AppColorPalette.success
-        : wiltingRisk < 60
-            ? AppColorPalette.warning
-            : AppColorPalette.alertError;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColorPalette.sageTint.withOpacity(0.1),
-            AppColorPalette.mistyBlue.withOpacity(0.1),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColorPalette.mistyBlue.withOpacity(0.3),
-          width: 2,
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColorPalette.mistyBlue.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.psychology,
-                  size: 28,
-                  color: AppColorPalette.mistyBlue,
-                ),
+          // Loading state
+          if (_loadingPrediction)
+            Container(
+              padding: const EdgeInsets.all(40),
+              decoration: BoxDecoration(
+                color: AppColorPalette.white,
+                borderRadius: BorderRadius.circular(16),
               ),
-              const SizedBox(width: 12),
-              Expanded(
+              child: Center(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'AI Prediction',
-                      style: AppTextStyles.h3(),
+                    CircularProgressIndicator(
+                      color: AppColorPalette.charcoalGreen,
                     ),
+                    const SizedBox(height: 16),
                     Text(
-                      'Machine learning analysis',
-                      style: AppTextStyles.caption(
+                      'Loading AI prediction...',
+                      style: AppTextStyles.bodyMedium(
                         color: AppColorPalette.softSlate,
                       ),
                     ),
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColorPalette.mistyBlue,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'BETA',
-                  style: AppTextStyles.caption(
-                    color: AppColorPalette.white,
-                  ).copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+            )
+          // Error state
+          else if (_predictionError != null)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColorPalette.white,
+                borderRadius: BorderRadius.circular(16),
               ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          // Prediction Title
-          Text(
-            'Wilting Point Prediction',
-            style: AppTextStyles.h4(),
-          ),
-          const SizedBox(height: 12),
-
-          // Risk Percentage
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${wiltingRisk.toStringAsFixed(0)}%',
-                style: AppTextStyles.displayMedium(
-                  color: riskColor,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: AppColorPalette.alertError,
                   ),
-                  decoration: BoxDecoration(
-                    color: riskColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: riskColor.withOpacity(0.3),
-                      width: 1,
+                  const SizedBox(height: 16),
+                  Text(
+                    'AI Service Unavailable',
+                    style: AppTextStyles.h4(),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Unable to load AI prediction. Make sure the AI service is running.',
+                    style: AppTextStyles.caption(
+                      color: AppColorPalette.softSlate,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _loadLatestPrediction,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColorPalette.charcoalGreen,
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        riskLevel == 'Low'
-                            ? Icons.check_circle
-                            : riskLevel == 'Medium'
-                                ? Icons.warning
-                                : Icons.error,
-                        size: 16,
-                        color: riskColor,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '$riskLevel Risk',
-                        style: AppTextStyles.bodySmall(
-                          color: riskColor,
-                        ).copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                ],
+              ),
+            )
+          // Success state - show prediction card
+          else if (_prediction != null)
+            AiPredictionCard(
+              prediction: _prediction!,
+              onRefresh: _loadLatestPrediction,
+            )
+          // Initial/empty state
+          else
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColorPalette.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.psychology,
+                    size: 48,
+                    color: AppColorPalette.charcoalGreen,
                   ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Progress bar
-          Container(
-            height: 12,
-            decoration: BoxDecoration(
-              color: AppColorPalette.lightGrey,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: wiltingRisk / 100,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: riskColor,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Description
-          Text(
-            'Based on current soil moisture trends, temperature patterns, and historical data, the AI model predicts a $riskLevel risk of reaching the wilting point in the next 7 days.',
-            style: AppTextStyles.bodySmall(
-              color: AppColorPalette.softSlate,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Recommendation
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColorPalette.info.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColorPalette.info.withOpacity(0.3),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.lightbulb_outline,
-                  size: 20,
-                  color: AppColorPalette.info,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    riskLevel == 'Low'
-                        ? 'Soil conditions are optimal. Continue monitoring.'
-                        : riskLevel == 'Medium'
-                            ? 'Consider irrigation within 2-3 days.'
-                            : 'Immediate irrigation recommended.',
-                    style: AppTextStyles.bodySmall(
-                      color: AppColorPalette.charcoalGreen,
+                  const SizedBox(height: 16),
+                  Text(
+                    'No AI Prediction Available',
+                    style: AppTextStyles.h4(),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Add more measurements to get AI predictions',
+                    style: AppTextStyles.caption(
+                      color: AppColorPalette.softSlate,
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -597,13 +525,18 @@ class _PhChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (data.isEmpty) {
+      return const Center(child: Text('No data'));
+    }
+    
+    // Use fixed range for pH (standard soil pH range)
     return CustomPaint(
       size: Size.infinite,
       painter: _LineChartPainter(
         data: data.map((m) => m.ph).toList(),
         color: AppColorPalette.mistyBlue,
-        minValue: 5.0,
-        maxValue: 8.5,
+        minValue: 4.5,
+        maxValue: 9.0,
         optimalMin: 6.0,
         optimalMax: 7.5,
       ),
@@ -619,6 +552,11 @@ class _MoistureChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (data.isEmpty) {
+      return const Center(child: Text('No data'));
+    }
+    
+    // Use 0-100% range for moisture (percentage)
     return CustomPaint(
       size: Size.infinite,
       painter: _LineChartPainter(
@@ -641,13 +579,34 @@ class _SunlightChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Calculate dynamic min/max from actual data
+    final sunlightValues = data.map((m) => m.sunlight).toList();
+    
+    if (sunlightValues.isEmpty) {
+      return const Center(child: Text('No data'));
+    }
+    
+    double minSunlight = sunlightValues.reduce((a, b) => a < b ? a : b);
+    double maxSunlight = sunlightValues.reduce((a, b) => a > b ? a : b);
+    
+    // Add padding to min/max for better visualization
+    // If all values are the same, create a range around that value
+    if (minSunlight == maxSunlight) {
+      minSunlight = (minSunlight * 0.8).clamp(0, double.infinity);
+      maxSunlight = minSunlight + (minSunlight > 0 ? minSunlight * 0.4 : 100);
+    } else {
+      final range = maxSunlight - minSunlight;
+      minSunlight = (minSunlight - range * 0.1).clamp(0, double.infinity);
+      maxSunlight = maxSunlight + range * 0.1;
+    }
+    
     return CustomPaint(
       size: Size.infinite,
       painter: _LineChartPainter(
-        data: data.map((m) => m.sunlight).toList(),
+        data: sunlightValues,
         color: AppColorPalette.warning,
-        minValue: 2000,
-        maxValue: 10000,
+        minValue: minSunlight,
+        maxValue: maxSunlight,
       ),
     );
   }

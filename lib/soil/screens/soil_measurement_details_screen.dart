@@ -8,6 +8,10 @@ import '../widgets/status_badge.dart';
 import '../widgets/soil_metric_card.dart';
 import 'soil_measurement_form_screen.dart';
 import 'soil_measurements_list_screen.dart';
+import '../data/soil_api_service.dart';
+import '../models/ai_prediction.dart';
+import '../widgets/ai_prediction_card.dart';
+import '../widgets/ai_advice_card.dart';
 
 /// Screen displaying detailed information about a soil measurement
 /// Route: /soil/:id
@@ -27,7 +31,10 @@ class SoilMeasurementDetailsScreen extends StatefulWidget {
 class _SoilMeasurementDetailsScreenState
     extends State<SoilMeasurementDetailsScreen> {
   late SoilMeasurement measurement;
-
+ bool _loadingPrediction = false;
+  AiPrediction? _prediction;
+  String? _predictionError;
+  final SoilApiService _apiService = SoilApiService();
   @override
   void initState() {
     super.initState();
@@ -68,6 +75,29 @@ class _SoilMeasurementDetailsScreenState
       );
     }
   }
+  Future<void> _loadPrediction() async {
+  setState(() {
+    _loadingPrediction = true;
+    _predictionError = null;
+  });
+
+  try {
+    final prediction = await _apiService.getPrediction(measurement.id);
+    if (mounted) {
+      setState(() {
+        _prediction = prediction;
+        _loadingPrediction = false;
+      });
+    }
+  } catch (e) {
+    if (mounted) {
+      setState(() {
+        _predictionError = e.toString();
+        _loadingPrediction = false;
+      });
+    }
+  }
+}
 
   /// Delete measurement
   Future<void> _deleteMeasurement() async {
@@ -164,6 +194,10 @@ class _SoilMeasurementDetailsScreenState
             _buildMetricsGrid(),
 
             const SizedBox(height: 24),
+              // AI Prediction Section
+               _buildAiSection(),
+
+       const SizedBox(height: 24),
 
             // Nutrients Section
             _buildNutrientsSection(),
@@ -183,9 +217,154 @@ class _SoilMeasurementDetailsScreenState
         ),
       ),
     ));
-    
   }
+Widget _buildAiSection() {
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: AppColorPalette.white,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(
+        color: AppColorPalette.softSlate.withValues(alpha: 0.2),
+      ),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section title with icon
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColorPalette.charcoalGreen.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.psychology,
+                size: 20,
+                color: AppColorPalette.charcoalGreen,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'AI Analysis',
+              style: AppTextStyles.h4(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
 
+        // Prediction card or loading/error state
+        if (_loadingPrediction)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Column(
+                children: [
+                  CircularProgressIndicator(
+                    color: AppColorPalette.charcoalGreen,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Analyzing soil conditions...',
+                    style: AppTextStyles.bodyMedium(
+                      color: AppColorPalette.softSlate,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else if (_predictionError != null)
+          Column(
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 36,
+                color: AppColorPalette.alertError,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Service Unavailable',
+                style: AppTextStyles.bodyLarge(),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'AI service not responding. Check if the AI service is running.',
+                style: AppTextStyles.caption(
+                  color: AppColorPalette.softSlate,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: _loadPrediction,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColorPalette.charcoalGreen,
+                  side: BorderSide(color: AppColorPalette.charcoalGreen),
+                ),
+              ),
+            ],
+          )
+        else if (_prediction != null)
+          Column(
+            children: [
+              // Prediction card
+              AiPredictionCard(
+                prediction: _prediction!,
+                onRefresh: _loadPrediction,
+              ),
+              const SizedBox(height: 16),
+              // Advice card
+              AiAdviceCard(prediction: _prediction!),
+            ],
+          )
+        else
+          // Initial state - show button to get prediction
+          Column(
+            children: [
+              Icon(
+                Icons.auto_awesome,
+                size: 40,
+                color: AppColorPalette.charcoalGreen,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Get Wilting Risk Prediction',
+                style: AppTextStyles.bodyLarge(),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Use machine learning to predict wilting risk',
+                style: AppTextStyles.caption(
+                  color: AppColorPalette.softSlate,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _loadPrediction,
+                icon: const Icon(Icons.psychology, size: 20),
+                label: const Text('Analyze with AI'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColorPalette.charcoalGreen,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+      ],
+    ),
+  );
+}
   /// Build header card with overall status
   Widget _buildHeaderCard() {
     return Container(

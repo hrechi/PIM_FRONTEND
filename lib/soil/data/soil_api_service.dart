@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import '../../config/api_config.dart';
 import '../models/soil_measurement.dart';
+import '../models/ai_prediction.dart';
 
 /// API Service for Soil Measurements
 /// Handles all HTTP communication with the backend
@@ -127,6 +128,54 @@ class SoilApiService {
   Future<void> deleteMeasurement(String id) async {
     try {
       await _dio.delete('/$id');
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // ==================== AI PREDICTION METHODS ====================
+
+  /// Get AI prediction for a soil measurement
+  /// 
+  /// Calls the backend which forwards to the AI microservice
+  Future<AiPrediction> getPrediction(String measurementId) async {
+    try {
+      final response = await _dio.get('/$measurementId/predict');
+      return AiPrediction.fromJson(response.data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 503) {
+        throw SoilApiException(
+          'AI service is currently unavailable. Please try again later.',
+          type: SoilApiExceptionType.server,
+        );
+      }
+      throw _handleError(e);
+    }
+  }
+
+  /// Get batch predictions for multiple measurements
+  Future<List<AiPrediction>> getBatchPredictions(
+    List<String> measurementIds,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/predict/batch',
+        data: {'measurementIds': measurementIds},
+      );
+      
+      return (response.data as List)
+          .map((json) => AiPrediction.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Check AI service health
+  Future<Map<String, dynamic>> checkAiHealth() async {
+    try {
+      final response = await _dio.get('/ai/health');
+      return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
       throw _handleError(e);
     }
