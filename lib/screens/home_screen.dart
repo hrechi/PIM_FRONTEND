@@ -11,6 +11,8 @@ import '../widgets/metric_card.dart';
 import '../widgets/alert_tile.dart';
 import '../widgets/gradient_container.dart';
 import 'profile_screen.dart';
+import 'add_staff_screen.dart';
+import 'staff_list_screen.dart';
 
 /// Main home screen displaying the farm dashboard
 /// Provides overview of weather, soil, livestock health, and alerts
@@ -47,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: AppColorPalette.wheatWarmClay,
+      drawer: _buildDrawer(),
       body: SafeArea(
         child: Responsive.constrainedContent(
           context: context,
@@ -98,6 +101,12 @@ class _HomeScreenState extends State<HomeScreen> {
       automaticallyImplyLeading: false,
       backgroundColor: AppColorPalette.wheatWarmClay,
       toolbarHeight: 80,
+      leading: Builder(
+        builder: (context) => IconButton(
+          icon: const Icon(Icons.menu_rounded, color: AppColorPalette.charcoalGreen),
+          onPressed: () => Scaffold.of(context).openDrawer(),
+        ),
+      ),
       title: Row(
         children: [
           // App Icon/Logo
@@ -635,7 +644,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: FloatingActionButton(
         onPressed: () {
-          // Open settings or scan
+          // Open settings or actions menu
         },
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -644,6 +653,143 @@ class _HomeScreenState extends State<HomeScreen> {
           size: 28,
         ),
       ),
+    );
+  }
+
+  /// Build side drawer menu
+  Widget _buildDrawer() {
+    return Drawer(
+      backgroundColor: Colors.white,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drawer Header
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: AppColorPalette.fieldFreshGradient,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.asset(
+                      'assets/images/agricole_icon2.gif',
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Fieldly',
+                    style: AppTextStyles.h2(color: AppColorPalette.white),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Smart Security System',
+                    style: AppTextStyles.bodySmall(
+                      color: AppColorPalette.white.withValues(alpha: 0.9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // Menu Items
+            _buildDrawerItem(
+              icon: Icons.shield_rounded,
+              title: 'Security Whitelist',
+              subtitle: 'View authorized staff',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const StaffListScreen()),
+                );
+              },
+            ),
+
+            _buildDrawerItem(
+              icon: Icons.person_add_rounded,
+              title: 'Add Staff',
+              subtitle: 'Add to whitelist',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AddStaffScreen()),
+                );
+              },
+            ),
+
+            const Divider(height: 1),
+
+            _buildDrawerItem(
+              icon: Icons.person_outline_rounded,
+              title: 'Profile',
+              subtitle: 'Manage account',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                );
+              },
+            ),
+
+            _buildDrawerItem(
+              icon: Icons.settings_outlined,
+              title: 'Settings',
+              subtitle: 'App preferences',
+              onTap: () {
+                Navigator.pop(context);
+                // Navigate to settings when implemented
+              },
+            ),
+
+            const Spacer(),
+
+            // Footer
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Version 1.0.0',
+                style: AppTextStyles.caption(color: AppColorPalette.softSlate),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: AppColorPalette.fieldFreshStart, size: 24),
+      ),
+      title: Text(
+        title,
+        style: AppTextStyles.bodyLarge(color: AppColorPalette.charcoalGreen),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate),
+      ),
+      onTap: onTap,
     );
   }
 }
