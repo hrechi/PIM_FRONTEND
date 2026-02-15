@@ -179,6 +179,153 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
     }
   }
 
+  Future<void> _editField(FieldModel field) async {
+    final nameController = TextEditingController(text: field.name);
+    List<List<double>>? coordinates = field.areaCoordinates;
+    double? areaSize = field.areaSize;
+
+    final result = await showDialog<Map<String, dynamic>>(
+      barrierDismissible: false,
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Edit Field'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Field Name',
+                    hintText: 'e.g., North Field',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final mapResult = await Navigator.push<Map<String, dynamic>>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MapPickerScreen(
+                          initialCoordinates: coordinates,
+                        ),
+                      ),
+                    );
+                    if (mapResult != null) {
+                      setState(() {
+                        coordinates = mapResult['coordinates'] as List<List<double>>;
+                        areaSize = mapResult['areaSize'] as double?;
+                      });
+                    }
+                  },
+                  icon: const Icon(Icons.location_on),
+                  label: const Text('Update Field Area on Map'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.mistBlue,
+                  ),
+                ),
+                if (coordinates != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Field area (${coordinates!.length} points)',
+                          style: const TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (areaSize != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              areaSize! < 1000000
+                                  ? 'Area: ${(areaSize! / 10000).toStringAsFixed(2)} hectares'
+                                  : 'Area: ${(areaSize!).toStringAsFixed(0)} m²',
+                              style: const TextStyle(
+                                color: Colors.blue,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (nameController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Field name is required')),
+                  );
+                  return;
+                }
+                if (coordinates == null || coordinates!.length < 3) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please mark the field area')),
+                  );
+                  return;
+                }
+                Navigator.pop(context, {
+                  'name': nameController.text,
+                  'coordinates': coordinates,
+                  'areaSize': areaSize,
+                });
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.mistBlue),
+              child: const Text(
+                'Update Field',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != null) {
+      _updateField(
+        field.id,
+        result['name'],
+        result['coordinates'],
+        result['areaSize'],
+      );
+    }
+  }
+
+  Future<void> _updateField(
+    String id,
+    String name,
+    List<List<double>> coordinates,
+    double? areaSize,
+  ) async {
+    try {
+      await fieldService.updateField(
+        id: id,
+        name: name,
+        areaCoordinates: coordinates,
+        areaSize: areaSize,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Field updated successfully')),
+      );
+      _loadFields();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating field: $e')),
+      );
+    }
+  }
+
   Future<void> _deleteField(String id) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -318,9 +465,7 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 TextButton.icon(
-                                  onPressed: () {
-                                    // Edit field (optional)
-                                  },
+                                  onPressed: () => _editField(field),
                                   icon: const Icon(Icons.edit,
                                       color: AppColors.mistBlue),
                                   label: const Text('Edit'),
