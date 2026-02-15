@@ -69,7 +69,6 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
                   onPressed: () async {
-                    Navigator.pop(context);
                     final result = await Navigator.push<List<List<double>>>(
                       context,
                       MaterialPageRoute(
