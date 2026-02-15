@@ -39,10 +39,11 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
 
   Future<void> _addNewField() async {
     final nameController = TextEditingController();
-    final cropController = TextEditingController();
     List<List<double>>? coordinates;
+    double? areaSize;
 
     final result = await showDialog<Map<String, dynamic>>(
+      barrierDismissible: false,
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
@@ -58,25 +59,20 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
                     hintText: 'e.g., North Field',
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: cropController,
-                  decoration: const InputDecoration(
-                    labelText: 'Crop Type (optional)',
-                    hintText: 'e.g., Wheat',
-                  ),
-                ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
                   onPressed: () async {
-                    final result = await Navigator.push<List<List<double>>>(
+                    final mapResult = await Navigator.push<Map<String, dynamic>>(
                       context,
                       MaterialPageRoute(
                         builder: (context) => const MapPickerScreen(),
                       ),
                     );
-                    if (result != null) {
-                      setState(() => coordinates = result);
+                    if (mapResult != null) {
+                      setState(() {
+                        coordinates = mapResult['coordinates'] as List<List<double>>;
+                        areaSize = mapResult['areaSize'] as double?;
+                      });
                     }
                   },
                   icon: const Icon(Icons.location_on),
@@ -88,12 +84,29 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
                 if (coordinates != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
-                    child: Text(
-                      'Field area marked (${coordinates!.length} points)',
-                      style: const TextStyle(
-                        color: Colors.green,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Field area marked (${coordinates!.length} points)',
+                          style: const TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (areaSize != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              areaSize! < 1000000
+                                  ? 'Area: ${(areaSize! / 10000).toStringAsFixed(2)} hectares'
+                                  : 'Area: ${(areaSize!).toStringAsFixed(0)} m²',
+                              style: const TextStyle(
+                                color: Colors.blue,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
               ],
@@ -120,10 +133,8 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
                 }
                 Navigator.pop(context, {
                   'name': nameController.text,
-                  'cropType': cropController.text.isEmpty
-                      ? null
-                      : cropController.text,
                   'coordinates': coordinates,
+                  'areaSize': areaSize,
                 });
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.mistBlue),
@@ -140,22 +151,22 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
     if (result != null) {
       _createField(
         result['name'],
-        result['cropType'],
         result['coordinates'],
+        result['areaSize'],
       );
     }
   }
 
   Future<void> _createField(
     String name,
-    String? cropType,
     List<List<double>> coordinates,
+    double? areaSize,
   ) async {
     try {
       await fieldService.createField(
         name: name,
-        cropType: cropType,
         areaCoordinates: coordinates,
+        areaSize: areaSize,
       );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Field created successfully')),

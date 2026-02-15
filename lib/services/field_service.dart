@@ -52,16 +52,14 @@ class FieldService {
 
   Future<FieldModel> createField({
     required String name,
-    String? cropType,
     required List<List<double>> areaCoordinates,
     double? areaSize,
   }) async {
     try {
       final body = jsonEncode({
         'name': name,
-        'cropType': cropType,
         'areaCoordinates': areaCoordinates,
-        'areaSize': areaSize,
+        if (areaSize != null) 'areaSize': areaSize,
       });
 
       final response = await http.post(
@@ -77,7 +75,6 @@ class FieldService {
         await ApiService.refreshToken();
         return createField(
           name: name,
-          cropType: cropType,
           areaCoordinates: areaCoordinates,
           areaSize: areaSize,
         );

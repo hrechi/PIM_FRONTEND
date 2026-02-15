@@ -85,7 +85,10 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     }
     Navigator.pop(
       context,
-      polygonPoints.map((p) => [p.latitude, p.longitude]).toList(),
+      {
+        'coordinates': polygonPoints.map((p) => [p.latitude, p.longitude]).toList(),
+        'areaSize': areaSize,
+      },
     );
   }
 
