@@ -4,11 +4,20 @@ import 'package:flutter/material.dart';
 // Change this IP to your PC's local WiFi IP when testing on a
 // physical device. Run `ipconfig` (Windows) or `ifconfig` (Mac/Linux)
 // and use the IPv4 address from your WiFi adapter.
-class AppConfig {
-  static const String serverHost = '192.168.1.102'; // your PC's WiFi IP
-  static const int    serverPort = 3000;
-}
+import 'dart:io'; // Import this at the top
 
+class AppConfig {
+  static String get serverHost {
+    // Android Emulator needs 10.0.2.2 to reach the host
+    if (Platform.isAndroid) {
+      return '10.0.2.2';
+    }
+    // iOS Simulator uses localhost
+    return 'localhost';
+  }
+
+  static const int serverPort = 3000;
+}
 class AppColors {
   // ── Primary Surface Colors ─────────────────────────────────
   static const Color sageTint = Color(0xFFF1F8F5);
