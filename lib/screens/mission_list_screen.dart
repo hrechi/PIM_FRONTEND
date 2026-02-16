@@ -34,20 +34,24 @@ class _MissionListScreenState extends State<MissionListScreen> {
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
     setState(() => isLoading = true);
     try {
       final loadedMissions =
           await missionService.getMissions(fieldId: widget.fieldId);
       final loadedFields = await fieldService.getFields();
+      if (!mounted) return;
       setState(() {
         missions = loadedMissions;
         fields = loadedFields;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading data: $e')),
       );
     } finally {
+      if (!mounted) return;
       setState(() => isLoading = false);
     }
   }
@@ -82,6 +86,72 @@ class _MissionListScreenState extends State<MissionListScreen> {
         return Colors.red;
       default:
         return Colors.grey;
+    }
+  }
+
+  Future<void> _deleteMissionFromList(String missionId, String missionTitle) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Mission?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.warning_rounded,
+              size: 48,
+              color: Colors.red[300],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Are you sure you want to delete "$missionTitle"?',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'This action cannot be undone.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.red,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await missionService.deleteMission(missionId);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Mission deleted successfully')),
+        );
+        _loadData();
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting mission: $e')),
+        );
+      }
     }
   }
 
@@ -167,6 +237,7 @@ class _MissionListScreenState extends State<MissionListScreen> {
                                         MissionDetailScreen(mission: mission),
                                   ),
                                 );
+                                if (!mounted) return;
                                 _loadData();
                               },
                               child: Card(
@@ -224,6 +295,45 @@ class _MissionListScreenState extends State<MissionListScreen> {
                                               ),
                                             ),
                                           ),
+                                          PopupMenuButton<String>(
+                                            onSelected: (value) async {
+                                              if (value == 'edit') {
+                                                await Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        MissionDetailScreen(mission: mission),
+                                                  ),
+                                                );
+                                                if (!mounted) return;
+                                                _loadData();
+                                              } else if (value == 'delete') {
+                                                await _deleteMissionFromList(mission.id, mission.title);
+                                              }
+                                            },
+                                            itemBuilder: (BuildContext context) => [
+                                              const PopupMenuItem<String>(
+                                                value: 'edit',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.edit, size: 18),
+                                                    SizedBox(width: 8),
+                                                    Text('Edit'),
+                                                  ],
+                                                ),
+                                              ),
+                                              const PopupMenuItem<String>(
+                                                value: 'delete',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.delete, size: 18, color: Colors.red),
+                                                    SizedBox(width: 8),
+                                                    Text('Delete', style: TextStyle(color: Colors.red)),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ],
                                       ),
                                       const SizedBox(height: 12),
@@ -268,6 +378,7 @@ class _MissionListScreenState extends State<MissionListScreen> {
                   CreateMissionScreen(fieldId: widget.fieldId),
             ),
           );
+          if (!mounted) return;
           _loadData();
         },
         backgroundColor: AppColors.mistBlue,

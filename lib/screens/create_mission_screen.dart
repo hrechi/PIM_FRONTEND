@@ -39,6 +39,37 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
     _loadFields();
   }
 
+  String? _validateMission() {
+    if (titleController.text.trim().isEmpty) {
+      return 'Mission title is required';
+    }
+    if (titleController.text.trim().length < 3) {
+      return 'Mission title must be at least 3 characters';
+    }
+    if (titleController.text.trim().length > 255) {
+      return 'Mission title must not exceed 255 characters';
+    }
+    if (selectedFieldId == null || selectedFieldId!.isEmpty) {
+      return 'Please select a field for this mission';
+    }
+    if (selectedType.isEmpty) {
+      return 'Please select a mission type';
+    }
+    if (selectedPriority.isEmpty) {
+      return 'Please select a priority level';
+    }
+    if (selectedDueDate != null) {
+      final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+      if (selectedDueDate!.isBefore(today)) {
+        return 'Due date cannot be in the past';
+      }
+    }
+    if (estimatedDuration != null && estimatedDuration! <= 0) {
+      return 'Estimated duration must be a positive number (in minutes)';
+    }
+    return null;
+  }
+
   Future<void> _loadFields() async {
     try {
       final loadedFields = await fieldService.getFields();
@@ -58,7 +89,7 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
   Future<void> _selectDate() async {
     final date = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: selectedDueDate ?? DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
@@ -68,15 +99,14 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
   }
 
   Future<void> _createMission() async {
-    if (titleController.text.isEmpty) {
+    final validationError = _validateMission();
+    if (validationError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mission title is required')),
-      );
-      return;
-    }
-    if (selectedFieldId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a field')),
+        SnackBar(
+          content: Text(validationError),
+          backgroundColor: Colors.red.shade600,
+          duration: const Duration(seconds: 4),
+        ),
       );
       return;
     }
@@ -130,8 +160,9 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
           DropdownButtonFormField<String>(
             value: selectedFieldId,
             decoration: const InputDecoration(
-              labelText: 'Select Field',
+              labelText: 'Select Field *',
               border: OutlineInputBorder(),
+              helperText: 'Required - Choose a field for this mission',
             ),
             items: fields
                 .map((field) => DropdownMenuItem(
@@ -145,9 +176,10 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
           TextField(
             controller: titleController,
             decoration: const InputDecoration(
-              labelText: 'Mission Title',
+              labelText: 'Mission Title *',
               border: OutlineInputBorder(),
               hintText: 'e.g., Spring Planting',
+              helperText: 'Required - 3 to 255 characters',
             ),
           ),
           const SizedBox(height: 16),
@@ -164,8 +196,9 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
           DropdownButtonFormField<String>(
             value: selectedType,
             decoration: const InputDecoration(
-              labelText: 'Mission Type',
+              labelText: 'Mission Type *',
               border: OutlineInputBorder(),
+              helperText: 'Required - Select the type of mission',
             ),
             items: ['PLANTING', 'WATERING', 'FERTILIZING', 'PESTICIDE', 'HARVESTING', 'OTHER']
                 .map((type) => DropdownMenuItem(
@@ -180,8 +213,9 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
           DropdownButtonFormField<String>(
             value: selectedPriority,
             decoration: const InputDecoration(
-              labelText: 'Priority',
+              labelText: 'Priority *',
               border: OutlineInputBorder(),
+              helperText: 'Required - Set the priority level',
             ),
             items: ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
                 .map((priority) => DropdownMenuItem(
@@ -210,10 +244,13 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
               labelText: 'Estimated Duration (minutes)',
               border: OutlineInputBorder(),
               hintText: 'e.g., 480',
+              helperText: 'Optional - Must be a positive number if provided',
             ),
             keyboardType: TextInputType.number,
-            onChanged: (value) =>
-                setState(() => estimatedDuration = int.tryParse(value)),
+            onChanged: (value) {
+              final parsed = int.tryParse(value);
+              setState(() => estimatedDuration = parsed);
+            },
           ),
           const SizedBox(height: 16),
           TextField(

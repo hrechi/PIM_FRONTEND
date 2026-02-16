@@ -23,6 +23,15 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
     _loadFields();
   }
 
+  String? _getFieldValidationError(String name, List<List<double>>? coordinates) {
+    if (name.trim().isEmpty) return 'Field name is required';
+    if (name.trim().length < 2) return 'Field name must be at least 2 characters';
+    if (name.trim().length > 100) return 'Field name must not exceed 100 characters';
+    if (coordinates == null || coordinates.isEmpty) return 'Field area must be marked on the map';
+    if (coordinates.length < 3) return 'Field area requires at least 3 points (triangle)';
+    return null;
+  }
+
   Future<void> _loadFields() async {
     setState(() => isLoading = true);
     try {
@@ -41,6 +50,7 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
     final nameController = TextEditingController();
     List<List<double>>? coordinates;
     double? areaSize;
+    String? validationError;
 
     final result = await showDialog<Map<String, dynamic>>(
       barrierDismissible: false,
@@ -52,12 +62,35 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (validationError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        border: Border.all(color: Colors.red),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        validationError!,
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
                 TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Field Name',
+                  decoration: InputDecoration(
+                    labelText: 'Field Name *',
                     hintText: 'e.g., North Field',
+                    helperText: 'Name must be 2-100 characters',
+                    border: const OutlineInputBorder(),
                   ),
+                  onChanged: (value) => setState(() => validationError = null),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
@@ -119,20 +152,13 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                if (nameController.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Field name is required')),
-                  );
-                  return;
-                }
-                if (coordinates == null || coordinates!.length < 3) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please mark the field area')),
-                  );
+                final error = _getFieldValidationError(nameController.text, coordinates);
+                if (error != null) {
+                  setState(() => validationError = error);
                   return;
                 }
                 Navigator.pop(context, {
-                  'name': nameController.text,
+                  'name': nameController.text.trim(),
                   'coordinates': coordinates,
                   'areaSize': areaSize,
                 });
@@ -183,6 +209,7 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
     final nameController = TextEditingController(text: field.name);
     List<List<double>>? coordinates = field.areaCoordinates;
     double? areaSize = field.areaSize;
+    String? validationError;
 
     final result = await showDialog<Map<String, dynamic>>(
       barrierDismissible: false,
@@ -194,12 +221,35 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (validationError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        border: Border.all(color: Colors.red),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        validationError!,
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
                 TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Field Name',
+                  decoration: InputDecoration(
+                    labelText: 'Field Name *',
                     hintText: 'e.g., North Field',
+                    helperText: 'Name must be 2-100 characters',
+                    border: const OutlineInputBorder(),
                   ),
+                  onChanged: (value) => setState(() => validationError = null),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
@@ -263,20 +313,13 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                if (nameController.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Field name is required')),
-                  );
-                  return;
-                }
-                if (coordinates == null || coordinates!.length < 3) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please mark the field area')),
-                  );
+                final error = _getFieldValidationError(nameController.text, coordinates);
+                if (error != null) {
+                  setState(() => validationError = error);
                   return;
                 }
                 Navigator.pop(context, {
-                  'name': nameController.text,
+                  'name': nameController.text.trim(),
                   'coordinates': coordinates,
                   'areaSize': areaSize,
                 });

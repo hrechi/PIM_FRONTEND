@@ -13,6 +13,7 @@ import '../widgets/gradient_container.dart';
 import 'profile_screen.dart';
 import 'fields_management_screen.dart';
 import 'mission_list_screen.dart';
+import 'chat_assistant_screen.dart';
 
 /// Main home screen displaying the farm dashboard
 /// Provides overview of weather, soil, livestock health, and alerts
@@ -239,6 +240,25 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               icon: const Icon(Icons.task),
               label: const Text('Missions'),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ChatAssistantScreen(),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColorPalette.mistyBlue,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              icon: const Icon(Icons.chat_bubble_outline),
+              label: const Text('Assistant'),
             ),
           ),
         ],
@@ -679,27 +699,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Build floating action button with gradient
   Widget _buildFloatingActionButton() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: AppColorPalette.successGradient,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColorPalette.success.withOpacity(0.4),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const ChatAssistantScreen(),
           ),
-        ],
-      ),
-      child: FloatingActionButton(
-        onPressed: () {
-          // Open settings or scan
-        },
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: const Icon(
-          Icons.settings,
-          size: 28,
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColorPalette.charcoalGreen.withOpacity(0.3),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Image.asset(
+            'assets/images/maskot_chatbot.png',
+            width: 65,
+            height: 85,
+            fit: BoxFit.contain,
+          ),
         ),
       ),
     );
