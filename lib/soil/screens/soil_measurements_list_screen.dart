@@ -4,6 +4,7 @@ import '../../../theme/color_palette.dart';
 import '../../../theme/text_styles.dart';
 import '../../../utils/responsive.dart';
 import '../models/soil_measurement.dart';
+import '../models/ai_prediction.dart';
 import '../data/soil_repository.dart';
 import '../data/soil_api_service.dart';
 import '../widgets/measurement_tile.dart';
@@ -26,6 +27,9 @@ class SoilMeasurementsProvider extends ChangeNotifier {
   int _limit = 20;
   bool _hasMore = true;
   PaginationMeta? _meta;
+  
+  // AI Predictions cache (measurementId -> AiPrediction)
+  final Map<String, AiPrediction> _predictions = {};
   
   SoilMeasurementsProvider({SoilRepository? repository})
       : _repository = repository ?? SoilRepository();
@@ -186,6 +190,23 @@ class SoilMeasurementsProvider extends ChangeNotifier {
   /// Clear error
   void clearError() {
     _error = null;
+    notifyListeners();
+  }
+  
+  /// Get prediction for a measurement (from cache)
+  AiPrediction? getPrediction(String measurementId) {
+    return _predictions[measurementId];
+  }
+  
+  /// Store prediction in cache
+  void storePrediction(String measurementId, AiPrediction prediction) {
+    _predictions[measurementId] = prediction;
+    notifyListeners();
+  }
+  
+  /// Clear prediction cache for a measurement
+  void clearPrediction(String measurementId) {
+    _predictions.remove(measurementId);
     notifyListeners();
   }
 }

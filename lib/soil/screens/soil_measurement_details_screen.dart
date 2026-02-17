@@ -12,6 +12,7 @@ import '../data/soil_api_service.dart';
 import '../models/ai_prediction.dart';
 import '../widgets/ai_prediction_card.dart';
 import '../widgets/ai_advice_card.dart';
+import '../services/plant_recommendation_service.dart';
 
 /// Screen displaying detailed information about a soil measurement
 /// Route: /soil/:id
@@ -31,14 +32,27 @@ class SoilMeasurementDetailsScreen extends StatefulWidget {
 class _SoilMeasurementDetailsScreenState
     extends State<SoilMeasurementDetailsScreen> {
   late SoilMeasurement measurement;
- bool _loadingPrediction = false;
+  bool _loadingPrediction = false;
   AiPrediction? _prediction;
   String? _predictionError;
+  PlantRecommendations? _plantRecommendations;
   final SoilApiService _apiService = SoilApiService();
+  
   @override
   void initState() {
     super.initState();
     measurement = widget.measurement;
+    // Check if prediction already exists in cache
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<SoilMeasurementsProvider>();
+      final cachedPrediction = provider.getPrediction(measurement.id);
+      if (cachedPrediction != null) {
+        setState(() {
+          _prediction = cachedPrediction;
+          _generatePlantRecommendations();
+        });
+      }
+    });
   }
 
   /// Navigate to edit screen
@@ -76,28 +90,43 @@ class _SoilMeasurementDetailsScreenState
     }
   }
   Future<void> _loadPrediction() async {
-  setState(() {
-    _loadingPrediction = true;
-    _predictionError = null;
-  });
+    setState(() {
+      _loadingPrediction = true;
+      _predictionError = null;
+    });
 
-  try {
-    final prediction = await _apiService.getPrediction(measurement.id);
-    if (mounted) {
-      setState(() {
-        _prediction = prediction;
-        _loadingPrediction = false;
-      });
-    }
-  } catch (e) {
-    if (mounted) {
-      setState(() {
-        _predictionError = e.toString();
-        _loadingPrediction = false;
-      });
+    try {
+      final prediction = await _apiService.getPrediction(measurement.id);
+      if (mounted) {
+        // Store in provider cache
+        final provider = context.read<SoilMeasurementsProvider>();
+        provider.storePrediction(measurement.id, prediction);
+        
+        setState(() {
+          _prediction = prediction;
+          _loadingPrediction = false;
+          _generatePlantRecommendations();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _predictionError = e.toString();
+          _loadingPrediction = false;
+        });
+      }
     }
   }
-}
+  
+  /// Generate plant recommendations based on soil conditions
+  void _generatePlantRecommendations() {
+    _plantRecommendations = PlantRecommendationService.getRecommendations(
+      ph: measurement.ph,
+      soilMoisture: measurement.soilMoisture,
+      temperature: measurement.temperature,
+      sunlight: measurement.sunlight,
+    );
+  }
 
   /// Delete measurement
   Future<void> _deleteMeasurement() async {
@@ -197,7 +226,16 @@ class _SoilMeasurementDetailsScreenState
               // AI Prediction Section
                _buildAiSection(),
 
-       const SizedBox(height: 24),
+            const SizedBox(height: 24),
+            
+            // Plant Recommendations Section (only if soil is not extreme)
+            if (_prediction != null && _plantRecommendations != null)
+              _plantRecommendations!.isExtreme
+                  ? _buildExtremeSoilWarning()
+                  : _buildPlantRecommendationsSection(),
+              
+            if (_prediction != null && _plantRecommendations != null)
+              const SizedBox(height: 24),
 
             // Nutrients Section
             _buildNutrientsSection(),
@@ -688,6 +726,593 @@ Widget _buildAiSection() {
       default:
         return code;
     }
+  }
+  
+  /// Build extreme soil warning section
+  Widget _buildExtremeSoilWarning() {
+    if (_plantRecommendations == null || !_plantRecommendations!.isExtreme) {
+      return const SizedBox.shrink();
+    }
+    
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColorPalette.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColorPalette.alertError.withValues(alpha: 0.3),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColorPalette.alertError.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.dangerous,
+                  size: 28,
+                  color: AppColorPalette.alertError,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Soil Not Suitable for Planting',
+                  style: AppTextStyles.h4(
+                    color: AppColorPalette.alertError,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Warning message
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColorPalette.alertError.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColorPalette.alertError.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.warning_rounded,
+                      color: AppColorPalette.alertError,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'No plants, vegetables, fruits, herbs, or trees can be grown in these extreme conditions.',
+                        style: AppTextStyles.bodyMedium(
+                          color: AppColorPalette.charcoalGreen,
+                        ).copyWith(
+                          fontWeight: FontWeight.w600,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Critical issues
+          Text(
+            'Critical Issues:',
+            style: AppTextStyles.h4(
+              color: AppColorPalette.charcoalGreen,
+            ),
+          ),
+          const SizedBox(height: 12),
+          
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColorPalette.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: AppColorPalette.softSlate.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _plantRecommendations!.extremeMessage!
+                  .split('\n\n')
+                  .map((issue) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '• ',
+                              style: AppTextStyles.bodyMedium(
+                                color: AppColorPalette.alertError,
+                              ).copyWith(fontSize: 16),
+                            ),
+                            Expanded(
+                              child: Text(
+                                issue,
+                                style: AppTextStyles.bodyMedium(
+                                  color: AppColorPalette.charcoalGreen,
+                                ).copyWith(height: 1.4),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ))
+                  .toList(),
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Action required section
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColorPalette.warning.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: AppColorPalette.warning.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.build_circle,
+                      size: 20,
+                      color: AppColorPalette.warning,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Required Actions:',
+                      style: AppTextStyles.bodyMedium(
+                        color: AppColorPalette.charcoalGreen,
+                      ).copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ..._getExtremeConditionActions().map((action) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${action['number']}. ',
+                            style: AppTextStyles.bodyMedium(
+                              color: AppColorPalette.charcoalGreen,
+                            ).copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          Expanded(
+                            child: Text(
+                              action['text'] as String,
+                              style: AppTextStyles.bodySmall(
+                                color: AppColorPalette.charcoalGreen,
+                              ).copyWith(height: 1.4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Expert consultation notice
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColorPalette.info.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.contact_support,
+                  size: 18,
+                  color: AppColorPalette.info,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Consider consulting an agricultural expert or soil specialist to remediate these extreme conditions before attempting to plant.',
+                    style: AppTextStyles.caption(
+                      color: AppColorPalette.charcoalGreen,
+                    ).copyWith(height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  /// Get actions needed for extreme conditions
+  List<Map<String, dynamic>> _getExtremeConditionActions() {
+    if (_plantRecommendations == null) return [];
+    
+    final actions = <Map<String, dynamic>>[];
+    int actionNumber = 1;
+    
+    final measurement = widget.measurement;
+    
+    // pH corrections
+    if (measurement.ph < 4.0) {
+      actions.add({
+        'number': actionNumber++,
+        'text': 'Add large amounts of agricultural lime to raise pH. May require multiple applications over several months.',
+      });
+    } else if (measurement.ph > 9.5) {
+      actions.add({
+        'number': actionNumber++,
+        'text': 'Add elemental sulfur or acidic organic matter to lower pH. Professional soil amendment may be necessary.',
+      });
+    }
+    
+    // Moisture corrections
+    if (measurement.soilMoisture < 5) {
+      actions.add({
+        'number': actionNumber++,
+        'text': 'Install irrigation system and water deeply multiple times. Add organic matter to improve water retention.',
+      });
+    } else if (measurement.soilMoisture > 95) {
+      actions.add({
+        'number': actionNumber++,
+        'text': 'Install drainage system immediately. Consider raised beds. Do not water until moisture drops below 60%.',
+      });
+    }
+    
+    // Temperature management
+    if (measurement.temperature < 5) {
+      actions.add({
+        'number': actionNumber++,
+        'text': 'Wait for warmer season. Consider greenhouse or cold frame protection for season extension.',
+      });
+    } else if (measurement.temperature > 45) {
+      actions.add({
+        'number': actionNumber++,
+        'text': 'Provide heavy mulching and shade structures. Increase irrigation to cool soil. Plant during cooler season.',
+      });
+    }
+    
+    actions.add({
+      'number': actionNumber++,
+      'text': 'Retest soil after implementing corrections to verify conditions have improved to safe levels.',
+    });
+    
+    return actions;
+  }
+  
+  /// Build plant recommendations section
+  Widget _buildPlantRecommendationsSection() {
+    if (_plantRecommendations == null) return const SizedBox.shrink();
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColorPalette.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColorPalette.softSlate.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColorPalette.success.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.park,
+                  size: 20,
+                  color: AppColorPalette.success,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'What You Can Grow Here',
+                  style: AppTextStyles.h4(),
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Soil type description
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColorPalette.wheatWarmClay.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              _plantRecommendations!.soilType,
+              style: AppTextStyles.bodyMedium(
+                color: AppColorPalette.charcoalGreen,
+              ).copyWith(height: 1.4),
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Vegetables
+          if (_plantRecommendations!.vegetables.isNotEmpty) ...[
+            _buildPlantCategoryHeader('Vegetables', Icons.spa, '🥬'),
+            const SizedBox(height: 12),
+            ..._plantRecommendations!.vegetables.take(3).map(
+              (plant) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _buildPlantRecommendationTile(plant),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          
+          // Fruits
+          if (_plantRecommendations!.fruits.isNotEmpty) ...[
+            _buildPlantCategoryHeader('Fruits', Icons.apple, '🍓'),
+            const SizedBox(height: 12),
+            ..._plantRecommendations!.fruits.take(3).map(
+              (plant) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _buildPlantRecommendationTile(plant),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          
+          // Trees
+          if (_plantRecommendations!.trees.isNotEmpty) ...[
+            _buildPlantCategoryHeader('Fruit Trees', Icons.forest, '🌳'),
+            const SizedBox(height: 12),
+            ..._plantRecommendations!.trees.take(3).map(
+              (plant) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _buildPlantRecommendationTile(plant),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          
+          // Herbs
+          if (_plantRecommendations!.herbs.isNotEmpty) ...[
+            _buildPlantCategoryHeader('Herbs', Icons.grass, '🌿'),
+            const SizedBox(height: 12),
+            ..._plantRecommendations!.herbs.take(3).map(
+              (plant) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _buildPlantRecommendationTile(plant),
+              ),
+            ),
+          ],
+          
+          const SizedBox(height: 16),
+          
+          // Info note
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColorPalette.info.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: AppColorPalette.info.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 18,
+                  color: AppColorPalette.info,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'These recommendations are based on current soil conditions. For best results, test soil and adjust as needed.',
+                    style: AppTextStyles.caption(
+                      color: AppColorPalette.charcoalGreen,
+                    ).copyWith(height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  /// Build plant category header
+  Widget _buildPlantCategoryHeader(String title, IconData icon, String emoji) {
+    return Row(
+      children: [
+        Text(
+          emoji,
+          style: const TextStyle(fontSize: 20),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: AppTextStyles.h4(
+            color: AppColorPalette.charcoalGreen,
+          ),
+        ),
+      ],
+    );
+  }
+  
+  /// Build individual plant recommendation tile
+  Widget _buildPlantRecommendationTile(PlantRecommendation plant) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColorPalette.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: Color(plant.suitabilityColor).withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Name and suitability
+          Row(
+            children: [
+              Text(
+                plant.icon,
+                style: const TextStyle(fontSize: 24),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  plant.name,
+                  style: AppTextStyles.bodyMedium(
+                    color: AppColorPalette.charcoalGreen,
+                  ).copyWith(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Color(plant.suitabilityColor).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.thumb_up,
+                      size: 12,
+                      color: Color(plant.suitabilityColor),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      plant.suitabilityLevel,
+                      style: AppTextStyles.caption(
+                        color: Color(plant.suitabilityColor),
+                      ).copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 10),
+          
+          // Why suitable
+          Text(
+            'Why it\'s suitable:',
+            style: AppTextStyles.caption(
+              color: AppColorPalette.softSlate,
+            ).copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 4),
+          ...plant.reasons.take(2).map((reason) => Padding(
+            padding: const EdgeInsets.only(left: 8, bottom: 2),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '• ',
+                  style: AppTextStyles.caption(
+                    color: AppColorPalette.success,
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    reason,
+                    style: AppTextStyles.caption(
+                      color: AppColorPalette.charcoalGreen,
+                    ).copyWith(height: 1.3),
+                  ),
+                ),
+              ],
+            ),
+          )),
+          
+          const SizedBox(height: 8),
+          
+          // Growing tip
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColorPalette.wheatWarmClay.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.lightbulb_outline,
+                  size: 14,
+                  color: AppColorPalette.warning,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    plant.tips,
+                    style: AppTextStyles.caption(
+                      color: AppColorPalette.charcoalGreen,
+                    ).copyWith(
+                      fontStyle: FontStyle.italic,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
