@@ -10,6 +10,7 @@ import '../widgets/status_chip.dart';
 import '../widgets/metric_card.dart';
 import '../widgets/alert_tile.dart';
 import '../widgets/gradient_container.dart';
+import '../soil/screens/soil_measurements_list_screen.dart';
 import 'profile_screen.dart';
 import 'fields_management_screen.dart';
 import 'mission_list_screen.dart';
@@ -55,48 +56,48 @@ class _HomeScreenState extends State<HomeScreen> {
           context: context,
           child: CustomScrollView(
             slivers: [
-            // A) Header Section
-            _buildHeader(),
+              // A) Header Section
+              _buildHeader(),
 
-            // A1) Fields & Missions Quick Access
-            SliverToBoxAdapter(
-              child: _buildQuickAccessButtons(),
-            ),
-
-            // B) Weather & Soil Card
-            SliverToBoxAdapter(
-              child: _buildWeatherSoilCard(),
-            ),
-
-            // C) Attention Required Section
-            if (attentionRequired.isNotEmpty)
+              // A1) Fields, Missions & Assistant Quick Access
               SliverToBoxAdapter(
-                child: _buildAttentionRequiredSection(attentionRequired),
+                child: _buildQuickAccessButtons(),
               ),
 
-            // D) Livestock Location Section
-            SliverToBoxAdapter(
-              child: _buildLivestockLocationSection(),
-            ),
+              // B) Weather & Soil Card
+              SliverToBoxAdapter(
+                child: _buildWeatherSoilCard(),
+              ),
 
-            // E) Live Health Metrics
-            SliverToBoxAdapter(
-              child: _buildLiveHealthMetrics(),
-            ),
+              // C) Attention Required Section
+              if (attentionRequired.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: _buildAttentionRequiredSection(attentionRequired),
+                ),
 
-            // Bottom padding
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 100),
-            ),
-          ],
+              // D) Livestock Location Section
+              SliverToBoxAdapter(
+                child: _buildLivestockLocationSection(),
+              ),
+
+              // E) Live Health Metrics
+              SliverToBoxAdapter(
+                child: _buildLiveHealthMetrics(),
+              ),
+
+              // Bottom padding
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 100),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
 
-    // F) Floating Action Button
-    floatingActionButton: _buildFloatingActionButton(),
-  );
-}
+      // F) Floating Action Button - Chatbot
+      floatingActionButton: _buildFloatingActionButton(),
+    );
+  }
 
   /// Build app header with title, notifications, and profile
   Widget _buildHeader() {
@@ -196,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build quick access buttons for Fields & Missions
+  /// Build quick access buttons for Fields, Missions & Assistant
   Widget _buildQuickAccessButtons() {
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -325,17 +326,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
 
           const SizedBox(height: 24),
-          
+
           // Soil Moisture Section - Tappable to navigate to Soil module
           InkWell(
             onTap: () {
-              // TODO: Navigate to Soil Measurements module once created
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(
-              //     builder: (context) => const SoilMeasurementsListScreen(),
-              //   ),
-              // );
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SoilMeasurementsListScreen(),
+                ),
+              );
             },
             borderRadius: BorderRadius.circular(12),
             child: Container(
@@ -465,7 +465,7 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: attentionAlerts
-                .take(3) // Show only first 3 alerts
+                .take(3)
                 .map((alert) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: AlertTile.compact(
@@ -533,7 +533,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
                   ),
-                  // Simulating a map with gradient
                   gradient: LinearGradient(
                     colors: [
                       AppColorPalette.emeraldGreen.withOpacity(0.1),
@@ -545,7 +544,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Stack(
                   children: [
-                    // Center text
                     Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -697,7 +695,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build floating action button with gradient
+  /// Build floating action button - Chatbot mascot
   Widget _buildFloatingActionButton() {
     return GestureDetector(
       onTap: () {
