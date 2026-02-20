@@ -11,6 +11,7 @@ import '../widgets/metric_card.dart';
 import '../widgets/alert_tile.dart';
 import '../widgets/gradient_container.dart';
 import 'profile_screen.dart';
+import 'package:frontend_pim/screens/parcel_list_screen.dart';
 // 1. Make sure to import your new screen here
 import 'plant_doctor_screen.dart';
 
@@ -77,6 +78,17 @@ class _HomeScreenState extends State<HomeScreen> {
               leading: const Icon(Icons.home),
               title: const Text('Farm Overview'),
               onTap: () => Navigator.pop(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.grass),
+              title: const Text('My Parcels'),
+              onTap: () {
+                Navigator.pop(context); // Close drawer
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ParcelListScreen()),
+                );
+              },
             ),
             // FIX: Plant Doctor Navigation
             ListTile(
