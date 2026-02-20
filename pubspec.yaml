@@ -39,6 +39,7 @@ dependencies:
   shared_preferences: ^2.3.4
   google_fonts: ^6.2.1
   image_picker: ^1.1.2
+  material_symbols_icons: ^4.2758.163
 
 dev_dependencies:
   flutter_test:

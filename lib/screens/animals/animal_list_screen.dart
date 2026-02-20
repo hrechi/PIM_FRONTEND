@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import '../../models/animal.dart';
 import '../../services/animal_service.dart';
 import '../../utils/constants.dart';
-import '../../widgets/metric_card.dart';
-import '../../widgets/status_chip.dart';
 import 'add_animal_screen.dart';
 import 'animal_details_screen.dart';
 
@@ -20,6 +19,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
   late Future<Map<String, dynamic>> _statsFuture;
   String? _selectedType;
   String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -36,135 +36,232 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Livestock'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshData,
-          ),
-        ],
-      ),
-      body: Column(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: Stack(
         children: [
-          _buildStatsHeader(),
-          _buildSearchAndFilter(),
-          Expanded(
-            child: _buildAnimalList(isDark),
+          _buildHeaderBackground(),
+          SafeArea(
+            child: Column(
+              children: [
+                _buildAppBar(),
+                _buildSearchSection(),
+                _buildCategoryFilters(),
+                Expanded(
+                  child: _buildAnimalList(),
+                ),
+              ],
+            ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddAnimalScreen()),
-          );
-          if (result == true) _refreshData();
-        },
-        label: const Text('Add Animal'),
-        icon: const Icon(Icons.add),
-        backgroundColor: isDark ? AppColors.darkMistyBlue : AppColors.mistyBlue,
+      floatingActionButton: _buildFab(),
+    );
+  }
+
+  Widget _buildHeaderBackground() {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 280,
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFE0F2FE),
+              Color(0xFFF0F9FF),
+              Color(0xFFF8FAFC),
+            ],
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -50,
+              right: -50,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  color: AppColors.fieldFreshStart.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 100,
+              left: -30,
+              child: Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  color: AppColors.mistyBlue.withValues(alpha: 0.05),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildStatsHeader() {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _statsFuture,
-      builder: (context, snapshot) {
-        final total = snapshot.data?['totalAnimals']?.toString() ?? '0';
-        final health = snapshot.data?['healthPercentage']?.toString() ?? '100';
-
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
+  Widget _buildAppBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: MetricCard(
-                  title: 'Total Animals',
-                  value: total,
-                  icon: Icons.pets,
-                  color: AppColors.mistyBlue,
+              Text(
+                'My Farm',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF64748B),
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: MetricCard(
-                  title: 'Health Index',
-                  value: '$health%',
-                  icon: Icons.health_and_safety,
-                  color: AppColors.fieldFreshStart,
+              Text(
+                'Livestock Registry',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF0F172A),
                 ),
               ),
             ],
           ),
-        );
-      },
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: const Icon(Symbols.sync, color: AppColors.mistyBlue),
+              onPressed: _refreshData,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildSearchAndFilter() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: TextField(
-            onChanged: (value) => setState(() => _searchQuery = value),
-            decoration: InputDecoration(
-              hintText: 'Search by Name or Tag...',
-              prefixIcon: const Icon(Icons.search),
-              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+  Widget _buildSearchSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: TextField(
+          controller: _searchController,
+          onChanged: (val) => setState(() => _searchQuery = val),
+          decoration: InputDecoration(
+            hintText: 'Search by name or node ID...',
+            hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+            border: InputBorder.none,
+            prefixIcon: const Icon(Symbols.search, color: Color(0xFF94A3B8), size: 22),
+            suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Symbols.close, size: 18),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                  )
+                : null,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryFilters() {
+    return Container(
+      height: 100,
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        itemCount: AppConstants.animalTypes.length + 1,
+        itemBuilder: (context, index) {
+          final isAll = index == 0;
+          final type = isAll ? null : AppConstants.animalTypes[index - 1];
+          final label = isAll ? 'All Animals' : type!;
+          final isSelected = _selectedType == type;
+
+          return _buildCategoryChip(label, isSelected, () {
+            setState(() {
+              _selectedType = type;
+              _refreshData();
+            });
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildCategoryChip(String label, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.mistyBlue : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.mistyBlue.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  )
+                ],
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: isSelected ? Colors.white : const Color(0xFF64748B),
             ),
           ),
         ),
-        const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              _buildFilterChip(null, 'All'),
-              ...AppConstants.animalTypes.map((type) => _buildFilterChip(type, type)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-
-  Widget _buildFilterChip(String? type, String label) {
-    final isSelected = _selectedType == type;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
-      child: FilterChip(
-        selected: isSelected,
-        label: Text(label),
-        onSelected: (selected) {
-          setState(() {
-            _selectedType = selected ? type : null;
-            _refreshData();
-          });
-        },
-        selectedColor: (isDark ? AppColors.darkMistyBlue : AppColors.mistyBlue).withValues(alpha: 0.2),
-        checkmarkColor: isDark ? AppColors.darkMistyBlue : AppColors.mistyBlue,
-        labelStyle: TextStyle(
-          color: isSelected 
-            ? (isDark ? AppColors.darkMistyBlue : AppColors.mistyBlue)
-            : (isDark ? Colors.white70 : Colors.black87),
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        ),
       ),
     );
   }
 
-  Widget _buildAnimalList(bool isDark) {
+  Widget _buildAnimalList() {
     return FutureBuilder<List<Animal>>(
       future: _animalsFuture,
       builder: (context, snapshot) {
@@ -172,14 +269,19 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return Center(
+            child: Text(
+              'Error loading livestock: ${snapshot.error}',
+              style: const TextStyle(color: Color(0xFFEF4444)),
+            ),
+          );
         }
-        
+
         final list = snapshot.data ?? [];
         final filteredList = list.where((a) {
           final query = _searchQuery.toLowerCase();
-          return a.name.toLowerCase().contains(query) || 
-                 (a.tagNumber?.toLowerCase().contains(query) ?? false);
+          return a.name.toLowerCase().contains(query) ||
+              (a.nodeId.toLowerCase().contains(query));
         }).toList();
 
         if (filteredList.isEmpty) {
@@ -187,11 +289,18 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey[400]),
+                Opacity(
+                  opacity: 0.2,
+                  child: Icon(Symbols.inventory_2, size: 80, color: AppColors.mistyBlue),
+                ),
                 const SizedBox(height: 16),
-                Text(
-                  'No animals found',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 18),
+                const Text(
+                  'No livestock found',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF94A3B8),
+                  ),
                 ),
               ],
             ),
@@ -199,54 +308,49 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
+          physics: const BouncingScrollPhysics(),
           itemCount: filteredList.length,
           itemBuilder: (context, index) {
-            final animal = filteredList[index];
-            return _buildAnimalCard(animal, isDark);
+            return _buildAnimalCard(filteredList[index]);
           },
         );
       },
     );
   }
 
-  Widget _buildAnimalCard(Animal animal, bool isDark) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 4,
-      shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: isDark ? AppColors.cardGradientDark : AppColors.cardGradientLight,
-        ),
+  Widget _buildAnimalCard(Animal animal) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(32),
           onTap: () async {
             final result = await Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => AnimalDetailsScreen(animal: animal)),
+              MaterialPageRoute(
+                builder: (context) => AnimalDetailsScreen(animal: animal),
+              ),
             );
             if (result == true) _refreshData();
           },
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: _getAnimalColor(animal.animalType).withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(
-                    _getAnimalIcon(animal.animalType),
-                    size: 40,
-                    color: _getAnimalColor(animal.animalType),
-                  ),
-                ),
+                _buildCardImage(animal),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -255,48 +359,35 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            animal.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                          Expanded(
+                            child: Text(
+                              animal.name,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF0F172A),
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          StatusChip(
-                            label: animal.healthStatus,
-                            color: _getHealthColor(animal.healthStatus),
-                          ),
+                          _buildStatusBadge(animal.healthStatus),
                         ],
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${animal.animalType} • ${animal.breed ?? "Common"}',
-                        style: TextStyle(color: Colors.grey[600]),
+                        '${animal.breed ?? "Common"} • ${animal.animalType}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF94A3B8),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       Row(
                         children: [
-                          Icon(Icons.monitor_heart, size: 16, color: Colors.grey[600]),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Vitality: ${animal.vitalityScore}%',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Icon(Icons.label_outline, size: 16, color: Colors.grey[600]),
-                          const SizedBox(width: 4),
-                          Text(
-                            animal.tagNumber ?? 'No Tag',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                          _buildQuickMetric(Symbols.monitor_heart, '${animal.vitalityScore}%'),
+                          const SizedBox(width: 16),
+                          _buildQuickMetric(Symbols.tag, animal.nodeId),
                         ],
                       ),
                     ],
@@ -310,34 +401,157 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
     );
   }
 
+  Widget _buildCardImage(Animal animal) {
+    return Container(
+      width: 90,
+      height: 90,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Stack(
+        children: [
+          Center(
+            child: animal.profileImage != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Image.network(
+                      animal.profileImage!,
+                      fit: BoxFit.cover,
+                      width: 90,
+                      height: 90,
+                    ),
+                  )
+                : Icon(
+                    _getAnimalIcon(animal.animalType),
+                    size: 40,
+                    color: AppColors.mistyBlue.withValues(alpha: 0.3),
+                  ),
+          ),
+          Positioned(
+            top: 6,
+            right: 6,
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: _getHealthStatusColor(animal.healthStatus),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    final color = _getHealthStatusColor(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        status,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+          color: color,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickMetric(IconData icon, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: AppColors.mistyBlue),
+        const SizedBox(width: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 11,
+            color: Color(0xFF64748B),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFab() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: GestureDetector(
+        onTap: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddAnimalScreen()),
+          );
+          if (result == true) _refreshData();
+        },
+        child: Container(
+          height: 60,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF34C759), Color(0xFF32ADE6)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF34C759).withValues(alpha: 0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Symbols.add, color: Colors.white, size: 24),
+              SizedBox(width: 8),
+              Text(
+                'Add Livestock',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   IconData _getAnimalIcon(String type) {
     switch (type) {
-      case 'COW': return Icons.agriculture;
-      case 'SHEEP': return Icons.cloud;
-      case 'HORSE': return Icons.directions_run;
-      case 'GOAT': return Icons.eco;
-      case 'BIRD': return Icons.flutter_dash;
-      default: return Icons.pets;
+      case 'COW': return Symbols.cruelty_free;
+      case 'SHEEP': return Symbols.pest_control_rodent;
+      case 'HORSE': return Symbols.emoji_nature;
+      case 'DOG': return Symbols.sound_detection_dog_barking;
+      default: return Symbols.pets;
     }
   }
 
-  Color _getAnimalColor(String type) {
-    switch (type) {
-      case 'COW': return AppColors.cowColor;
-      case 'SHEEP': return AppColors.sheepColor;
-      case 'HORSE': return AppColors.horseColor;
-      case 'GOAT': return AppColors.goatColor;
-      case 'BIRD': return AppColors.birdColor;
-      default: return AppColors.otherColor;
-    }
-  }
-
-  Color _getHealthColor(String status) {
+  Color _getHealthStatusColor(String status) {
     switch (status) {
-      case 'OPTIMAL': return AppColors.healthOptimal;
-      case 'WARNING': return AppColors.healthWarning;
-      case 'CRITICAL': return AppColors.healthCritical;
-      default: return Colors.grey;
+      case 'OPTIMAL':
+        return const Color(0xFF22C55E);
+      case 'WARNING':
+        return const Color(0xFFF59E0B);
+      case 'CRITICAL':
+        return const Color(0xFFEF4444);
+      default:
+        return const Color(0xFF94A3B8);
     }
   }
 }

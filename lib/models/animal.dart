@@ -24,6 +24,14 @@ class Animal {
   final String? profileImage;
   final String? tagNumber;
   final String? notes;
+  final String? productionHabit; // ACTIVE, NORMAL, LESS
+  final List<Map<String, dynamic>>? vaccines; // [{ 'name': 'Rabies', 'date': '2023-10-01' }]
+  final List<Map<String, dynamic>>? birthHistory; // [{ 'date': '2024-01-01', 'weight': 35.0, 'health': 'EXCELLENT' }]
+  final bool? isPregnant;
+  final double? woolYield; // NEW
+  final DateTime? lastInseminationDate;
+  final DateTime? lastBirthDate;
+  final String? role; // GUARD, SHEPHERD (for DOG)
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -53,6 +61,14 @@ class Animal {
     this.profileImage,
     this.tagNumber,
     this.notes,
+    this.productionHabit,
+    this.vaccines,
+    this.birthHistory,
+    this.isPregnant,
+    this.woolYield, // NEW
+    this.lastInseminationDate,
+    this.lastBirthDate,
+    this.role,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -90,6 +106,22 @@ class Animal {
       profileImage: json['profileImage'],
       tagNumber: json['tagNumber'],
       notes: json['notes'],
+      productionHabit: json['productionHabit'] as String?,
+      vaccines: json['vaccines'] != null 
+          ? (json['vaccines'] as List).map((v) => Map<String, dynamic>.from(v)).toList()
+          : null,
+      birthHistory: json['birthHistory'] != null 
+          ? (json['birthHistory'] as List).map((v) => Map<String, dynamic>.from(v)).toList()
+          : null,
+      isPregnant: json['isPregnant'],
+      woolYield: json['woolYield'] != null ? (json['woolYield'] as num).toDouble() : null, // NEW
+      lastInseminationDate: json['lastInseminationDate'] != null 
+          ? DateTime.parse(json['lastInseminationDate']) 
+          : null,
+      lastBirthDate: json['lastBirthDate'] != null 
+          ? DateTime.parse(json['lastBirthDate']) 
+          : null,
+      role: json['role'],
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
     );
@@ -122,6 +154,14 @@ class Animal {
       'profileImage': profileImage,
       'tagNumber': tagNumber,
       'notes': notes,
+      'productionHabit': productionHabit,
+      'vaccines': vaccines,
+      'birthHistory': birthHistory,
+      'isPregnant': isPregnant,
+      'woolYield': woolYield, // NEW
+      'lastInseminationDate': lastInseminationDate?.toIso8601String(),
+      'lastBirthDate': lastBirthDate?.toIso8601String(),
+      'role': role,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };

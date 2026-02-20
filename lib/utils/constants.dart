@@ -41,11 +41,9 @@ class AppColors {
 
   // Animal Type Colors
   static const Color cowColor = Color(0xFF8D6E63);
-  static const Color sheepColor = Color(0xFFECEFF1);
+  static const Color sheepColor = Color(0xFFDEE4E7);
   static const Color horseColor = Color(0xFF6D4C41);
-  static const Color goatColor = Color(0xFFBCAAA4);
-  static const Color birdColor = Color(0xFF90CAF9);
-  static const Color otherColor = Color(0xFF9E9E9E);
+  static const Color dogColor = Color(0xFFFFA726);
 
   // Gradients
   static const LinearGradient fieldFreshGradient = LinearGradient(
@@ -82,9 +80,7 @@ class AppConstants {
     'COW',
     'SHEEP',
     'HORSE',
-    'GOAT',
-    'BIRD',
-    'OTHER',
+    'DOG',
   ];
 
   // Health Status
