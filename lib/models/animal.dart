@@ -125,7 +125,33 @@ class Animal {
     this.medicalEvents,
   });
 
+  static double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+
+  static int _toInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? double.tryParse(value)?.toInt() ?? 0;
+    return 0;
+  }
+
   factory Animal.fromJson(Map<String, dynamic> json) {
+    // Backend now returns medicalEvents list, let's derive count if missing
+    int historyCount = _toInt(json['diseaseHistoryCount']);
+    if (historyCount == 0 && json['medicalEvents'] != null) {
+      if (json['medicalEvents'] is List) {
+        historyCount = (json['medicalEvents'] as List).length;
+      }
+    } else if (historyCount == 0 && json['_count'] != null) {
+      historyCount = _toInt(json['_count']['medicalEvents']);
+    }
+
     return Animal(
       id: json['id'],
       nodeId: json['nodeId'],
@@ -133,13 +159,13 @@ class Animal {
       name: json['name'],
       animalType: json['animalType'],
       breed: json['breed'],
-      age: json['age'],
-      ageYears: json['ageYears'] ?? 0,
+      age: _toInt(json['age']),
+      ageYears: _toInt(json['ageYears']),
       sex: json['sex'],
-      weight: json['weight']?.toDouble(),
+      weight: _toDouble(json['weight']),
       healthStatus: json['healthStatus'] ?? 'OPTIMAL',
-      vitalityScore: json['vitalityScore'] ?? 100,
-      bodyTemp: json['bodyTemp']?.toDouble(),
+      vitalityScore: _toInt(json['vitalityScore'] ?? 100),
+      bodyTemp: _toDouble(json['bodyTemp']),
       activityLevel: json['activityLevel'] ?? 'MODERATE',
       lastVetCheck: json['lastVetCheck'] != null ? DateTime.parse(json['lastVetCheck']) : null,
       vaccination: json['vaccination'] ?? false,
@@ -150,31 +176,30 @@ class Animal {
       lastInseminationDate: json['lastInseminationDate'] != null ? DateTime.parse(json['lastInseminationDate']) : null,
       lastBirthDate: json['lastBirthDate'] != null ? DateTime.parse(json['lastBirthDate']) : null,
       expectedBirthDate: json['expectedBirthDate'] != null ? DateTime.parse(json['expectedBirthDate']) : null,
-      birthCount: json['birthCount'] ?? 0,
+      birthCount: _toInt(json['birthCount']),
       status: json['status'] ?? 'active',
-      healthRiskScore: json['healthRiskScore']?.toDouble(),
-      diseaseHistoryCount: json['diseaseHistoryCount'] ?? 
-          (json['_count'] != null ? json['_count']['medicalEvents'] : 0),
-      fatContent: json['fatContent']?.toDouble(),
-      protein: json['protein']?.toDouble(),
+      healthRiskScore: _toDouble(json['healthRiskScore']),
+      diseaseHistoryCount: historyCount,
+      fatContent: _toDouble(json['fatContent']),
+      protein: _toDouble(json['protein']),
       feedIntakeRecorded: json['feedIntakeRecorded'] != null ? DateTime.parse(json['feedIntakeRecorded']) : null,
       dewormingScheduled: json['dewormingScheduled'] != null ? DateTime.parse(json['dewormingScheduled']) : null,
       productionHabit: json['productionHabit'],
       vaccines: json['vaccines'] != null ? (json['vaccines'] as List).map((v) => Map<String, dynamic>.from(v)).toList() : null,
       birthHistory: json['birthHistory'] != null ? (json['birthHistory'] as List).map((v) => Map<String, dynamic>.from(v)).toList() : null,
-      dailyMilkAvgL: json['dailyMilkAvgL']?.toDouble(),
+      dailyMilkAvgL: _toDouble(json['dailyMilkAvgL']),
       milkPeakDate: json['milkPeakDate'] != null ? DateTime.parse(json['milkPeakDate']) : null,
-      lactationNumber: json['lactationNumber'],
+      lactationNumber: _toInt(json['lactationNumber']),
       raceCategory: json['raceCategory'],
-      bestRaceTime: json['bestRaceTime']?.toDouble(),
+      bestRaceTime: _toDouble(json['bestRaceTime']),
       trainingLevel: json['trainingLevel'],
       woolLastShearDate: json['woolLastShearDate'] != null ? DateTime.parse(json['woolLastShearDate']) : null,
       meatGrade: json['meatGrade'],
       dogRole: json['dogRole'],
-      purchasePrice: json['purchasePrice']?.toDouble(),
+      purchasePrice: _toDouble(json['purchasePrice']),
       purchaseDate: json['purchaseDate'] != null ? DateTime.parse(json['purchaseDate']) : null,
-      estimatedValue: json['estimatedValue']?.toDouble(),
-      salePrice: json['salePrice']?.toDouble(),
+      estimatedValue: _toDouble(json['estimatedValue']),
+      salePrice: _toDouble(json['salePrice']),
       saleDate: json['saleDate'] != null ? DateTime.parse(json['saleDate']) : null,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),

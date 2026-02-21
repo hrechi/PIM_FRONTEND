@@ -18,6 +18,10 @@ class AppColors {
   static const Color primaryText = Color(0xFF2C3E50);
   static const Color secondaryText = Color(0xFF7F8C8D);
   static const Color error = Color(0xFFE74C3C);
+  
+  // Redesign Colors
+  static const Color primaryGreen = Color(0xFF2F7F34);
+  static const Color backgroundNeutral = Color(0xFFF6F8F6);
 
   // Dark Theme Colors
   static const Color darkBackground = Color(0xFF121212);

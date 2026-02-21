@@ -11,6 +11,7 @@ import '../widgets/metric_card.dart';
 import '../widgets/alert_tile.dart';
 import '../widgets/gradient_container.dart';
 import 'animals/animal_list_screen.dart';
+import 'animals/animal_dashboard_screen.dart';
 import 'profile_screen.dart';
 
 /// Main home screen displaying the farm dashboard
@@ -599,11 +600,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const AnimalListScreen()),
+                    MaterialPageRoute(builder: (context) => const AnimalDashboardScreen()),
                   );
                 },
                 child: Text(
-                  'VIEW ALL',
+                  'DASHBOARD',
                   style: AppTextStyles.buttonSmall(color: AppColorPalette.mistyBlue),
                 ),
               ),

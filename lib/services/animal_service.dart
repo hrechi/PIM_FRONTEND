@@ -22,14 +22,18 @@ class AnimalService {
 
   Future<List<Animal>> getAnimals({String? animalType}) async {
     String endpoint = '/animals';
+    if (animalType != null) {
+      endpoint += '?animalType=$animalType';
+    }
     
     final response = await ApiService.get(endpoint, withAuth: true);
     final List<dynamic> data = response is List ? response : (response['data'] ?? []);
     
     var animals = data.map((json) => Animal.fromJson(json)).toList();
     
+    // For safety, apply a local case-insensitive filter as fallback
     if (animalType != null) {
-      animals = animals.where((a) => a.animalType == animalType).toList();
+      animals = animals.where((a) => a.animalType.toUpperCase() == animalType.toUpperCase()).toList();
     }
     
     return animals;
