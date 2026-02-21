@@ -144,6 +144,7 @@ class AuthProvider with ChangeNotifier {
 
   // ── Update Profile ─────────────────────────────────────────
 
+
   Future<bool> updateProfile({
     String? name,
     String? farmName,
