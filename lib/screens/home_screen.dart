@@ -20,9 +20,10 @@ import 'chat_assistant_screen.dart';
 import 'add_staff_screen.dart';
 import 'staff_list_screen.dart';
 import 'incident_history_screen.dart';
+import 'package:frontend_pim/screens/parcel_list_screen.dart';
+// 1. Make sure to import your new screen here
+import 'plant_doctor_screen.dart';
 
-/// Main home screen displaying the farm dashboard
-/// Provides overview of weather, soil, livestock health, and alerts
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -53,7 +54,70 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: AppColorPalette.wheatWarmClay,
-      drawer: _buildDrawer(),
+      // --- DRAWER ---
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: const BoxDecoration(
+                color: AppColorPalette.emeraldGreen,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.eco, color: AppColorPalette.emeraldGreen, size: 30),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Fieldly Menu',
+                    style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Farm Overview'),
+              onTap: () => Navigator.pop(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.grass),
+              title: const Text('My Parcels'),
+              onTap: () {
+                Navigator.pop(context); // Close drawer
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ParcelListScreen()),
+                );
+              },
+            ),
+            // FIX: Plant Doctor Navigation
+            ListTile(
+              leading: const Icon(Icons.medical_services, color: AppColorPalette.alertError),
+              title: const Text(
+                'AI Plant Doctor',
+                style: TextStyle(fontWeight: FontWeight.bold, color: AppColorPalette.emeraldGreen),
+              ),
+              onTap: () {
+                Navigator.pop(context); // Close drawer
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const PlantDoctorScreen()),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+
       body: SafeArea(
         child: Responsive.constrainedContent(
           context: context,
@@ -96,7 +160,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return SliverAppBar(
       floating: true,
       elevation: 0,
-      automaticallyImplyLeading: false,
       backgroundColor: AppColorPalette.wheatWarmClay,
       toolbarHeight: 80,
       leading: Builder(
@@ -124,18 +187,8 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Fieldly',
-                  style: AppTextStyles.h3().copyWith(
-                    color: AppColorPalette.charcoalGreen,
-                  ),
-                ),
-                Text(
-                  'Farm Overview',
-                  style: AppTextStyles.bodySmall(
-                    color: AppColorPalette.softSlate,
-                  ),
-                ),
+                Text('Fieldly', style: AppTextStyles.h3().copyWith(color: AppColorPalette.charcoalGreen)),
+                Text('Farm Overview', style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate)),
               ],
             ),
           ),
