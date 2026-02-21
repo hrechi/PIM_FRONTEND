@@ -33,10 +33,37 @@ class ApiService {
 
   // ── Token Management ───────────────────────────────────────
 
-  static Future<void> saveTokens(String accessToken, String refreshToken) async {
+  static Future<void> saveTokens(
+    String accessToken,
+    String refreshToken,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('accessToken', accessToken);
     await prefs.setString('refreshToken', refreshToken);
+
+    // Also save access token to shared file for AI engine
+    await _saveTokenToFile(accessToken);
+  }
+
+  // Save JWT token to shared file (~/.pim_jwt_token) for AI engine
+  static Future<void> _saveTokenToFile(String token) async {
+    try {
+      // Try to save token to home directory (works on macOS when debugging)
+      final homeDir = Platform.environment['HOME'];
+      if (homeDir != null) {
+        final tokenFile = File('$homeDir/.pim_jwt_token');
+        await tokenFile.writeAsString(token);
+        print('[ApiService] ✓ Token saved to: ${tokenFile.path}');
+      } else {
+        print('[ApiService] HOME environment variable not found');
+      }
+    } catch (e) {
+      print('[ApiService] ⚠️ Could not save token to file: $e');
+      print(
+        '[ApiService] This is only needed if AI engine runs on same machine',
+      );
+      // Not critical - continue anyway
+    }
   }
 
   static Future<String?> getAccessToken() async {
@@ -93,9 +120,7 @@ class ApiService {
   // ── HTTP Methods ───────────────────────────────────────────
 
   static Future<Map<String, String>> _headers({bool withAuth = false}) async {
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-    };
+    final headers = <String, String>{'Content-Type': 'application/json'};
     if (withAuth) {
       final token = await getAccessToken();
       if (token != null) {
@@ -105,7 +130,7 @@ class ApiService {
     return headers;
   }
 
-  static Future<Map<String, dynamic>> post(
+  static Future<dynamic> post(
     String endpoint,
     Map<String, dynamic> body, {
     bool withAuth = false,
@@ -118,10 +143,7 @@ class ApiService {
     return _handleResponse(response, endpoint, body, withAuth);
   }
 
-  static Future<Map<String, dynamic>> get(
-    String endpoint, {
-    bool withAuth = false,
-  }) async {
+  static Future<dynamic> get(String endpoint, {bool withAuth = false}) async {
     final response = await http.get(
       Uri.parse('$baseUrl$endpoint'),
       headers: await _headers(withAuth: withAuth),
@@ -129,7 +151,7 @@ class ApiService {
     return _handleResponse(response, endpoint, null, withAuth);
   }
 
-  static Future<Map<String, dynamic>> patch(
+  static Future<dynamic> patch(
     String endpoint,
     Map<String, dynamic> body, {
     bool withAuth = false,
@@ -142,7 +164,7 @@ class ApiService {
     return _handleResponse(response, endpoint, body, withAuth);
   }
 
-  static Future<Map<String, dynamic>> delete(
+  static Future<dynamic> delete(
     String endpoint, {
     bool withAuth = false,
   }) async {
@@ -177,15 +199,35 @@ class ApiService {
     return _handleUploadResponse(response);
   }
 
+  /// Upload a staff member with name + image to the whitelist endpoint.
+  static Future<Map<String, dynamic>> uploadStaff(
+    String name,
+    String imagePath,
+  ) async {
+    final token = await getAccessToken();
+    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/staff'));
+
+    if (token != null) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+
+    request.fields['name'] = name;
+    request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+    return _handleUploadResponse(response);
+  }
+
   // ── Response Handling ──────────────────────────────────────
 
-  static Future<Map<String, dynamic>> _handleResponse(
+  static Future<dynamic> _handleResponse(
     http.Response response,
     String endpoint,
     Map<String, dynamic>? body,
     bool withAuth,
   ) async {
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = jsonDecode(response.body);
 
     if (response.statusCode == 401 && withAuth) {
       // Try to refresh the token
@@ -208,14 +250,19 @@ class ApiService {
           );
         }
 
-        final retryData = jsonDecode(retryResponse.body) as Map<String, dynamic>;
+        final retryData = jsonDecode(retryResponse.body);
         if (retryResponse.statusCode >= 200 && retryResponse.statusCode < 300) {
           return retryData;
         }
-        throw ApiException(
-          retryData['message']?.toString() ?? 'Request failed',
-          retryResponse.statusCode,
-        );
+
+        // Handle error from retry
+        if (retryData is Map<String, dynamic>) {
+          throw ApiException(
+            retryData['message']?.toString() ?? 'Request failed',
+            retryResponse.statusCode,
+          );
+        }
+        throw ApiException('Request failed', retryResponse.statusCode);
       }
 
       throw ApiException('Session expired. Please sign in again.', 401);
@@ -225,9 +272,16 @@ class ApiService {
       return data;
     }
 
-    final message = data['message'];
-    final errorMsg = message is List ? message.first.toString() : message?.toString() ?? 'Something went wrong';
-    throw ApiException(errorMsg, response.statusCode);
+    // Handle error response
+    if (data is Map<String, dynamic>) {
+      final message = data['message'];
+      final errorMsg = message is List
+          ? message.first.toString()
+          : message?.toString() ?? 'Something went wrong';
+      throw ApiException(errorMsg, response.statusCode);
+    }
+
+    throw ApiException('Something went wrong', response.statusCode);
   }
 
   static Map<String, dynamic> _handleUploadResponse(http.Response response) {

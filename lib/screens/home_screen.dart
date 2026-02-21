@@ -15,6 +15,9 @@ import 'profile_screen.dart';
 import 'fields_management_screen.dart';
 import 'mission_list_screen.dart';
 import 'chat_assistant_screen.dart';
+import 'add_staff_screen.dart';
+import 'staff_list_screen.dart';
+import 'incident_history_screen.dart';
 
 /// Main home screen displaying the farm dashboard
 /// Provides overview of weather, soil, livestock health, and alerts
@@ -26,7 +29,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Mock data - will be replaced with API calls later
   late WeatherInfo weatherInfo;
   late List<AlertItem> alerts;
   late List<Animal> animals;
@@ -37,7 +39,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadMockData();
   }
 
-  /// Load mock data for demonstration
   void _loadMockData() {
     weatherInfo = WeatherInfo.getMockData();
     alerts = AlertItem.getMockData();
@@ -46,11 +47,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Get alerts that require attention
     final attentionRequired = AlertItem.getAttentionRequired(alerts);
 
     return Scaffold(
       backgroundColor: AppColorPalette.wheatWarmClay,
+      drawer: _buildDrawer(),
       body: SafeArea(
         child: Responsive.constrainedContent(
           context: context,
@@ -60,14 +61,10 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildHeader(),
 
               // A1) Fields, Missions & Assistant Quick Access
-              SliverToBoxAdapter(
-                child: _buildQuickAccessButtons(),
-              ),
+              SliverToBoxAdapter(child: _buildQuickAccessButtons()),
 
               // B) Weather & Soil Card
-              SliverToBoxAdapter(
-                child: _buildWeatherSoilCard(),
-              ),
+              SliverToBoxAdapter(child: _buildWeatherSoilCard()),
 
               // C) Attention Required Section
               if (attentionRequired.isNotEmpty)
@@ -76,30 +73,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
 
               // D) Livestock Location Section
-              SliverToBoxAdapter(
-                child: _buildLivestockLocationSection(),
-              ),
+              SliverToBoxAdapter(child: _buildLivestockLocationSection()),
 
               // E) Live Health Metrics
-              SliverToBoxAdapter(
-                child: _buildLiveHealthMetrics(),
-              ),
+              SliverToBoxAdapter(child: _buildLiveHealthMetrics()),
 
               // Bottom padding
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 100),
-              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           ),
         ),
       ),
 
-      // F) Floating Action Button - Chatbot
+      // F) Floating Action Button - Chatbot mascot
       floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
-  /// Build app header with title, notifications, and profile
+  /// Build app header with hamburger menu, title, notifications, and profile
   Widget _buildHeader() {
     return SliverAppBar(
       floating: true,
@@ -107,9 +98,17 @@ class _HomeScreenState extends State<HomeScreen> {
       automaticallyImplyLeading: false,
       backgroundColor: AppColorPalette.wheatWarmClay,
       toolbarHeight: 80,
+      leading: Builder(
+        builder: (context) => IconButton(
+          icon: const Icon(
+            Icons.menu_rounded,
+            color: AppColorPalette.charcoalGreen,
+          ),
+          onPressed: () => Scaffold.of(context).openDrawer(),
+        ),
+      ),
       title: Row(
         children: [
-          // App Icon/Logo
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.asset(
@@ -120,8 +119,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(width: 12),
-
-          // Title
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,14 +141,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       actions: [
-        // Notification Icon
         Stack(
           children: [
             IconButton(
               icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {
-                // Navigate to notifications
-              },
+              onPressed: () {},
             ),
             if (alerts.where((a) => !a.isRead).isNotEmpty)
               Positioned(
@@ -174,8 +168,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         const SizedBox(width: 8),
-
-        // Profile Avatar
         Padding(
           padding: const EdgeInsets.only(right: 16.0),
           child: GestureDetector(
@@ -186,10 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             child: CircleAvatar(
               backgroundColor: AppColorPalette.mistyBlue,
-              child: const Icon(
-                Icons.person,
-                color: AppColorPalette.white,
-              ),
+              child: const Icon(Icons.person, color: AppColorPalette.white),
             ),
           ),
         ),
@@ -208,14 +197,12 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const FieldsManagementScreen(),
-                  ),
-                );
-              },
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const FieldsManagementScreen(),
+                ),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorPalette.mistyBlue,
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -227,14 +214,12 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MissionListScreen(),
-                  ),
-                );
-              },
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MissionListScreen(),
+                ),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorPalette.mistyBlue,
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -246,14 +231,12 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ChatAssistantScreen(),
-                  ),
-                );
-              },
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ChatAssistantScreen(),
+                ),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorPalette.mistyBlue,
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -282,7 +265,6 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Left side - Weather info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,8 +291,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-
-              // Right side - Weather icon
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -327,16 +307,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const SizedBox(height: 24),
 
-          // Soil Moisture Section - Tappable to navigate to Soil module
+          // Soil Moisture - navigates to SoilMeasurementsListScreen
           InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SoilMeasurementsListScreen(),
-                ),
-              );
-            },
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SoilMeasurementsListScreen(),
+              ),
+            ),
             borderRadius: BorderRadius.circular(12),
             child: Container(
               padding: const EdgeInsets.all(16),
@@ -350,11 +328,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.water_drop,
-                    color: AppColorPalette.white,
-                    size: 32,
-                  ),
+                  Icon(Icons.water_drop, color: AppColorPalette.white, size: 32),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -399,7 +373,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
-                  // Arrow icon to indicate navigation
                   Icon(
                     Icons.arrow_forward_ios,
                     color: AppColorPalette.white,
@@ -414,7 +387,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build attention required section with alerts
   Widget _buildAttentionRequiredSection(List<AlertItem> attentionAlerts) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -436,16 +408,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Text(
-                'Attention Required',
-                style: AppTextStyles.h3(),
-              ),
+              Text('Attention Required', style: AppTextStyles.h3()),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColorPalette.alertError,
                   borderRadius: BorderRadius.circular(12),
@@ -468,12 +434,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 .take(3)
                 .map((alert) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: AlertTile.compact(
-                        alert: alert,
-                        onTap: () {
-                          // Navigate to alert details
-                        },
-                      ),
+                      child: AlertTile.compact(alert: alert, onTap: () {}),
                     ))
                 .toList(),
           ),
@@ -482,7 +443,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build livestock location section with map placeholder
   Widget _buildLivestockLocationSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -507,10 +467,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    'Livestock Location',
-                    style: AppTextStyles.h3(),
-                  ),
+                  Text('Livestock Location', style: AppTextStyles.h3()),
                 ],
               ),
               StatusChip.info(
@@ -524,7 +481,6 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.all(0),
           child: Column(
             children: [
-              // Map Placeholder
               Container(
                 height: 200,
                 decoration: BoxDecoration(
@@ -563,7 +519,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
-                    // Animal location pins (mock positions)
                     ...animals.asMap().entries.map((entry) {
                       final index = entry.key;
                       final animal = entry.value;
@@ -576,13 +531,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              // Full Map Button
               Container(
                 padding: const EdgeInsets.all(16),
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Navigate to full map view
-                  },
+                  onPressed: () {},
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColorPalette.mistyBlue,
                     minimumSize: const Size(double.infinity, 50),
@@ -592,10 +544,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const Icon(Icons.fullscreen),
                       const SizedBox(width: 8),
-                      Text(
-                        'VIEW FULL MAP',
-                        style: AppTextStyles.buttonMedium(),
-                      ),
+                      Text('VIEW FULL MAP', style: AppTextStyles.buttonMedium()),
                     ],
                   ),
                 ),
@@ -607,7 +556,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build animal location pin
   Widget _buildAnimalPin(Animal animal) {
     return Container(
       padding: const EdgeInsets.all(6),
@@ -616,10 +564,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ? AppColorPalette.success
             : AppColorPalette.alertError,
         shape: BoxShape.circle,
-        border: Border.all(
-          color: AppColorPalette.white,
-          width: 3,
-        ),
+        border: Border.all(color: AppColorPalette.white, width: 3),
         boxShadow: [
           BoxShadow(
             color: AppColorPalette.charcoalGreen.withOpacity(0.2),
@@ -628,15 +573,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      child: const Icon(
-        Icons.pets,
-        size: 16,
-        color: AppColorPalette.white,
-      ),
+      child: const Icon(Icons.pets, size: 16, color: AppColorPalette.white),
     );
   }
 
-  /// Build live health metrics horizontal scroll section
   Widget _buildLiveHealthMetrics() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -661,10 +601,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Text(
-                'Live Health Metrics',
-                style: AppTextStyles.h3(),
-              ),
+              Text('Live Health Metrics', style: AppTextStyles.h3()),
             ],
           ),
         ),
@@ -682,12 +619,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             itemCount: animals.length,
             itemBuilder: (context, index) {
-              return MetricCard(
-                animal: animals[index],
-                onTap: () {
-                  // Navigate to animal details
-                },
-              );
+              return MetricCard(animal: animals[index], onTap: () {});
             },
           ),
         ),
@@ -698,14 +630,10 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Build floating action button - Chatbot mascot
   Widget _buildFloatingActionButton() {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const ChatAssistantScreen(),
-          ),
-        );
-      },
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ChatAssistantScreen()),
+      ),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
@@ -727,6 +655,149 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Build side drawer with security & navigation options
+  Widget _buildDrawer() {
+    return Drawer(
+      backgroundColor: Colors.white,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drawer Header
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: AppColorPalette.fieldFreshGradient,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.asset(
+                      'assets/images/agricole_icon2.gif',
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Fieldly',
+                    style: AppTextStyles.h2(color: AppColorPalette.white),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Smart Security System',
+                    style: AppTextStyles.bodySmall(
+                      color: AppColorPalette.white.withValues(alpha: 0.9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            _buildDrawerItem(
+              icon: Icons.shield_rounded,
+              title: 'Security Whitelist',
+              subtitle: 'View authorized staff',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const StaffListScreen()),
+                );
+              },
+            ),
+            _buildDrawerItem(
+              icon: Icons.person_add_rounded,
+              title: 'Add Staff',
+              subtitle: 'Add to whitelist',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AddStaffScreen()),
+                );
+              },
+            ),
+            _buildDrawerItem(
+              icon: Icons.history_rounded,
+              title: 'Incident History',
+              subtitle: 'View security logs',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const IncidentHistoryScreen(),
+                  ),
+                );
+              },
+            ),
+
+            const Divider(height: 1),
+
+            _buildDrawerItem(
+              icon: Icons.person_outline_rounded,
+              title: 'Profile',
+              subtitle: 'Manage account',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                );
+              },
+            ),
+            _buildDrawerItem(
+              icon: Icons.settings_outlined,
+              title: 'Settings',
+              subtitle: 'App preferences',
+              onTap: () => Navigator.pop(context),
+            ),
+
+            const Spacer(),
+
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Version 1.0.0',
+                style: AppTextStyles.caption(color: AppColorPalette.softSlate),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: AppColorPalette.fieldFreshStart, size: 24),
+      ),
+      title: Text(
+        title,
+        style: AppTextStyles.bodyLarge(color: AppColorPalette.charcoalGreen),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate),
+      ),
+      onTap: onTap,
     );
   }
 }
