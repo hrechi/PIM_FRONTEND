@@ -61,45 +61,45 @@ class _AnimalListScreenState extends State<AnimalListScreen> {
 
   Widget _buildHeaderBackground() {
     return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      height: 280,
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFE0F2FE),
-              Color(0xFFF0F9FF),
-              Color(0xFFF8FAFC),
-            ],
-          ),
-        ),
+      top: -100,
+      left: -100,
+      right: -100,
+      height: 400,
+      child: Opacity(
+        opacity: 0.6,
         child: Stack(
           children: [
             Positioned(
-              top: -50,
-              right: -50,
+              top: 0,
+              left: 0,
               child: Container(
-                width: 200,
-                height: 200,
+                width: 400,
+                height: 400,
                 decoration: BoxDecoration(
-                  color: AppColors.fieldFreshStart.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.fieldFreshStart.withValues(alpha: 0.2),
+                      AppColors.fieldFreshStart.withValues(alpha: 0.0),
+                    ],
+                  ),
                 ),
               ),
             ),
             Positioned(
-              top: 100,
-              left: -30,
+              top: -50,
+              right: -50,
               child: Container(
-                width: 150,
-                height: 150,
+                width: 350,
+                height: 350,
                 decoration: BoxDecoration(
-                  color: AppColors.mistyBlue.withValues(alpha: 0.05),
                   shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.mistyBlue.withValues(alpha: 0.2),
+                      AppColors.mistyBlue.withValues(alpha: 0.0),
+                    ],
+                  ),
                 ),
               ),
             ),
