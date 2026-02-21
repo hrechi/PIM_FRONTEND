@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
 
@@ -65,6 +67,11 @@ class AuthProvider with ChangeNotifier {
       );
 
       _user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
+      
+      // Save user data for stateless services
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user', jsonEncode(data['user']));
+
       _isAuthenticated = true;
       _setLoading(false);
       return true;
@@ -102,6 +109,11 @@ class AuthProvider with ChangeNotifier {
       await ApiService.setRememberMe(rememberMe);
 
       _user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
+      
+      // Save user data for stateless services
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user', jsonEncode(data['user']));
+
       _isAuthenticated = true;
       _setLoading(false);
       return true;
@@ -121,6 +133,11 @@ class AuthProvider with ChangeNotifier {
   Future<void> fetchProfile() async {
     final data = await ApiService.get('/user/profile', withAuth: true);
     _user = UserModel.fromJson(data);
+    
+    // Update saved user data
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user', jsonEncode(data));
+
     _isAuthenticated = true;
     notifyListeners();
   }

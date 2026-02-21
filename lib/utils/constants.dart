@@ -38,6 +38,19 @@ class AppColors {
   static const Color primaryText = Color(0xFF2C3E2D);      // Charcoal Green
   static const Color secondaryText = Color(0xFF7F8C8D);    // Soft Slate
 
+  // ── Accent / Alias Colors ─────────────────────────────────
+  static const Color primaryGreen = Color(0xFF2ECC71);
+  static const Color backgroundNeutral = Color(0xFFF5F7FA);
+
+  // ── Dark Theme Colors ─────────────────────────────────────
+  static const Color darkBackground = Color(0xFF121212);
+  static const Color darkSurface = Color(0xFF1E1E1E);
+  static const Color darkMistyBlue = Color(0xFF4CAF6A);
+  static const Color darkFieldFreshStart = Color(0xFF3DDC84);
+  static const Color darkError = Color(0xFFCF6679);
+  static const Color darkTextPrimary = Color(0xFFE0E0E0);
+  static const Color darkTextSecondary = Color(0xFF9E9E9E);
+
   // ── Gradient Definitions ───────────────────────────────────
   static const LinearGradient fieldFreshGradient = LinearGradient(
     colors: [fieldFreshStart, fieldFreshEnd],
@@ -56,4 +69,8 @@ class AppColors {
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
   );
+}
+
+class AppConstants {
+  static const List<String> animalTypes = ['cow', 'horse', 'sheep', 'dog'];
 }

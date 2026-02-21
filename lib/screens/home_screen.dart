@@ -11,6 +11,8 @@ import '../widgets/metric_card.dart';
 import '../widgets/alert_tile.dart';
 import '../widgets/gradient_container.dart';
 import '../soil/screens/soil_measurements_list_screen.dart';
+import 'animals/animal_list_screen.dart';
+import 'animals/animal_dashboard_screen.dart';
 import 'profile_screen.dart';
 import 'fields_management_screen.dart';
 import 'mission_list_screen.dart';
@@ -90,7 +92,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build app header with hamburger menu, title, notifications, and profile
   Widget _buildHeader() {
     return SliverAppBar(
       floating: true,
@@ -171,11 +172,9 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.only(right: 16.0),
           child: GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              );
-            },
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
             child: CircleAvatar(
               backgroundColor: AppColorPalette.mistyBlue,
               child: const Icon(Icons.person, color: AppColorPalette.white),
@@ -186,7 +185,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build quick access buttons for Fields, Missions & Assistant
   Widget _buildQuickAccessButtons() {
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -250,7 +248,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build weather and soil card with gradient background
   Widget _buildWeatherSoilCard() {
     return GradientContainer.fieldFresh(
       margin: EdgeInsets.symmetric(
@@ -307,7 +304,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const SizedBox(height: 24),
 
-          // Soil Moisture - navigates to SoilMeasurementsListScreen
           InkWell(
             onTap: () => Navigator.push(
               context,
@@ -577,6 +573,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Build live health metrics - header has DASHBOARD button,
+  /// each card taps into AnimalListScreen
   Widget _buildLiveHealthMetrics() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -587,21 +585,40 @@ class _HomeScreenState extends State<HomeScreen> {
             vertical: Responsive.verticalPadding(context),
           ),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColorPalette.healthGlow.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColorPalette.healthGlow.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.favorite,
+                      color: AppColorPalette.warning,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('Live Health Metrics', style: AppTextStyles.h3()),
+                ],
+              ),
+              TextButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AnimalDashboardScreen(),
+                  ),
                 ),
-                child: Icon(
-                  Icons.favorite,
-                  color: AppColorPalette.warning,
-                  size: 24,
+                child: Text(
+                  'DASHBOARD',
+                  style: AppTextStyles.buttonSmall(
+                    color: AppColorPalette.mistyBlue,
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Text('Live Health Metrics', style: AppTextStyles.h3()),
             ],
           ),
         ),
@@ -619,7 +636,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             itemCount: animals.length,
             itemBuilder: (context, index) {
-              return MetricCard(animal: animals[index], onTap: () {});
+              return MetricCard(
+                animal: animals[index],
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AnimalListScreen(),
+                  ),
+                ),
+              );
             },
           ),
         ),
@@ -627,7 +652,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build floating action button - Chatbot mascot
   Widget _buildFloatingActionButton() {
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -658,7 +682,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build side drawer with security & navigation options
   Widget _buildDrawer() {
     return Drawer(
       backgroundColor: Colors.white,
@@ -666,7 +689,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Drawer Header
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
