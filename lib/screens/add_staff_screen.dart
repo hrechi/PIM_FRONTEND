@@ -68,11 +68,15 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.1),
+                    color: AppColorPalette.fieldFreshStart.withValues(
+                      alpha: 0.1,
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.camera_alt_rounded,
-                      color: AppColorPalette.fieldFreshStart),
+                  child: const Icon(
+                    Icons.camera_alt_rounded,
+                    color: AppColorPalette.fieldFreshStart,
+                  ),
                 ),
                 title: Text('Take a Photo', style: AppTextStyles.bodyLarge()),
                 onTap: () {
@@ -84,13 +88,20 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.1),
+                    color: AppColorPalette.fieldFreshStart.withValues(
+                      alpha: 0.1,
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.photo_library_rounded,
-                      color: AppColorPalette.fieldFreshStart),
+                  child: const Icon(
+                    Icons.photo_library_rounded,
+                    color: AppColorPalette.fieldFreshStart,
+                  ),
                 ),
-                title: Text('Choose from Gallery', style: AppTextStyles.bodyLarge()),
+                title: Text(
+                  'Choose from Gallery',
+                  style: AppTextStyles.bodyLarge(),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImage(ImageSource.gallery);
@@ -114,7 +125,9 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
           content: Text('Please select a photo', style: GoogleFonts.inter()),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       return;
@@ -132,11 +145,15 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Staff member added to whitelist!',
-              style: GoogleFonts.inter()),
+          content: Text(
+            'Staff member added to whitelist!',
+            style: GoogleFonts.inter(),
+          ),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
 
@@ -148,7 +165,9 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
           content: Text(e.message, style: GoogleFonts.inter()),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     } finally {
@@ -166,8 +185,10 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
         backgroundColor: AppColorPalette.wheatWarmClay,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded,
-              color: AppColorPalette.charcoalGreen),
+          icon: const Icon(
+            Icons.arrow_back_ios_rounded,
+            color: AppColorPalette.charcoalGreen,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -194,7 +215,9 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'Take or select a clear face photo for recognition',
-                  style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate),
+                  style: AppTextStyles.bodySmall(
+                    color: AppColorPalette.softSlate,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
@@ -216,7 +239,9 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColorPalette.charcoalGreen.withValues(alpha: 0.08),
+                          color: AppColorPalette.charcoalGreen.withValues(
+                            alpha: 0.08,
+                          ),
                           blurRadius: 16,
                           offset: const Offset(0, 4),
                         ),
@@ -238,7 +263,9 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                               Icon(
                                 Icons.add_a_photo_rounded,
                                 size: 48,
-                                color: AppColorPalette.softSlate.withValues(alpha: 0.5),
+                                color: AppColorPalette.softSlate.withValues(
+                                  alpha: 0.5,
+                                ),
                               ),
                               const SizedBox(height: 12),
                               Text(

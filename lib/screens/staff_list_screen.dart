@@ -35,7 +35,7 @@ class _StaffListScreenState extends State<StaffListScreen> {
 
     try {
       final response = await ApiService.get('/staff', withAuth: true);
-      
+
       setState(() {
         if (response is List) {
           _staff = List<Map<String, dynamic>>.from(response);
@@ -96,7 +96,9 @@ class _StaffListScreenState extends State<StaffListScreen> {
           content: Text('Staff member removed', style: GoogleFonts.inter()),
           backgroundColor: AppColorPalette.success,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
 
@@ -108,7 +110,9 @@ class _StaffListScreenState extends State<StaffListScreen> {
           content: Text(e.message, style: GoogleFonts.inter()),
           backgroundColor: AppColorPalette.alertError,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -124,8 +128,10 @@ class _StaffListScreenState extends State<StaffListScreen> {
         backgroundColor: AppColorPalette.wheatWarmClay,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded,
-              color: AppColorPalette.charcoalGreen),
+          icon: const Icon(
+            Icons.arrow_back_ios_rounded,
+            color: AppColorPalette.charcoalGreen,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -135,12 +141,14 @@ class _StaffListScreenState extends State<StaffListScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_rounded,
-                color: AppColorPalette.charcoalGreen),
+            icon: const Icon(
+              Icons.add_rounded,
+              color: AppColorPalette.charcoalGreen,
+            ),
             onPressed: () async {
-              final result = await Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const AddStaffScreen()),
-              );
+              final result = await Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const AddStaffScreen()));
               if (result == true) {
                 _loadStaff(); // Refresh if staff was added
               }
@@ -151,10 +159,10 @@ class _StaffListScreenState extends State<StaffListScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _buildErrorView()
-              : _staff.isEmpty
-                  ? _buildEmptyView()
-                  : _buildStaffList(),
+          ? _buildErrorView()
+          : _staff.isEmpty
+          ? _buildEmptyView()
+          : _buildStaffList(),
     );
   }
 
@@ -236,7 +244,10 @@ class _StaffListScreenState extends State<StaffListScreen> {
               icon: const Icon(Icons.add_rounded),
               label: Text('Add First Staff', style: GoogleFonts.inter()),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
               ),
             ),
           ],
@@ -253,7 +264,8 @@ class _StaffListScreenState extends State<StaffListScreen> {
         itemCount: _staff.length,
         itemBuilder: (context, index) {
           final staff = _staff[index];
-          final imageUrl = '${ApiService.baseUrl.replaceAll('/api', '')}${staff['imagePath']}';
+          final imageUrl =
+              '${ApiService.baseUrl.replaceAll('/api', '')}${staff['imagePath']}';
 
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
@@ -268,7 +280,9 @@ class _StaffListScreenState extends State<StaffListScreen> {
               ),
               leading: CircleAvatar(
                 radius: 30,
-                backgroundColor: AppColorPalette.fieldFreshStart.withValues(alpha: 0.1),
+                backgroundColor: AppColorPalette.fieldFreshStart.withValues(
+                  alpha: 0.1,
+                ),
                 backgroundImage: NetworkImage(imageUrl),
                 onBackgroundImageError: (_, __) {},
                 child: const Icon(
@@ -282,7 +296,9 @@ class _StaffListScreenState extends State<StaffListScreen> {
               ),
               subtitle: Text(
                 'Added ${_formatDate(staff['createdAt'])}',
-                style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate),
+                style: AppTextStyles.bodySmall(
+                  color: AppColorPalette.softSlate,
+                ),
               ),
               trailing: IconButton(
                 icon: const Icon(Icons.delete_outline_rounded),

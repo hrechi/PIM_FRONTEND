@@ -13,6 +13,7 @@ import '../widgets/gradient_container.dart';
 import 'profile_screen.dart';
 import 'add_staff_screen.dart';
 import 'staff_list_screen.dart';
+import 'incident_history_screen.dart';
 
 /// Main home screen displaying the farm dashboard
 /// Provides overview of weather, soil, livestock health, and alerts
@@ -55,43 +56,35 @@ class _HomeScreenState extends State<HomeScreen> {
           context: context,
           child: CustomScrollView(
             slivers: [
-            // A) Header Section
-            _buildHeader(),
+              // A) Header Section
+              _buildHeader(),
 
-            // B) Weather & Soil Card
-            SliverToBoxAdapter(
-              child: _buildWeatherSoilCard(),
-            ),
+              // B) Weather & Soil Card
+              SliverToBoxAdapter(child: _buildWeatherSoilCard()),
 
-            // C) Attention Required Section
-            if (attentionRequired.isNotEmpty)
-              SliverToBoxAdapter(
-                child: _buildAttentionRequiredSection(attentionRequired),
-              ),
+              // C) Attention Required Section
+              if (attentionRequired.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: _buildAttentionRequiredSection(attentionRequired),
+                ),
 
-            // D) Livestock Location Section
-            SliverToBoxAdapter(
-              child: _buildLivestockLocationSection(),
-            ),
+              // D) Livestock Location Section
+              SliverToBoxAdapter(child: _buildLivestockLocationSection()),
 
-            // E) Live Health Metrics
-            SliverToBoxAdapter(
-              child: _buildLiveHealthMetrics(),
-            ),
+              // E) Live Health Metrics
+              SliverToBoxAdapter(child: _buildLiveHealthMetrics()),
 
-            // Bottom padding
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 100),
-            ),
-          ],
+              // Bottom padding
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
+            ],
+          ),
         ),
       ),
-    ),
 
-    // F) Floating Action Button
-    floatingActionButton: _buildFloatingActionButton(),
-  );
-}
+      // F) Floating Action Button
+      floatingActionButton: _buildFloatingActionButton(),
+    );
+  }
 
   /// Build app header with title, notifications, and profile
   Widget _buildHeader() {
@@ -103,7 +96,10 @@ class _HomeScreenState extends State<HomeScreen> {
       toolbarHeight: 80,
       leading: Builder(
         builder: (context) => IconButton(
-          icon: const Icon(Icons.menu_rounded, color: AppColorPalette.charcoalGreen),
+          icon: const Icon(
+            Icons.menu_rounded,
+            color: AppColorPalette.charcoalGreen,
+          ),
           onPressed: () => Scaffold.of(context).openDrawer(),
         ),
       ),
@@ -180,16 +176,13 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.only(right: 16.0),
           child: GestureDetector(
             onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              );
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
             },
             child: CircleAvatar(
               backgroundColor: AppColorPalette.mistyBlue,
-              child: const Icon(
-                Icons.person,
-                color: AppColorPalette.white,
-              ),
+              child: const Icon(Icons.person, color: AppColorPalette.white),
             ),
           ),
         ),
@@ -256,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
 
           const SizedBox(height: 24),
-          
+
           // Soil Moisture Section - Tappable to navigate to Soil module
           InkWell(
             onTap: () {
@@ -367,16 +360,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Text(
-                'Attention Required',
-                style: AppTextStyles.h3(),
-              ),
+              Text('Attention Required', style: AppTextStyles.h3()),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColorPalette.alertError,
                   borderRadius: BorderRadius.circular(12),
@@ -397,15 +384,17 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             children: attentionAlerts
                 .take(3) // Show only first 3 alerts
-                .map((alert) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: AlertTile.compact(
-                        alert: alert,
-                        onTap: () {
-                          // Navigate to alert details
-                        },
-                      ),
-                    ))
+                .map(
+                  (alert) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: AlertTile.compact(
+                      alert: alert,
+                      onTap: () {
+                        // Navigate to alert details
+                      },
+                    ),
+                  ),
+                )
                 .toList(),
           ),
         ),
@@ -438,10 +427,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    'Livestock Location',
-                    style: AppTextStyles.h3(),
-                  ),
+                  Text('Livestock Location', style: AppTextStyles.h3()),
                 ],
               ),
               StatusChip.info(
@@ -549,10 +535,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ? AppColorPalette.success
             : AppColorPalette.alertError,
         shape: BoxShape.circle,
-        border: Border.all(
-          color: AppColorPalette.white,
-          width: 3,
-        ),
+        border: Border.all(color: AppColorPalette.white, width: 3),
         boxShadow: [
           BoxShadow(
             color: AppColorPalette.charcoalGreen.withOpacity(0.2),
@@ -561,11 +544,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      child: const Icon(
-        Icons.pets,
-        size: 16,
-        color: AppColorPalette.white,
-      ),
+      child: const Icon(Icons.pets, size: 16, color: AppColorPalette.white),
     );
   }
 
@@ -594,10 +573,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Text(
-                'Live Health Metrics',
-                style: AppTextStyles.h3(),
-              ),
+              Text('Live Health Metrics', style: AppTextStyles.h3()),
             ],
           ),
         ),
@@ -648,10 +624,7 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         backgroundColor: Colors.transparent,
         elevation: 0,
-        child: const Icon(
-          Icons.settings,
-          size: 28,
-        ),
+        child: const Icon(Icons.settings, size: 28),
       ),
     );
   }
@@ -722,6 +695,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.pop(context);
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const AddStaffScreen()),
+                );
+              },
+            ),
+
+            _buildDrawerItem(
+              icon: Icons.history_rounded,
+              title: 'Incident History',
+              subtitle: 'View security logs',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const IncidentHistoryScreen(),
+                  ),
                 );
               },
             ),

@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 // physical device. Run `ipconfig` (Windows) or `ifconfig` (Mac/Linux)
 // and use the IPv4 address from your WiFi adapter.
 class AppConfig {
-  static const String serverHost = '192.168.1.13'; // your PC's WiFi IP
-  static const int    serverPort = 3000;
+  static const String serverHost = '192.168.1.12'; // your PC's WiFi IP
+  static const int serverPort = 3000;
 }
 
 class AppColors {
@@ -32,8 +32,8 @@ class AppColors {
   static const Color warning = Color(0xFF729944);
 
   // ── Text Colors ────────────────────────────────────────────
-  static const Color primaryText = Color(0xFF2C3E2D);      // Charcoal Green
-  static const Color secondaryText = Color(0xFF7F8C8D);    // Soft Slate
+  static const Color primaryText = Color(0xFF2C3E2D); // Charcoal Green
+  static const Color secondaryText = Color(0xFF7F8C8D); // Soft Slate
 
   // ── Gradient Definitions ───────────────────────────────────
   static const LinearGradient fieldFreshGradient = LinearGradient(
