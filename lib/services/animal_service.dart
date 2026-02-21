@@ -21,15 +21,8 @@ class AnimalService {
   }
 
   Future<List<Animal>> getAnimals({String? animalType}) async {
-    final farmerId = await _getFarmerId();
-    if (farmerId == null) throw Exception('No farmer logged in');
-
-    String endpoint = '/animals/$farmerId';
-    if (animalType != null) {
-      // If backend supports filtering via query params
-      // endpoint += '?type=$animalType';
-    }
-
+    String endpoint = '/animals';
+    
     final response = await ApiService.get(endpoint, withAuth: true);
     final List<dynamic> data = response is List ? response : (response['data'] ?? []);
     
@@ -43,18 +36,13 @@ class AnimalService {
   }
 
   Future<Map<String, dynamic>> getStatistics() async {
-    final farmerId = await _getFarmerId();
-    if (farmerId == null) throw Exception('No farmer logged in');
-
-    return await ApiService.get('/animals/stats/$farmerId', withAuth: true);
+    return await ApiService.get('/animals/stats', withAuth: true);
   }
 
   Future<Animal> createAnimal(Map<String, dynamic> animalData) async {
-    final farmerId = await _getFarmerId();
-    if (farmerId == null) throw Exception('No farmer logged in');
-
-    // Ensure farmerId and nodeId are present
-    animalData['farmerId'] = farmerId;
+    // We no longer inject farmerId here because the backend 
+    // extracts it from the JWT for security and to avoid FK conflicts.
+    
     if (animalData['nodeId'] == null) {
       animalData['nodeId'] = 'SCAN-${DateTime.now().millisecondsSinceEpoch}';
     }
