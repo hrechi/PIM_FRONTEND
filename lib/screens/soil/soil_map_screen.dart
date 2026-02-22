@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../theme/color_palette.dart';
-import '../../../theme/text_styles.dart';
-import '../../../utils/responsive.dart';
-import '../models/soil_measurement.dart';
-import '../widgets/status_badge.dart';
+import '../../theme/color_palette.dart';
+import '../../theme/text_styles.dart';
+import '../../utils/responsive.dart';
+import '../../models/soil_measurement.dart';
+import '../../widgets/soil/status_badge.dart';
 import 'soil_measurement_details_screen.dart';
 
 /// Screen displaying soil measurements on a map

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../theme/color_palette.dart';
-import '../../../theme/text_styles.dart';
-import '../models/ai_prediction.dart';
+import '../../theme/color_palette.dart';
+import '../../theme/text_styles.dart';
+import '../../models/ai_prediction.dart';
 
 /// Widget to display AI-generated advice and recommendations
 /// Enhanced version with detailed farmer-friendly explanations

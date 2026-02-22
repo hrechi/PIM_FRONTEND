@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../theme/color_palette.dart';
-import '../../../theme/text_styles.dart';
-import '../../../utils/responsive.dart';
-import '../models/soil_measurement.dart';
-import '../widgets/status_badge.dart';
-import '../widgets/soil_metric_card.dart';
+import '../../theme/color_palette.dart';
+import '../../theme/text_styles.dart';
+import '../../utils/responsive.dart';
+import '../../models/soil_measurement.dart';
+import '../../widgets/soil/status_badge.dart';
+import '../../widgets/soil/soil_metric_card.dart';
+import '../../models/ai_prediction.dart';
+import '../../widgets/soil/ai_prediction_card.dart';
+import '../../widgets/soil/ai_advice_card.dart';
+import '../../services/soil_api_service.dart';
+import '../../services/plant_recommendation_service.dart';
 import 'soil_measurement_form_screen.dart';
 import 'soil_measurements_list_screen.dart';
-import '../data/soil_api_service.dart';
-import '../models/ai_prediction.dart';
-import '../widgets/ai_prediction_card.dart';
-import '../widgets/ai_advice_card.dart';
-import '../services/plant_recommendation_service.dart';
 
 /// Screen displaying detailed information about a soil measurement
 /// Route: /soil/:id

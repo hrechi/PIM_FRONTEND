@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/ai_prediction.dart';
+import '../../models/ai_prediction.dart';
 
 /// Visual indicator showing risk level as a progress bar
 /// Color transitions from green → yellow → red

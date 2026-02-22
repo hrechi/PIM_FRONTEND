@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../../theme/color_palette.dart';
-import '../../../theme/text_styles.dart';
-import '../../../utils/responsive.dart';
-import '../models/soil_measurement.dart';
+import '../../theme/color_palette.dart';
+import '../../theme/text_styles.dart';
+import '../../utils/responsive.dart';
+import '../../models/soil_measurement.dart';
 import 'soil_measurements_list_screen.dart';
 
 /// Screen for adding or editing soil measurements

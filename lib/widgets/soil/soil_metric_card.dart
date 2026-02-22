@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../theme/color_palette.dart';
-import '../../../theme/text_styles.dart';
+import '../../theme/color_palette.dart';
+import '../../theme/text_styles.dart';
 
 /// Reusable card widget for displaying soil metrics
 /// Shows a metric with icon, label, value, and optional trend

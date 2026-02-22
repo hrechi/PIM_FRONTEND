@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../../theme/color_palette.dart';
-import '../../../theme/text_styles.dart';
-import '../../../utils/responsive.dart';
-import '../models/soil_measurement.dart';
-import '../models/ai_prediction.dart';
-import '../widgets/chart_container.dart';
-import '../widgets/ai_prediction_card.dart';
-import '../data/soil_repository.dart';
-import '../data/soil_api_service.dart';
+import '../../theme/color_palette.dart';
+import '../../theme/text_styles.dart';
+import '../../utils/responsive.dart';
+import '../../services/soil_repository.dart';
+import '../../services/soil_api_service.dart';
+import '../../models/soil_measurement.dart';
+import '../../models/ai_prediction.dart';
+import '../../widgets/soil/ai_prediction_card.dart';
+import '../../widgets/soil/chart_container.dart';
+
 
 /// Screen displaying soil analytics and AI predictions
 /// Route: /soil/analytics
@@ -151,7 +152,7 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
                           label: 'pH Level',
                         ),
                         ChartLegendItem(
-                          color: AppColorPalette.success.withOpacity(0.2),
+                          color: AppColorPalette.success.withValues(alpha: 0.2),
                           label: 'Optimal Range (6-7.5)',
                         ),
                       ],
@@ -171,7 +172,7 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
                           label: 'Moisture %',
                         ),
                         ChartLegendItem(
-                          color: AppColorPalette.success.withOpacity(0.2),
+                          color: AppColorPalette.success.withValues(alpha: 0.2),
                           label: 'Optimal Range (30-80%)',
                         ),
                       ],
@@ -218,7 +219,7 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
             Icon(
               Icons.show_chart,
               size: 80,
-              color: AppColorPalette.softSlate.withOpacity(0.5),
+              color: AppColorPalette.softSlate.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Text(
@@ -250,7 +251,7 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
             Icon(
               Icons.data_usage,
               size: 80,
-              color: AppColorPalette.info.withOpacity(0.5),
+              color: AppColorPalette.info.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Text(
@@ -481,7 +482,7 @@ class _SummaryCard extends StatelessWidget {
         color: AppColorPalette.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: color.withOpacity(0.3),
+          color: color.withValues(alpha: 0.3),
           width: 2,
         ),
       ),
@@ -643,7 +644,7 @@ class _LineChartPainter extends CustomPainter {
     // Draw optimal range background
     if (optimalMin != null && optimalMax != null) {
       final optimalPaint = Paint()
-        ..color = AppColorPalette.success.withOpacity(0.1)
+        ..color = AppColorPalette.success.withValues(alpha: 0.1)
         ..style = PaintingStyle.fill;
 
       final minY = chartHeight * (1 - (optimalMin! - minValue) / (maxValue - minValue)) + padding;
@@ -657,7 +658,7 @@ class _LineChartPainter extends CustomPainter {
 
     // Draw grid lines
     final gridPaint = Paint()
-      ..color = AppColorPalette.softSlate.withOpacity(0.2)
+      ..color = AppColorPalette.softSlate.withValues(alpha: 0.2)
       ..strokeWidth = 1;
 
     for (int i = 0; i <= 4; i++) {

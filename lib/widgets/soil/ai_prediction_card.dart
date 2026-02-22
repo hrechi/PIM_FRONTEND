@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../theme/color_palette.dart';
-import '../../../theme/text_styles.dart';
-import '../models/ai_prediction.dart';
-import 'risk_level_indicator.dart';
+import '../../theme/color_palette.dart';
+import '../../theme/text_styles.dart';
+import '../../models/ai_prediction.dart';
+import './risk_level_indicator.dart';
 
 /// Widget to display AI prediction results
 /// Shows wilting score, risk level, and visual indicator

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../theme/color_palette.dart';
-import '../../../theme/text_styles.dart';
+import '../../theme/color_palette.dart';
+import '../../theme/text_styles.dart';
 
 /// Reusable container widget for charts
 /// Provides consistent styling and layout for all chart widgets
@@ -33,12 +33,12 @@ class ChartContainer extends StatelessWidget {
         color: AppColorPalette.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColorPalette.softSlate.withOpacity(0.2),
+          color: AppColorPalette.softSlate.withValues(alpha: 0.2),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColorPalette.charcoalGreen.withOpacity(0.08),
+            color: AppColorPalette.charcoalGreen.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -102,55 +102,59 @@ class ChartContainer extends StatelessWidget {
       ),
     );
   }
+}
 
-  /// Factory for compact chart containers (smaller height)
-  factory ChartContainer.compact({
-    required String title,
-    String? subtitle,
-    required Widget chart,
-    Widget? legend,
-    VoidCallback? onInfoTap,
-  }) {
-    return ChartContainer(
-      title: title,
-      subtitle: subtitle,
-      chart: chart,
-      legend: legend,
-      height: 150,
-      onInfoTap: onInfoTap,
-    );
-  }
+/// Legend widget for displaying chart indicators
+class ChartLegend extends StatelessWidget {
+  final List<ChartLegendItem> items;
+  final Axis direction;
+  final MainAxisAlignment alignment;
 
-  /// Factory for tall chart containers
-  factory ChartContainer.tall({
-    required String title,
-    String? subtitle,
-    required Widget chart,
-    Widget? legend,
-    VoidCallback? onInfoTap,
-  }) {
-    return ChartContainer(
-      title: title,
-      subtitle: subtitle,
-      chart: chart,
-      legend: legend,
-      height: 300,
-      onInfoTap: onInfoTap,
+  const ChartLegend({
+    super.key,
+    required this.items,
+    this.direction = Axis.horizontal,
+    this.alignment = MainAxisAlignment.start,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    if (direction == Axis.horizontal) {
+      return Wrap(
+        spacing: 24,
+        runSpacing: 8,
+        children: items,
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: items
+          .asMap()
+          .entries
+          .map((entry) => Padding(
+                padding: EdgeInsets.only(
+                  bottom: entry.key < items.length - 1 ? 8 : 0,
+                ),
+                child: entry.value,
+              ))
+          .toList(),
     );
   }
 }
 
-/// Legend item widget for charts
+/// Individual legend item
 class ChartLegendItem extends StatelessWidget {
   final Color color;
   final String label;
-  final String? value;
 
   const ChartLegendItem({
     super.key,
     required this.color,
     required this.label,
-    this.value,
   });
 
   @override
@@ -166,43 +170,15 @@ class ChartLegendItem extends StatelessWidget {
             borderRadius: BorderRadius.circular(2),
           ),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: 8),
         Text(
           label,
-          style: AppTextStyles.caption(),
-        ),
-        if (value != null) ...[
-          const SizedBox(width: 4),
-          Text(
-            value!,
-            style: AppTextStyles.caption().copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+          style: AppTextStyles.caption(
+            color: AppColorPalette.darkGrey,
           ),
-        ],
+        ),
       ],
     );
   }
 }
 
-/// Legend row widget for multiple items
-class ChartLegend extends StatelessWidget {
-  final List<ChartLegendItem> items;
-  final MainAxisAlignment alignment;
-
-  const ChartLegend({
-    super.key,
-    required this.items,
-    this.alignment = MainAxisAlignment.start,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 16,
-      runSpacing: 8,
-      alignment: WrapAlignment.start,
-      children: items,
-    );
-  }
-}

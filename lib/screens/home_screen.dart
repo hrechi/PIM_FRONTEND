@@ -10,7 +10,7 @@ import '../widgets/status_chip.dart';
 import '../widgets/metric_card.dart';
 import '../widgets/alert_tile.dart';
 import '../widgets/gradient_container.dart';
-import '../soil/screens/soil_measurements_list_screen.dart';
+import 'soil/soil_measurements_list_screen.dart';
 import 'animals/animal_list_screen.dart';
 import 'animals/animal_dashboard_screen.dart';
 import 'profile_screen.dart';

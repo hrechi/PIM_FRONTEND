@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../theme/color_palette.dart';
-import '../../../theme/text_styles.dart';
+import '../../theme/color_palette.dart';
+import '../../theme/text_styles.dart';
 
 /// Reusable badge widget for displaying status information
 /// Used for pH status, moisture status, etc.

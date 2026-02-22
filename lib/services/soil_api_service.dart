@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
-import '../../config/api_config.dart';
+import '../config/api_config.dart';
 import '../models/soil_measurement.dart';
 import '../models/ai_prediction.dart';
 
@@ -400,7 +400,7 @@ class SoilApiException implements Exception {
       case SoilApiExceptionType.cancelled:
         return 'Request was cancelled.';
       case SoilApiExceptionType.unknown:
-        return message;
+        return 'An unexpected error occurred. Please try again.';
     }
   }
 }

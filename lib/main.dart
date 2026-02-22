@@ -4,7 +4,7 @@ import 'providers/auth_provider.dart';
 import 'providers/parcel_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
-import 'soil/screens/soil_measurements_list_screen.dart';
+import 'screens/soil/soil_measurements_list_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

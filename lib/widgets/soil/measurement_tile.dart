@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../theme/color_palette.dart';
-import '../../../theme/text_styles.dart';
-import '../models/soil_measurement.dart';
+import '../../theme/color_palette.dart';
+import '../../theme/text_styles.dart';
+import '../../models/soil_measurement.dart';
 import 'status_badge.dart';
 
 /// Tile widget for displaying soil measurement in a list
