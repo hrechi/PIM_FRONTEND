@@ -10,13 +10,20 @@ import '../widgets/status_chip.dart';
 import '../widgets/metric_card.dart';
 import '../widgets/alert_tile.dart';
 import '../widgets/gradient_container.dart';
+import '../soil/screens/soil_measurements_list_screen.dart';
+import 'animals/animal_list_screen.dart';
+import 'animals/animal_dashboard_screen.dart';
 import 'profile_screen.dart';
+import 'fields_management_screen.dart';
+import 'mission_list_screen.dart';
+import 'chat_assistant_screen.dart';
 import 'add_staff_screen.dart';
 import 'staff_list_screen.dart';
 import 'incident_history_screen.dart';
+import 'package:frontend_pim/screens/parcel_list_screen.dart';
+import 'plant_doctor_screen.dart';
 
 /// Main home screen displaying the farm dashboard
-/// Provides overview of weather, soil, livestock health, and alerts
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -25,7 +32,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Mock data - will be replaced with API calls later
   late WeatherInfo weatherInfo;
   late List<AlertItem> alerts;
   late List<Animal> animals;
@@ -36,7 +42,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadMockData();
   }
 
-  /// Load mock data for demonstration
   void _loadMockData() {
     weatherInfo = WeatherInfo.getMockData();
     alerts = AlertItem.getMockData();
@@ -45,7 +50,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Get alerts that require attention
     final attentionRequired = AlertItem.getAttentionRequired(alerts);
 
     return Scaffold(
@@ -56,37 +60,223 @@ class _HomeScreenState extends State<HomeScreen> {
           context: context,
           child: CustomScrollView(
             slivers: [
-              // A) Header Section
               _buildHeader(),
-
-              // B) Weather & Soil Card
+              SliverToBoxAdapter(child: _buildQuickAccessButtons()),
               SliverToBoxAdapter(child: _buildWeatherSoilCard()),
-
-              // C) Attention Required Section
               if (attentionRequired.isNotEmpty)
                 SliverToBoxAdapter(
                   child: _buildAttentionRequiredSection(attentionRequired),
                 ),
-
-              // D) Livestock Location Section
               SliverToBoxAdapter(child: _buildLivestockLocationSection()),
-
-              // E) Live Health Metrics
               SliverToBoxAdapter(child: _buildLiveHealthMetrics()),
-
-              // Bottom padding
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           ),
         ),
       ),
-
-      // F) Floating Action Button
       floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
-  /// Build app header with title, notifications, and profile
+  // ─────────────────────────────────────────────
+  // DRAWER
+  // ─────────────────────────────────────────────
+  Widget _buildDrawer() {
+    return Drawer(
+      backgroundColor: Colors.white,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Expanded(child: ListView(children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: AppColorPalette.fieldFreshGradient,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.asset(
+                      'assets/images/agricole_icon2.gif',
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Fieldly',
+                    style: AppTextStyles.h2(color: AppColorPalette.white),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Smart Farm System',
+                    style: AppTextStyles.bodySmall(
+                      color: AppColorPalette.white.withValues(alpha: 0.9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // Farm
+            _buildDrawerSection('Farm'),
+            _buildDrawerItem(
+              icon: Icons.grass,
+              title: 'My Parcels',
+              subtitle: 'View farm parcels',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ParcelListScreen()),
+                );
+              },
+            ),
+            _buildDrawerItem(
+              icon: Icons.medical_services,
+              iconColor: AppColorPalette.alertError,
+              title: 'AI Plant Doctor',
+              subtitle: 'Diagnose plant issues',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PlantDoctorScreen()),
+                );
+              },
+            ),
+
+            const Divider(height: 1),
+
+            // Security
+            _buildDrawerSection('Security'),
+            _buildDrawerItem(
+              icon: Icons.shield_rounded,
+              title: 'Security Whitelist',
+              subtitle: 'View authorized staff',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const StaffListScreen()),
+                );
+              },
+            ),
+            _buildDrawerItem(
+              icon: Icons.person_add_rounded,
+              title: 'Add Staff',
+              subtitle: 'Add to whitelist',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddStaffScreen()),
+                );
+              },
+            ),
+            _buildDrawerItem(
+              icon: Icons.history_rounded,
+              title: 'Incident History',
+              subtitle: 'View security logs',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const IncidentHistoryScreen()),
+                );
+              },
+            ),
+
+            const Divider(height: 1),
+
+            // Account
+            _buildDrawerSection('Account'),
+            _buildDrawerItem(
+              icon: Icons.person_outline_rounded,
+              title: 'Profile',
+              subtitle: 'Manage account',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                );
+              },
+            ),
+            _buildDrawerItem(
+              icon: Icons.settings_outlined,
+              title: 'Settings',
+              subtitle: 'App preferences',
+              onTap: () => Navigator.pop(context),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Version 1.0.0',
+                style: AppTextStyles.caption(color: AppColorPalette.softSlate),
+              ),
+            ),
+            ])),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerSection(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Text(
+        title.toUpperCase(),
+        style: AppTextStyles.caption(color: AppColorPalette.softSlate).copyWith(
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    Color? iconColor,
+  }) {
+    final color = iconColor ?? AppColorPalette.fieldFreshStart;
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: color, size: 24),
+      ),
+      title: Text(
+        title,
+        style: AppTextStyles.bodyLarge(color: AppColorPalette.charcoalGreen),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate),
+      ),
+      onTap: onTap,
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // HEADER
+  // ─────────────────────────────────────────────
   Widget _buildHeader() {
     return SliverAppBar(
       floating: true,
@@ -105,7 +295,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       title: Row(
         children: [
-          // App Icon/Logo
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.asset(
@@ -116,8 +305,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(width: 12),
-
-          // Title
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,14 +327,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       actions: [
-        // Notification Icon
         Stack(
           children: [
             IconButton(
               icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {
-                // Navigate to notifications
-              },
+              onPressed: () {},
             ),
             if (alerts.where((a) => !a.isRead).isNotEmpty)
               Positioned(
@@ -170,16 +354,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         const SizedBox(width: 8),
-
-        // Profile Avatar
         Padding(
           padding: const EdgeInsets.only(right: 16.0),
           child: GestureDetector(
-            onTap: () {
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
-            },
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
             child: CircleAvatar(
               backgroundColor: AppColorPalette.mistyBlue,
               child: const Icon(Icons.person, color: AppColorPalette.white),
@@ -190,7 +370,75 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build weather and soil card with gradient background
+  // ─────────────────────────────────────────────
+  // QUICK ACCESS BUTTONS
+  // ─────────────────────────────────────────────
+  Widget _buildQuickAccessButtons() {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+        vertical: 12,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const FieldsManagementScreen(),
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColorPalette.mistyBlue,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              icon: const Icon(Icons.landscape),
+              label: const Text('Fields'),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MissionListScreen(),
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColorPalette.mistyBlue,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              icon: const Icon(Icons.task),
+              label: const Text('Missions'),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ChatAssistantScreen(),
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColorPalette.mistyBlue,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              icon: const Icon(Icons.chat_bubble_outline),
+              label: const Text('Assistant'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // WEATHER & SOIL CARD
+  // ─────────────────────────────────────────────
   Widget _buildWeatherSoilCard() {
     return GradientContainer.fieldFresh(
       margin: EdgeInsets.symmetric(
@@ -205,7 +453,6 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Left side - Weather info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,8 +479,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-
-              // Right side - Weather icon
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -250,17 +495,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const SizedBox(height: 24),
 
-          // Soil Moisture Section - Tappable to navigate to Soil module
           InkWell(
-            onTap: () {
-              // TODO: Navigate to Soil Measurements module once created
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(
-              //     builder: (context) => const SoilMeasurementsListScreen(),
-              //   ),
-              // );
-            },
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SoilMeasurementsListScreen(),
+              ),
+            ),
             borderRadius: BorderRadius.circular(12),
             child: Container(
               padding: const EdgeInsets.all(16),
@@ -274,11 +515,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.water_drop,
-                    color: AppColorPalette.white,
-                    size: 32,
-                  ),
+                  Icon(Icons.water_drop, color: AppColorPalette.white, size: 32),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -323,7 +560,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
-                  // Arrow icon to indicate navigation
                   Icon(
                     Icons.arrow_forward_ios,
                     color: AppColorPalette.white,
@@ -338,7 +574,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build attention required section with alerts
+  // ─────────────────────────────────────────────
+  // ATTENTION REQUIRED
+  // ─────────────────────────────────────────────
   Widget _buildAttentionRequiredSection(List<AlertItem> attentionAlerts) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -383,18 +621,11 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: attentionAlerts
-                .take(3) // Show only first 3 alerts
-                .map(
-                  (alert) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: AlertTile.compact(
-                      alert: alert,
-                      onTap: () {
-                        // Navigate to alert details
-                      },
-                    ),
-                  ),
-                )
+                .take(3)
+                .map((alert) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: AlertTile.compact(alert: alert, onTap: () {}),
+                    ))
                 .toList(),
           ),
         ),
@@ -402,7 +633,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build livestock location section with map placeholder
+  // ─────────────────────────────────────────────
+  // LIVESTOCK LOCATION
+  // ─────────────────────────────────────────────
   Widget _buildLivestockLocationSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -441,7 +674,6 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.all(0),
           child: Column(
             children: [
-              // Map Placeholder
               Container(
                 height: 200,
                 decoration: BoxDecoration(
@@ -450,7 +682,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
                   ),
-                  // Simulating a map with gradient
                   gradient: LinearGradient(
                     colors: [
                       AppColorPalette.emeraldGreen.withOpacity(0.1),
@@ -462,7 +693,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Stack(
                   children: [
-                    // Center text
                     Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -482,7 +712,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
-                    // Animal location pins (mock positions)
                     ...animals.asMap().entries.map((entry) {
                       final index = entry.key;
                       final animal = entry.value;
@@ -495,13 +724,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              // Full Map Button
               Container(
                 padding: const EdgeInsets.all(16),
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Navigate to full map view
-                  },
+                  onPressed: () {},
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColorPalette.mistyBlue,
                     minimumSize: const Size(double.infinity, 50),
@@ -511,10 +737,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const Icon(Icons.fullscreen),
                       const SizedBox(width: 8),
-                      Text(
-                        'VIEW FULL MAP',
-                        style: AppTextStyles.buttonMedium(),
-                      ),
+                      Text('VIEW FULL MAP', style: AppTextStyles.buttonMedium()),
                     ],
                   ),
                 ),
@@ -526,7 +749,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build animal location pin
   Widget _buildAnimalPin(Animal animal) {
     return Container(
       padding: const EdgeInsets.all(6),
@@ -548,7 +770,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build live health metrics horizontal scroll section
+  // ─────────────────────────────────────────────
+  // LIVE HEALTH METRICS
+  // ─────────────────────────────────────────────
   Widget _buildLiveHealthMetrics() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -559,21 +783,40 @@ class _HomeScreenState extends State<HomeScreen> {
             vertical: Responsive.verticalPadding(context),
           ),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColorPalette.healthGlow.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColorPalette.healthGlow.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.favorite,
+                      color: AppColorPalette.warning,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('Live Health Metrics', style: AppTextStyles.h3()),
+                ],
+              ),
+              TextButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AnimalDashboardScreen(),
+                  ),
                 ),
-                child: Icon(
-                  Icons.favorite,
-                  color: AppColorPalette.warning,
-                  size: 24,
+                child: Text(
+                  'DASHBOARD',
+                  style: AppTextStyles.buttonSmall(
+                    color: AppColorPalette.mistyBlue,
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Text('Live Health Metrics', style: AppTextStyles.h3()),
             ],
           ),
         ),
@@ -593,9 +836,12 @@ class _HomeScreenState extends State<HomeScreen> {
             itemBuilder: (context, index) {
               return MetricCard(
                 animal: animals[index],
-                onTap: () {
-                  // Navigate to animal details
-                },
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AnimalListScreen(),
+                  ),
+                ),
               );
             },
           ),
@@ -604,179 +850,36 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Build floating action button with gradient
+  // ─────────────────────────────────────────────
+  // FLOATING ACTION BUTTON
+  // ─────────────────────────────────────────────
   Widget _buildFloatingActionButton() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: AppColorPalette.successGradient,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColorPalette.success.withOpacity(0.4),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ChatAssistantScreen()),
       ),
-      child: FloatingActionButton(
-        onPressed: () {
-          // Open settings or actions menu
-        },
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: const Icon(Icons.settings, size: 28),
-      ),
-    );
-  }
-
-  /// Build side drawer menu
-  Widget _buildDrawer() {
-    return Drawer(
-      backgroundColor: Colors.white,
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Drawer Header
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: AppColorPalette.fieldFreshGradient,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.asset(
-                      'assets/images/agricole_icon2.gif',
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Fieldly',
-                    style: AppTextStyles.h2(color: AppColorPalette.white),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Smart Security System',
-                    style: AppTextStyles.bodySmall(
-                      color: AppColorPalette.white.withValues(alpha: 0.9),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // Menu Items
-            _buildDrawerItem(
-              icon: Icons.shield_rounded,
-              title: 'Security Whitelist',
-              subtitle: 'View authorized staff',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const StaffListScreen()),
-                );
-              },
-            ),
-
-            _buildDrawerItem(
-              icon: Icons.person_add_rounded,
-              title: 'Add Staff',
-              subtitle: 'Add to whitelist',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AddStaffScreen()),
-                );
-              },
-            ),
-
-            _buildDrawerItem(
-              icon: Icons.history_rounded,
-              title: 'Incident History',
-              subtitle: 'View security logs',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const IncidentHistoryScreen(),
-                  ),
-                );
-              },
-            ),
-
-            const Divider(height: 1),
-
-            _buildDrawerItem(
-              icon: Icons.person_outline_rounded,
-              title: 'Profile',
-              subtitle: 'Manage account',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                );
-              },
-            ),
-
-            _buildDrawerItem(
-              icon: Icons.settings_outlined,
-              title: 'Settings',
-              subtitle: 'App preferences',
-              onTap: () {
-                Navigator.pop(context);
-                // Navigate to settings when implemented
-              },
-            ),
-
-            const Spacer(),
-
-            // Footer
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Version 1.0.0',
-                style: AppTextStyles.caption(color: AppColorPalette.softSlate),
-              ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColorPalette.charcoalGreen.withOpacity(0.3),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Image.asset(
+            'assets/images/maskot_chatbot.png',
+            width: 65,
+            height: 85,
+            fit: BoxFit.contain,
+          ),
         ),
-        child: Icon(icon, color: AppColorPalette.fieldFreshStart, size: 24),
       ),
-      title: Text(
-        title,
-        style: AppTextStyles.bodyLarge(color: AppColorPalette.charcoalGreen),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate),
-      ),
-      onTap: onTap,
     );
   }
 }

@@ -5,14 +5,17 @@ import 'package:flutter/material.dart';
 // physical device. Run `ipconfig` (Windows) or `ifconfig` (Mac/Linux)
 // and use the IPv4 address from your WiFi adapter.
 class AppConfig {
-  static const String serverHost = '172.20.10.4'; // your PC's WiFi IP
-  static const int serverPort = 3000;
+  static const String serverHost = '192.168.1.100'; // your PC's WiFi IP
+  static const int    serverPort = 3000;
 }
 
 class AppColors {
   // ── Primary Surface Colors ─────────────────────────────────
   static const Color sageTint = Color(0xFFF1F8F5);
+  static const Color sageGreen = Color(0xFF2D5016);  // For UI elements
+  static const Color mistBlue = Color(0xFF309448);
   static const Color mistyBlue = Color(0xFF309448);
+  static const Color wheat = Color(0xFFD4A574);
   static const Color wheatWarmClay = Color(0xFFFAF7F2);
 
   // ── High-Impact Gradients ──────────────────────────────────
@@ -32,8 +35,21 @@ class AppColors {
   static const Color warning = Color(0xFF729944);
 
   // ── Text Colors ────────────────────────────────────────────
-  static const Color primaryText = Color(0xFF2C3E2D); // Charcoal Green
-  static const Color secondaryText = Color(0xFF7F8C8D); // Soft Slate
+  static const Color primaryText = Color(0xFF2C3E2D);      // Charcoal Green
+  static const Color secondaryText = Color(0xFF7F8C8D);    // Soft Slate
+
+  // ── Accent / Alias Colors ─────────────────────────────────
+  static const Color primaryGreen = Color(0xFF2ECC71);
+  static const Color backgroundNeutral = Color(0xFFF5F7FA);
+
+  // ── Dark Theme Colors ─────────────────────────────────────
+  static const Color darkBackground = Color(0xFF121212);
+  static const Color darkSurface = Color(0xFF1E1E1E);
+  static const Color darkMistyBlue = Color(0xFF4CAF6A);
+  static const Color darkFieldFreshStart = Color(0xFF3DDC84);
+  static const Color darkError = Color(0xFFCF6679);
+  static const Color darkTextPrimary = Color(0xFFE0E0E0);
+  static const Color darkTextSecondary = Color(0xFF9E9E9E);
 
   // ── Gradient Definitions ───────────────────────────────────
   static const LinearGradient fieldFreshGradient = LinearGradient(
@@ -53,4 +69,8 @@ class AppColors {
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
   );
+}
+
+class AppConstants {
+  static const List<String> animalTypes = ['cow', 'horse', 'sheep', 'dog'];
 }
