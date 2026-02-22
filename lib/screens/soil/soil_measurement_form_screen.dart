@@ -5,6 +5,9 @@ import '../../theme/color_palette.dart';
 import '../../theme/text_styles.dart';
 import '../../utils/responsive.dart';
 import '../../models/soil_measurement.dart';
+import '../../models/field_model.dart';
+import '../../services/field_service.dart';
+import 'location_picker_screen.dart';
 import 'soil_measurements_list_screen.dart';
 
 /// Screen for adding or editing soil measurements
@@ -28,14 +31,19 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
   final _moistureController = TextEditingController();
   final _sunlightController = TextEditingController();
   final _temperatureController = TextEditingController();
-  final _latitudeController = TextEditingController();
-  final _longitudeController = TextEditingController();
   final _nitrogenController = TextEditingController();
   final _phosphorusController = TextEditingController();
   final _potassiumController = TextEditingController();
 
+  double? _latitude;
+  double? _longitude;
+  String? _selectedFieldId;
+  List<FieldModel> _fields = [];
+  bool _isLoadingFields = false;
   bool isEditing = false;
   bool isSaving = false;
+
+  final FieldService _fieldService = FieldService();
 
   @override
   void initState() {
@@ -45,6 +53,32 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
     if (isEditing) {
       _populateFields(widget.measurement!);
     }
+    
+    _loadFields();
+  }
+
+  /// Load available fields from backend
+  Future<void> _loadFields() async {
+    setState(() {
+      _isLoadingFields = true;
+    });
+
+    try {
+      final fields = await _fieldService.getFields();
+      setState(() {
+        _fields = fields;
+        _isLoadingFields = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingFields = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load fields: $e')),
+        );
+      }
+    }
   }
 
   /// Populate form fields in edit mode
@@ -53,8 +87,9 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
     _moistureController.text = measurement.soilMoisture.toString();
     _sunlightController.text = measurement.sunlight.toString();
     _temperatureController.text = measurement.temperature.toString();
-    _latitudeController.text = measurement.latitude.toString();
-    _longitudeController.text = measurement.longitude.toString();
+    _latitude = measurement.latitude;
+    _longitude = measurement.longitude;
+    _selectedFieldId = measurement.fieldId;
     _nitrogenController.text = (measurement.nutrients['nitrogen'] ?? 0).toString();
     _phosphorusController.text = (measurement.nutrients['phosphorus'] ?? 0).toString();
     _potassiumController.text = (measurement.nutrients['potassium'] ?? 0).toString();
@@ -66,17 +101,56 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
     _moistureController.dispose();
     _sunlightController.dispose();
     _temperatureController.dispose();
-    _latitudeController.dispose();
-    _longitudeController.dispose();
     _nitrogenController.dispose();
     _phosphorusController.dispose();
     _potassiumController.dispose();
     super.dispose();
   }
 
+  /// Open map to pick location
+  Future<void> _pickLocation() async {
+    // Get selected field model if fieldId is set
+    FieldModel? fieldModel;
+    if (_selectedFieldId != null) {
+      try {
+        fieldModel = _fields.firstWhere((f) => f.id == _selectedFieldId);
+      } catch (e) {
+        // Field not found in list
+      }
+    }
+
+    final result = await Navigator.push<Map<String, double>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationPickerScreen(
+          initialLatitude: _latitude,
+          initialLongitude: _longitude,
+          selectedField: fieldModel,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _latitude = result['latitude'];
+        _longitude = result['longitude'];
+      });
+    }
+  }
+
   /// Save measurement
   Future<void> _saveMeasurement() async {
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (_latitude == null || _longitude == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a location on the map'),
+          backgroundColor: AppColorPalette.alertError,
+        ),
+      );
       return;
     }
 
@@ -101,8 +175,9 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
           sunlight: double.parse(_sunlightController.text),
           nutrients: nutrients,
           temperature: double.parse(_temperatureController.text),
-          latitude: double.parse(_latitudeController.text),
-          longitude: double.parse(_longitudeController.text),
+          latitude: _latitude!,
+          longitude: _longitude!,
+          fieldId: _selectedFieldId,
         );
       } else {
         // Create new measurement
@@ -112,8 +187,9 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
           sunlight: double.parse(_sunlightController.text),
           nutrients: nutrients,
           temperature: double.parse(_temperatureController.text),
-          latitude: double.parse(_latitudeController.text),
-          longitude: double.parse(_longitudeController.text),
+          latitude: _latitude!,
+          longitude: _longitude!,
+          fieldId: _selectedFieldId,
         );
       }
 
@@ -362,6 +438,83 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
             ),
             const SizedBox(height: 24),
 
+            // Field Selection Section
+            _SectionHeader(
+              icon: Icons.landscape,
+              title: 'Select Field',
+              color: AppColorPalette.mistyBlue,
+            ),
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColorPalette.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColorPalette.softSlate.withOpacity(0.3),
+                  width: 1.5,
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: _isLoadingFields
+                  ? const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  : DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        value: _selectedFieldId,
+                        hint: Text(
+                          'Select a field (optional)',
+                          style: AppTextStyles.bodyMedium(
+                            color: AppColorPalette.softSlate,
+                          ),
+                        ),
+                        icon: Icon(
+                          Icons.arrow_drop_down,
+                          color: AppColorPalette.mistyBlue,
+                        ),
+                        items: [
+                          const DropdownMenuItem<String>(
+                            value: null,
+                            child: Text('No field selected'),
+                          ),
+                          ..._fields.map((field) {
+                            return DropdownMenuItem<String>(
+                              value: field.id,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.landscape,
+                                    size: 20,
+                                    color: AppColorPalette.fieldFreshStart,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(field.name),
+                                  ),
+                                  if (field.areaSize != null)
+                                    Text(
+                                      '(${(field.areaSize! / 10000).toStringAsFixed(2)} ha)',
+                                      style: AppTextStyles.caption(
+                                        color: AppColorPalette.softSlate,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedFieldId = value;
+                          });
+                        },
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 24),
+
             // Location Section
             _SectionHeader(
               icon: Icons.location_on,
@@ -369,38 +522,87 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
               color: AppColorPalette.sageTint,
             ),
             const SizedBox(height: 12),
-            _FormField(
-              controller: _latitudeController,
-              label: 'Latitude',
-              hint: 'Enter latitude',
-              icon: Icons.location_on,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter latitude';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter a valid number';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            _FormField(
-              controller: _longitudeController,
-              label: 'Longitude',
-              hint: 'Enter longitude',
-              icon: Icons.location_on,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter longitude';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter a valid number';
-                }
-                return null;
-              },
+            
+            // Map picker button
+            Container(
+              decoration: BoxDecoration(
+                color: AppColorPalette.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _latitude == null 
+                      ? AppColorPalette.alertError.withOpacity(0.5)
+                      : AppColorPalette.success.withOpacity(0.5),
+                  width: 2,
+                ),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: _pickLocation,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColorPalette.mistyBlue.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.map,
+                            color: AppColorPalette.mistyBlue,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _latitude == null 
+                                    ? 'Select Location from Map'
+                                    : 'Location Selected',
+                                style: AppTextStyles.bodyLarge().copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (_latitude != null && _longitude != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    'Lat: ${_latitude!.toStringAsFixed(6)}, Lng: ${_longitude!.toStringAsFixed(6)}',
+                                    style: AppTextStyles.bodySmall(
+                                      color: AppColorPalette.softSlate,
+                                    ),
+                                  ),
+                                ),
+                              if (_latitude == null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    'Tap to open map and pick location',
+                                    style: AppTextStyles.bodySmall(
+                                      color: AppColorPalette.softSlate,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          _latitude == null ? Icons.chevron_right : Icons.check_circle,
+                          color: _latitude == null 
+                              ? AppColorPalette.softSlate
+                              : AppColorPalette.success,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 32),
 

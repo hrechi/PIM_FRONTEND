@@ -3,6 +3,7 @@ import '../models/field_model.dart';
 import '../services/field_service.dart';
 import '../utils/constants.dart';
 import 'map_picker_screen.dart';
+import 'soil/soil_map_screen.dart';
 
 class FieldsManagementScreen extends StatefulWidget {
   const FieldsManagementScreen({Key? key}) : super(key: key);
@@ -33,16 +34,27 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
   }
 
   Future<void> _loadFields() async {
+    if (!mounted) return;
     setState(() => isLoading = true);
     try {
       final loadedFields = await fieldService.getFields();
-      setState(() => fields = loadedFields);
+      if (!mounted) return;
+      setState(() {
+        fields = loadedFields;
+        isLoading = false;
+      });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading fields: $e')),
-      );
-    } finally {
+      if (!mounted) return;
       setState(() => isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading fields: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 
@@ -507,6 +519,22 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
+                                TextButton.icon(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => SoilMapScreen(
+                                          measurements: const [],
+                                          fieldId: field.id,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.map,
+                                      color: AppColors.mistBlue),
+                                  label: const Text('View Map'),
+                                ),
                                 TextButton.icon(
                                   onPressed: () => _editField(field),
                                   icon: const Icon(Icons.edit,

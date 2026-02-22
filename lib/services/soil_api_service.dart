@@ -254,6 +254,7 @@ class CreateSoilMeasurementDto {
   final double temperature;
   final double latitude;
   final double longitude;
+  final String? fieldId;
 
   const CreateSoilMeasurementDto({
     required this.ph,
@@ -263,6 +264,7 @@ class CreateSoilMeasurementDto {
     required this.temperature,
     required this.latitude,
     required this.longitude,
+    this.fieldId,
   });
 
   Map<String, dynamic> toJson() {
@@ -274,6 +276,7 @@ class CreateSoilMeasurementDto {
       'temperature': temperature,
       'latitude': latitude,
       'longitude': longitude,
+      if (fieldId != null) 'fieldId': fieldId,
     };
   }
 }
@@ -287,6 +290,7 @@ class UpdateSoilMeasurementDto {
   final double? temperature;
   final double? latitude;
   final double? longitude;
+  final String? fieldId;
 
   const UpdateSoilMeasurementDto({
     this.ph,
@@ -296,6 +300,7 @@ class UpdateSoilMeasurementDto {
     this.temperature,
     this.latitude,
     this.longitude,
+    this.fieldId,
   });
 
   Map<String, dynamic> toJson() {
@@ -307,6 +312,7 @@ class UpdateSoilMeasurementDto {
     if (temperature != null) json['temperature'] = temperature;
     if (latitude != null) json['latitude'] = latitude;
     if (longitude != null) json['longitude'] = longitude;
+    if (fieldId != null) json['fieldId'] = fieldId;
     return json;
   }
 }

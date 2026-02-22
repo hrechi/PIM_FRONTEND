@@ -4,12 +4,14 @@ import '../../theme/color_palette.dart';
 import '../../theme/text_styles.dart';
 import '../../utils/responsive.dart';
 import '../../models/soil_measurement.dart';
+import '../../models/field_model.dart';
 import '../../widgets/soil/status_badge.dart';
 import '../../widgets/soil/soil_metric_card.dart';
 import '../../models/ai_prediction.dart';
 import '../../widgets/soil/ai_prediction_card.dart';
 import '../../widgets/soil/ai_advice_card.dart';
 import '../../services/soil_api_service.dart';
+import '../../services/field_service.dart';
 import '../../services/plant_recommendation_service.dart';
 import 'soil_measurement_form_screen.dart';
 import 'soil_measurements_list_screen.dart';
@@ -36,12 +38,19 @@ class _SoilMeasurementDetailsScreenState
   AiPrediction? _prediction;
   String? _predictionError;
   PlantRecommendations? _plantRecommendations;
+  FieldModel? _field;
+  bool _isLoadingField = false;
   final SoilApiService _apiService = SoilApiService();
+  final FieldService _fieldService = FieldService();
   
   @override
   void initState() {
     super.initState();
     measurement = widget.measurement;
+    // Load field data if measurement is linked to a field
+    if (measurement.fieldId != null) {
+      _loadField();
+    }
     // Check if prediction already exists in cache
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<SoilMeasurementsProvider>();
@@ -53,6 +62,36 @@ class _SoilMeasurementDetailsScreenState
         });
       }
     });
+  }
+
+  /// Load field data if measurement is linked to a field
+  Future<void> _loadField() async {
+    setState(() => _isLoadingField = true);
+    try {
+      final fields = await _fieldService.getFields();
+      final field = fields.firstWhere(
+        (f) => f.id == measurement.fieldId,
+        orElse: () => throw Exception('Field not found'),
+      );
+      if (mounted) {
+        setState(() {
+          _field = field;
+          _isLoadingField = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingField = false);
+      }
+    }
+  }
+
+  /// Get display title for the measurement
+  String get _displayTitle {
+    if (measurement.fieldId != null && _field != null) {
+      return _field!.name;
+    }
+    return 'Soil Measurement';
   }
 
   /// Navigate to edit screen
@@ -135,7 +174,7 @@ class _SoilMeasurementDetailsScreenState
       builder: (context) => AlertDialog(
         title: const Text('Delete Measurement'),
         content: Text(
-          'Are you sure you want to delete measurement ${measurement.id}? This action cannot be undone.',
+          'Are you sure you want to delete this measurement? This action cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -161,7 +200,7 @@ class _SoilMeasurementDetailsScreenState
         Navigator.pop(context, 'deleted');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Measurement ${measurement.id} deleted'),
+            content: Text('Measurement deleted successfully'),
             backgroundColor: AppColorPalette.success,
           ),
         );
@@ -182,7 +221,7 @@ class _SoilMeasurementDetailsScreenState
       backgroundColor: AppColorPalette.wheatWarmClay,
       appBar: AppBar(
         title: Text(
-          measurement.id,
+          _isLoadingField ? 'Loading...' : _displayTitle,
           style: AppTextStyles.h3(),
         ),
         actions: [
@@ -701,11 +740,6 @@ Widget _buildAiSection() {
             ],
           ),
           const SizedBox(height: 16),
-          _MetadataRow(
-            label: 'Measurement ID',
-            value: measurement.id,
-          ),
-          const SizedBox(height: 8),
           _MetadataRow(
             label: 'Date & Time',
             value: measurement.formattedDateTime,

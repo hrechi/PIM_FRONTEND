@@ -50,6 +50,7 @@ class SoilRepository {
     required double temperature,
     required double latitude,
     required double longitude,
+    String? fieldId,
   }) async {
     final dto = CreateSoilMeasurementDto(
       ph: ph,
@@ -59,6 +60,7 @@ class SoilRepository {
       temperature: temperature,
       latitude: latitude,
       longitude: longitude,
+      fieldId: fieldId,
     );
 
     return await _apiService.createMeasurement(dto);
@@ -74,6 +76,7 @@ class SoilRepository {
     double? temperature,
     double? latitude,
     double? longitude,
+    String? fieldId,
   }) async {
     final dto = UpdateSoilMeasurementDto(
       ph: ph,
@@ -83,6 +86,7 @@ class SoilRepository {
       temperature: temperature,
       latitude: latitude,
       longitude: longitude,
+      fieldId: fieldId,
     );
 
     return await _apiService.updateMeasurement(id, dto);

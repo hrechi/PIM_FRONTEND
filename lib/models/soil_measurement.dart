@@ -25,6 +25,7 @@ class SoilMeasurement {
   final double temperature; // Celsius
   final double latitude;
   final double longitude;
+  final String? fieldId; // Optional field ID this measurement belongs to
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -37,6 +38,7 @@ class SoilMeasurement {
     required this.temperature,
     required this.latitude,
     required this.longitude,
+    this.fieldId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -107,6 +109,24 @@ class SoilMeasurement {
     return '$formattedDate at $formattedTime';
   }
 
+  /// Format number without trailing zeros
+  String _formatCoordinate(double value, int decimals) {
+    String str = value.toStringAsFixed(decimals);
+    // Remove trailing zeros and decimal point if not needed
+    str = str.replaceAll(RegExp(r'\.?0+$'), '');
+    return str;
+  }
+
+  /// Get location name from coordinates
+  String get locationName {
+    return 'Lat: ${_formatCoordinate(latitude, 4)}, Lng: ${_formatCoordinate(longitude, 4)}';
+  }
+
+  /// Get short location name for markers
+  String get shortLocation {
+    return '${_formatCoordinate(latitude, 2)}, ${_formatCoordinate(longitude, 2)}';
+  }
+
   /// Copy with method
   SoilMeasurement copyWith({
     String? id,
@@ -117,6 +137,7 @@ class SoilMeasurement {
     double? temperature,
     double? latitude,
     double? longitude,
+    String? fieldId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -129,6 +150,7 @@ class SoilMeasurement {
       temperature: temperature ?? this.temperature,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      fieldId: fieldId ?? this.fieldId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -145,6 +167,7 @@ class SoilMeasurement {
       'temperature': temperature,
       'latitude': latitude,
       'longitude': longitude,
+      if (fieldId != null) 'fieldId': fieldId,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -161,6 +184,7 @@ class SoilMeasurement {
       temperature: (json['temperature'] as num).toDouble(),
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
+      fieldId: json['fieldId'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );

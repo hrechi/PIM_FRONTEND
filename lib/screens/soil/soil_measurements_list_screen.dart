@@ -104,6 +104,7 @@ class SoilMeasurementsProvider extends ChangeNotifier {
     required double temperature,
     required double latitude,
     required double longitude,
+    String? fieldId,
   }) async {
     try {
       await _repository.createMeasurement(
@@ -114,6 +115,7 @@ class SoilMeasurementsProvider extends ChangeNotifier {
         temperature: temperature,
         latitude: latitude,
         longitude: longitude,
+        fieldId: fieldId,
       );
       
       // Refresh the list
@@ -136,6 +138,7 @@ class SoilMeasurementsProvider extends ChangeNotifier {
     double? temperature,
     double? latitude,
     double? longitude,
+    String? fieldId,
   }) async {
     try {
       final updated = await _repository.updateMeasurement(
@@ -147,6 +150,7 @@ class SoilMeasurementsProvider extends ChangeNotifier {
         temperature: temperature,
         latitude: latitude,
         longitude: longitude,
+        fieldId: fieldId,
       );
       
       // Update in local list
@@ -287,7 +291,7 @@ class _SoilMeasurementsListScreenState
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Measurement'),
-        content: Text('Are you sure you want to delete measurement ${measurement.id}?'),
+        content: Text('Are you sure you want to delete measurement at ${measurement.locationName}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -310,7 +314,7 @@ class _SoilMeasurementsListScreenState
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Measurement ${measurement.id} deleted'),
+            content: Text('Measurement at ${measurement.locationName} deleted'),
             backgroundColor: AppColorPalette.success,
           ),
         );
