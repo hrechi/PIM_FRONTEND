@@ -102,7 +102,8 @@ class ProfileScreen extends StatelessWidget {
                             if (context.mounted) {
                               Navigator.of(context).pushReplacement(
                                 MaterialPageRoute(
-                                    builder: (_) => const SignInScreen()),
+                                  builder: (_) => const SignInScreen(),
+                                ),
                               );
                             }
                           }
@@ -129,7 +130,8 @@ class ProfileScreen extends StatelessWidget {
                       backgroundColor: AppColors.wheatWarmClay,
                       backgroundImage: user.profilePicture != null
                           ? NetworkImage(
-                              '${ApiService.baseUrl.replaceAll('/api', '')}${user.profilePicture}')
+                              '${ApiService.mediaBaseUrl}${user.profilePicture}',
+                            )
                           : null,
                       child: user.profilePicture == null
                           ? Text(
@@ -162,8 +164,11 @@ class ProfileScreen extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.agriculture_rounded,
-                          size: 16, color: AppColors.mistyBlue),
+                      Icon(
+                        Icons.agriculture_rounded,
+                        size: 16,
+                        color: AppColors.mistyBlue,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         user.farmName,
@@ -208,7 +213,8 @@ class ProfileScreen extends StatelessWidget {
                     onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                            builder: (_) => const EditProfileScreen()),
+                          builder: (_) => const EditProfileScreen(),
+                        ),
                       );
                     },
                   ),
@@ -236,8 +242,18 @@ class ProfileScreen extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }

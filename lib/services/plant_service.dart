@@ -6,12 +6,17 @@ class PlantService {
   // 🚨 REPLACE THIS WITH YOUR MAC'S IP ADDRESS 🚨
   // Run 'ifconfig' (Mac) or 'ipconfig' (Windows) in terminal to find it.
   // Example: http://192.168.1.15:8000
-// Update this line:
+  // Update this line:
   static const String baseUrl = 'http://192.168.1.12:8000';
   static Future<Map<String, dynamic>> scanPlant(File imageFile) async {
     try {
-      var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/analyze'));
-      request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/analyze'),
+      );
+      request.files.add(
+        await http.MultipartFile.fromPath('file', imageFile.path),
+      );
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);

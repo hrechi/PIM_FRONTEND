@@ -67,10 +67,13 @@ class AuthProvider with ChangeNotifier {
       );
 
       _user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
-      
+
       // Save user data for stateless services
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user', jsonEncode(data['user']));
+
+      // Register token with backend so AI engine auto-detects this user
+      await _registerAiToken();
 
       _isAuthenticated = true;
       _setLoading(false);
@@ -109,10 +112,13 @@ class AuthProvider with ChangeNotifier {
       await ApiService.setRememberMe(rememberMe);
 
       _user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
-      
+
       // Save user data for stateless services
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user', jsonEncode(data['user']));
+
+      // Register token with backend so AI engine auto-detects this user
+      await _registerAiToken();
 
       _isAuthenticated = true;
       _setLoading(false);
@@ -133,7 +139,7 @@ class AuthProvider with ChangeNotifier {
   Future<void> fetchProfile() async {
     final data = await ApiService.get('/user/profile', withAuth: true);
     _user = UserModel.fromJson(data);
-    
+
     // Update saved user data
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user', jsonEncode(data));
@@ -143,7 +149,6 @@ class AuthProvider with ChangeNotifier {
   }
 
   // ── Update Profile ─────────────────────────────────────────
-
 
   Future<bool> updateProfile({
     String? name,
@@ -163,7 +168,11 @@ class AuthProvider with ChangeNotifier {
       if (phone != null) body['phone'] = phone;
       if (password != null && password.isNotEmpty) body['password'] = password;
 
-      final data = await ApiService.patch('/user/profile', body, withAuth: true);
+      final data = await ApiService.patch(
+        '/user/profile',
+        body,
+        withAuth: true,
+      );
       _user = UserModel.fromJson(data);
       _setLoading(false);
       return true;
@@ -237,6 +246,18 @@ class AuthProvider with ChangeNotifier {
   }
 
   // ── Private Helpers ────────────────────────────────────────
+
+  /// Push the current JWT to the backend so the AI engine auto-detects
+  /// which user is logged in — no manual .env editing needed.
+  Future<void> _registerAiToken() async {
+    try {
+      await ApiService.post('/security/register-ai', {}, withAuth: true);
+      print('[AuthProvider] ✓ AI engine registered for current user');
+    } catch (e) {
+      // Not critical — AI token registration is best-effort
+      print('[AuthProvider] ⚠ Could not register AI token: $e');
+    }
+  }
 
   Future<void> _logout() async {
     await ApiService.clearTokens();

@@ -209,7 +209,7 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: Image.network(
-                              '${ApiService.baseUrl.replaceAll('/api', '')}${incident.imagePath}',
+                              '${ApiService.mediaBaseUrl}${incident.imagePath}',
                               width: 80,
                               height: 80,
                               fit: BoxFit.cover,

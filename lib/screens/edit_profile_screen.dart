@@ -91,12 +91,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Profile updated successfully',
-              style: GoogleFonts.inter()),
+          content: Text(
+            'Profile updated successfully',
+            style: GoogleFonts.inter(),
+          ),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       Navigator.of(context).pop();
@@ -140,38 +143,44 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           backgroundColor: AppColors.wheatWarmClay,
                           backgroundImage: user.profilePicture != null
                               ? NetworkImage(
-                                  '${ApiService.baseUrl.replaceAll('/api', '')}${user.profilePicture}')
+                                  '${ApiService.mediaBaseUrl}${user.profilePicture}',
+                                )
                               : null,
                           child: _isUploadingPicture
                               ? const CircularProgressIndicator(
-                                  strokeWidth: 2.5)
+                                  strokeWidth: 2.5,
+                                )
                               : (user.profilePicture == null
-                                  ? Text(
-                                      user.name.isNotEmpty
-                                          ? user.name[0].toUpperCase()
-                                          : '?',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.mistyBlue,
-                                      ),
-                                    )
-                                  : null),
+                                    ? Text(
+                                        user.name.isNotEmpty
+                                            ? user.name[0].toUpperCase()
+                                            : '?',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.mistyBlue,
+                                        ),
+                                      )
+                                    : null),
                         ),
                       ),
                       Positioned(
                         bottom: 0,
                         right: 0,
                         child: GestureDetector(
-                          onTap: _isUploadingPicture ? null : _pickAndUploadImage,
+                          onTap: _isUploadingPicture
+                              ? null
+                              : _pickAndUploadImage,
                           child: Container(
                             width: 36,
                             height: 36,
                             decoration: BoxDecoration(
                               color: AppColors.mistyBlue,
                               shape: BoxShape.circle,
-                              border:
-                                  Border.all(color: Colors.white, width: 2.5),
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 2.5,
+                              ),
                             ),
                             child: const Icon(
                               Icons.camera_alt_outlined,
@@ -261,8 +270,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.error_outline,
-                                color: AppColors.error, size: 20),
+                            const Icon(
+                              Icons.error_outline,
+                              color: AppColors.error,
+                              size: 20,
+                            ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
