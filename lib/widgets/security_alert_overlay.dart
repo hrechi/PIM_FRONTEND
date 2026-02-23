@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../screens/incident_history_screen.dart';
+import '../screens/incident_detail_screen.dart';
 import '../theme/text_styles.dart';
 
 /// High-fidelity security alert overlay shown when a push notification arrives
@@ -111,7 +111,9 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
   void _viewIncident(BuildContext context) {
     _dismiss();
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const IncidentHistoryScreen()),
+      MaterialPageRoute(
+        builder: (_) => IncidentDetailScreen(incidentId: widget.incidentId),
+      ),
     );
   }
 

@@ -264,11 +264,7 @@ class AuthProvider with ChangeNotifier {
     try {
       final messaging = FirebaseMessaging.instance;
       // Request permission (iOS requires explicit ask)
-      await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+      await messaging.requestPermission(alert: true, badge: true, sound: true);
 
       // iOS: APNS token must be ready before FCM token can be fetched.
       // We retry up to 5 times with a short delay to handle the race condition.
@@ -279,7 +275,9 @@ class AuthProvider with ChangeNotifier {
             // Wait for APNS token to be set by the OS
             final apnsToken = await messaging.getAPNSToken();
             if (apnsToken == null) {
-              print('[AuthProvider] APNS not ready (attempt $attempt/5), retrying...');
+              print(
+                '[AuthProvider] APNS not ready (attempt $attempt/5), retrying...',
+              );
               await Future.delayed(const Duration(seconds: 2));
               continue;
             }
@@ -293,14 +291,16 @@ class AuthProvider with ChangeNotifier {
       }
 
       if (fcmToken != null) {
-        await ApiService.post(
-          '/user/fcm-token',
-          {'token': fcmToken},
-          withAuth: true,
+        await ApiService.post('/user/fcm-token', {
+          'token': fcmToken,
+        }, withAuth: true);
+        print(
+          '[AuthProvider] ✓ FCM token registered: ${fcmToken.substring(0, 20)}...',
         );
-        print('[AuthProvider] ✓ FCM token registered: ${fcmToken.substring(0, 20)}...');
       } else {
-        print('[AuthProvider] ⚠ FCM token unavailable after retries (non-critical)');
+        print(
+          '[AuthProvider] ⚠ FCM token unavailable after retries (non-critical)',
+        );
       }
     } catch (e) {
       print('[AuthProvider] ⚠ Could not register FCM token: $e');
