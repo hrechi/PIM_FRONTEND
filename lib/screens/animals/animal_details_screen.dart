@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../models/animal.dart';
 import '../../services/animal_service.dart';
 import '../../utils/constants.dart';
+import '../../widgets/app_drawer.dart';
 import 'add_animal_screen.dart';
 
 class AnimalDetailsScreen extends StatefulWidget {
@@ -76,20 +77,13 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xFFF8FAFC), Color(0xFFEFF6FF)],
-                ),
-              ),
-            ),
-          ),
+      backgroundColor: AppColors.sageTint,
+      drawer: const AppDrawer(),
+      body: Container(
+        color: AppColors.sageTint,
+        child: Stack(
+          children: [
+
           SafeArea(
             child: Column(
               children: [
@@ -118,6 +112,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
           _buildBottomActions(),
         ],
       ),
+    ),
     );
   }
 
@@ -127,7 +122,15 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildCircleIconButton(Symbols.arrow_back_ios_new, onPressed: () => Navigator.pop(context)),
+          Row(
+            children: [
+              Builder(
+                builder: (context) => _buildCircleIconButton(Icons.menu_rounded, onPressed: () => Scaffold.of(context).openDrawer()),
+              ),
+              const SizedBox(width: 8),
+              _buildCircleIconButton(Symbols.arrow_back_ios_new, onPressed: () => Navigator.pop(context)),
+            ],
+          ),
           Text(
             'Profil: ${_animal.name}',
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF1E293B)),

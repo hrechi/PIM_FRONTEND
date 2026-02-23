@@ -3,6 +3,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../models/animal.dart';
 import '../../services/animal_service.dart';
 import '../../utils/constants.dart';
+import '../../widgets/app_drawer.dart';
 import 'add_animal_screen.dart';
 import 'animal_details_screen.dart';
 
@@ -46,18 +47,22 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundNeutral,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildAppBar(),
-            _buildSearchSection(),
-            _buildCategoryFilters(),
-            _buildStatusTabs(),
-            Expanded(
-              child: _buildAnimalList(),
-            ),
-          ],
+      backgroundColor: AppColors.sageTint,
+      drawer: const AppDrawer(),
+      body: Container(
+        color: AppColors.sageTint,
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildAppBar(),
+              _buildSearchSection(),
+              _buildCategoryFilters(),
+              _buildStatusTabs(),
+              Expanded(
+                child: _buildAnimalList(),
+              ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: _buildFab(),
@@ -122,6 +127,27 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
         children: [
           Row(
             children: [
+              Builder(
+                builder: (context) => GestureDetector(
+                  onTap: () => Scaffold.of(context).openDrawer(),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.only(right: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.menu_rounded, color: Color(0xFF141E15), size: 24),
+                  ),
+                ),
+              ),
               if (Navigator.canPop(context))
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
@@ -383,14 +409,17 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
           );
         }
 
-        return ListView.builder(
+        return RefreshIndicator(
+        onRefresh: () async => _refreshData(),
+        child: ListView.builder(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 100),
-          physics: const BouncingScrollPhysics(),
+          physics: const AlwaysScrollableScrollPhysics(),
           itemCount: filteredList.length,
           itemBuilder: (context, index) {
             return _buildAnimalCard(filteredList[index]);
           },
-        );
+        ),
+      );
       },
     );
   }
