@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../utils/responsive.dart';
 import '../models/animal.dart';
 import '../models/alert_item.dart';
 import '../models/weather_info.dart';
+import '../providers/weather_provider.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/status_chip.dart';
 import '../widgets/metric_card.dart';
@@ -22,6 +24,8 @@ import 'staff_list_screen.dart';
 import 'incident_history_screen.dart';
 import 'package:frontend_pim/screens/parcel_list_screen.dart';
 import 'plant_doctor_screen.dart';
+import 'weather_screen.dart';
+import 'irrigation_scheduler_screen.dart';
 
 /// Main home screen displaying the farm dashboard
 class HomeScreen extends StatefulWidget {
@@ -150,6 +154,33 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const PlantDoctorScreen()),
+                );
+              },
+            ),
+            _buildDrawerItem(
+              icon: Icons.cloud,
+              iconColor: const Color(0xFF57A0D3),
+              title: 'Weather & Advice',
+              subtitle: 'Forecast & recommendations',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WeatherScreen()),
+                );
+              },
+            ),
+            _buildDrawerItem(
+              icon: Icons.water_drop,
+              iconColor: const Color(0xFF2196F3),
+              title: 'Irrigation Scheduler',
+              subtitle: 'Smart 7-day irrigation plan',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const IrrigationSchedulerScreen()),
                 );
               },
             ),
@@ -440,7 +471,12 @@ class _HomeScreenState extends State<HomeScreen> {
   // WEATHER & SOIL CARD
   // ─────────────────────────────────────────────
   Widget _buildWeatherSoilCard() {
-    return GradientContainer.fieldFresh(
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const WeatherScreen()),
+      ),
+      child: GradientContainer.fieldFresh(
       margin: EdgeInsets.symmetric(
         horizontal: Responsive.horizontalPadding(context),
         vertical: Responsive.verticalPadding(context),
@@ -571,6 +607,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 

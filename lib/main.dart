@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/parcel_provider.dart';
+import 'providers/weather_provider.dart';
+import 'providers/irrigation_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'soil/screens/soil_measurements_list_screen.dart';
@@ -21,6 +23,8 @@ class FieldlyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => SoilMeasurementsProvider()),
         ChangeNotifierProvider(create: (_) => ParcelProvider()),
+        ChangeNotifierProvider(create: (_) => WeatherProvider()),
+        ChangeNotifierProvider(create: (_) => IrrigationProvider()),
       ],
       child: MaterialApp(
         title: 'Fieldly',
