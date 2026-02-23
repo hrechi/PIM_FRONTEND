@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../utils/responsive.dart';
@@ -10,6 +11,7 @@ import '../widgets/status_chip.dart';
 import '../widgets/metric_card.dart';
 import '../widgets/alert_tile.dart';
 import '../widgets/gradient_container.dart';
+import '../widgets/security_alert_overlay.dart';
 import '../soil/screens/soil_measurements_list_screen.dart';
 import 'animals/animal_list_screen.dart';
 import 'animals/animal_dashboard_screen.dart';
@@ -40,6 +42,25 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadMockData();
+    _initFcmListener();
+  }
+
+  void _initFcmListener() {
+    // Listen for foreground push notifications
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      final data = message.data;
+      final incidentId = data['incidentId'] ?? '';
+      final type = data['type'] ?? 'intruder';
+      final imageUrl = data['image_url'] ?? '';
+
+      if (!mounted) return;
+      SecurityAlertOverlay.show(
+        context,
+        incidentId: incidentId,
+        type: type,
+        imageUrl: imageUrl,
+      );
+    });
   }
 
   void _loadMockData() {
@@ -89,143 +110,161 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            Expanded(child: ListView(children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: AppColorPalette.fieldFreshGradient,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Expanded(
+              child: ListView(
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.asset(
-                      'assets/images/agricole_icon2.gif',
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      gradient: AppColorPalette.fieldFreshGradient,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.asset(
+                            'assets/images/agricole_icon2.gif',
+                            width: 60,
+                            height: 60,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Fieldly',
+                          style: AppTextStyles.h2(color: AppColorPalette.white),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Smart Farm System',
+                          style: AppTextStyles.bodySmall(
+                            color: AppColorPalette.white.withValues(alpha: 0.9),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Fieldly',
-                    style: AppTextStyles.h2(color: AppColorPalette.white),
+
+                  const SizedBox(height: 8),
+
+                  // Farm
+                  _buildDrawerSection('Farm'),
+                  _buildDrawerItem(
+                    icon: Icons.grass,
+                    title: 'My Parcels',
+                    subtitle: 'View farm parcels',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ParcelListScreen(),
+                        ),
+                      );
+                    },
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Smart Farm System',
-                    style: AppTextStyles.bodySmall(
-                      color: AppColorPalette.white.withValues(alpha: 0.9),
+                  _buildDrawerItem(
+                    icon: Icons.medical_services,
+                    iconColor: AppColorPalette.alertError,
+                    title: 'AI Plant Doctor',
+                    subtitle: 'Diagnose plant issues',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PlantDoctorScreen(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const Divider(height: 1),
+
+                  // Security
+                  _buildDrawerSection('Security'),
+                  _buildDrawerItem(
+                    icon: Icons.shield_rounded,
+                    title: 'Security Whitelist',
+                    subtitle: 'View authorized staff',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const StaffListScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.person_add_rounded,
+                    title: 'Add Staff',
+                    subtitle: 'Add to whitelist',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AddStaffScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.history_rounded,
+                    title: 'Incident History',
+                    subtitle: 'View security logs',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const IncidentHistoryScreen(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const Divider(height: 1),
+
+                  // Account
+                  _buildDrawerSection('Account'),
+                  _buildDrawerItem(
+                    icon: Icons.person_outline_rounded,
+                    title: 'Profile',
+                    subtitle: 'Manage account',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ProfileScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.settings_outlined,
+                    title: 'Settings',
+                    subtitle: 'App preferences',
+                    onTap: () => Navigator.pop(context),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      'Version 1.0.0',
+                      style: AppTextStyles.caption(
+                        color: AppColorPalette.softSlate,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-
-            const SizedBox(height: 8),
-
-            // Farm
-            _buildDrawerSection('Farm'),
-            _buildDrawerItem(
-              icon: Icons.grass,
-              title: 'My Parcels',
-              subtitle: 'View farm parcels',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ParcelListScreen()),
-                );
-              },
-            ),
-            _buildDrawerItem(
-              icon: Icons.medical_services,
-              iconColor: AppColorPalette.alertError,
-              title: 'AI Plant Doctor',
-              subtitle: 'Diagnose plant issues',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PlantDoctorScreen()),
-                );
-              },
-            ),
-
-            const Divider(height: 1),
-
-            // Security
-            _buildDrawerSection('Security'),
-            _buildDrawerItem(
-              icon: Icons.shield_rounded,
-              title: 'Security Whitelist',
-              subtitle: 'View authorized staff',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const StaffListScreen()),
-                );
-              },
-            ),
-            _buildDrawerItem(
-              icon: Icons.person_add_rounded,
-              title: 'Add Staff',
-              subtitle: 'Add to whitelist',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AddStaffScreen()),
-                );
-              },
-            ),
-            _buildDrawerItem(
-              icon: Icons.history_rounded,
-              title: 'Incident History',
-              subtitle: 'View security logs',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const IncidentHistoryScreen()),
-                );
-              },
-            ),
-
-            const Divider(height: 1),
-
-            // Account
-            _buildDrawerSection('Account'),
-            _buildDrawerItem(
-              icon: Icons.person_outline_rounded,
-              title: 'Profile',
-              subtitle: 'Manage account',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                );
-              },
-            ),
-            _buildDrawerItem(
-              icon: Icons.settings_outlined,
-              title: 'Settings',
-              subtitle: 'App preferences',
-              onTap: () => Navigator.pop(context),
-            ),
-
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Version 1.0.0',
-                style: AppTextStyles.caption(color: AppColorPalette.softSlate),
-              ),
-            ),
-            ])),
           ],
         ),
       ),
@@ -237,10 +276,9 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Text(
         title.toUpperCase(),
-        style: AppTextStyles.caption(color: AppColorPalette.softSlate).copyWith(
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
-        ),
+        style: AppTextStyles.caption(
+          color: AppColorPalette.softSlate,
+        ).copyWith(fontWeight: FontWeight.bold, letterSpacing: 1.2),
       ),
     );
   }
@@ -357,9 +395,9 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.only(right: 16.0),
           child: GestureDetector(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ProfileScreen()),
-            ),
+            onTap: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
             child: CircleAvatar(
               backgroundColor: AppColorPalette.mistyBlue,
               child: const Icon(Icons.person, color: AppColorPalette.white),
@@ -515,7 +553,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.water_drop, color: AppColorPalette.white, size: 32),
+                  Icon(
+                    Icons.water_drop,
+                    color: AppColorPalette.white,
+                    size: 32,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -622,10 +664,12 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             children: attentionAlerts
                 .take(3)
-                .map((alert) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: AlertTile.compact(alert: alert, onTap: () {}),
-                    ))
+                .map(
+                  (alert) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: AlertTile.compact(alert: alert, onTap: () {}),
+                  ),
+                )
                 .toList(),
           ),
         ),
@@ -737,7 +781,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const Icon(Icons.fullscreen),
                       const SizedBox(width: 8),
-                      Text('VIEW FULL MAP', style: AppTextStyles.buttonMedium()),
+                      Text(
+                        'VIEW FULL MAP',
+                        style: AppTextStyles.buttonMedium(),
+                      ),
                     ],
                   ),
                 ),

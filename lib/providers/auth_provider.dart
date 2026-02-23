@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
 
@@ -249,13 +251,59 @@ class AuthProvider with ChangeNotifier {
 
   /// Push the current JWT to the backend so the AI engine auto-detects
   /// which user is logged in — no manual .env editing needed.
+  /// Also registers the FCM device token for push notifications.
   Future<void> _registerAiToken() async {
     try {
       await ApiService.post('/security/register-ai', {}, withAuth: true);
       print('[AuthProvider] ✓ AI engine registered for current user');
     } catch (e) {
-      // Not critical — AI token registration is best-effort
       print('[AuthProvider] ⚠ Could not register AI token: $e');
+    }
+
+    // Register FCM device token for push notifications
+    try {
+      final messaging = FirebaseMessaging.instance;
+      // Request permission (iOS requires explicit ask)
+      await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      // iOS: APNS token must be ready before FCM token can be fetched.
+      // We retry up to 5 times with a short delay to handle the race condition.
+      String? fcmToken;
+      for (int attempt = 1; attempt <= 5; attempt++) {
+        try {
+          if (defaultTargetPlatform == TargetPlatform.iOS) {
+            // Wait for APNS token to be set by the OS
+            final apnsToken = await messaging.getAPNSToken();
+            if (apnsToken == null) {
+              print('[AuthProvider] APNS not ready (attempt $attempt/5), retrying...');
+              await Future.delayed(const Duration(seconds: 2));
+              continue;
+            }
+          }
+          fcmToken = await messaging.getToken();
+          break; // success — exit retry loop
+        } catch (_) {
+          if (attempt == 5) rethrow;
+          await Future.delayed(const Duration(seconds: 2));
+        }
+      }
+
+      if (fcmToken != null) {
+        await ApiService.post(
+          '/user/fcm-token',
+          {'token': fcmToken},
+          withAuth: true,
+        );
+        print('[AuthProvider] ✓ FCM token registered: ${fcmToken.substring(0, 20)}...');
+      } else {
+        print('[AuthProvider] ⚠ FCM token unavailable after retries (non-critical)');
+      }
+    } catch (e) {
+      print('[AuthProvider] ⚠ Could not register FCM token: $e');
     }
   }
 
