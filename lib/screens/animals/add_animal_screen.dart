@@ -3,6 +3,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../models/animal.dart';
 import '../../services/animal_service.dart';
 import '../../utils/constants.dart';
+import '../../widgets/app_drawer.dart';
 
 class AddAnimalScreen extends StatefulWidget {
   final Animal? animal;
@@ -167,10 +168,13 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: Stack(
-        children: [
-          // Background Mesh Gradient
+      backgroundColor: AppColors.sageTint,
+      drawer: const AppDrawer(),
+      body: Container(
+        color: AppColors.sageTint,
+        child: Stack(
+          children: [
+            // Background Mesh Gradient
           Positioned(
             top: -100,
             left: -100,
@@ -239,6 +243,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           _buildBottomAction(),
         ],
       ),
+    ),
     );
   }
 
@@ -250,9 +255,20 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: _buildIconButton(Symbols.arrow_back_ios_new),
+              Row(
+                children: [
+                  Builder(
+                    builder: (context) => GestureDetector(
+                      onTap: () => Scaffold.of(context).openDrawer(),
+                      child: _buildIconButton(Icons.menu_rounded),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: _buildIconButton(Symbols.arrow_back_ios_new),
+                  ),
+                ],
               ),
               Text(
                 isEditMode ? 'Edit Animal' : 'Add Animal',
