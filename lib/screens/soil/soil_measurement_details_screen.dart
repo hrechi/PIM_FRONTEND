@@ -13,6 +13,9 @@ import '../../widgets/soil/ai_advice_card.dart';
 import '../../services/soil_api_service.dart';
 import '../../services/field_service.dart';
 import '../../services/plant_recommendation_service.dart';
+import '../../services/parcel_crud_service.dart';
+import '../../models/crop_suitability.dart';
+import '../../providers/parcel_provider.dart';
 import 'soil_measurement_form_screen.dart';
 import 'soil_measurements_list_screen.dart';
 
@@ -42,6 +45,13 @@ class _SoilMeasurementDetailsScreenState
   bool _isLoadingField = false;
   final SoilApiService _apiService = SoilApiService();
   final FieldService _fieldService = FieldService();
+  final ParcelCrudService _parcelService = ParcelCrudService();
+  
+  // Crop analysis state
+  bool _loadingCropAnalysis = false;
+  AnalyzeExistingCropsResponse? _cropAnalysis;
+  String? _cropAnalysisError;
+  String? _selectedParcelId;
   
   @override
   void initState() {
@@ -167,6 +177,32 @@ class _SoilMeasurementDetailsScreenState
     );
   }
 
+  /// Load crop analysis for a parcel
+  Future<void> _loadCropAnalysis(String parcelId) async {
+    setState(() {
+      _loadingCropAnalysis = true;
+      _cropAnalysisError = null;
+      _selectedParcelId = parcelId;
+    });
+
+    try {
+      final analysis = await _parcelService.analyzeExistingCrops(parcelId);
+      if (mounted) {
+        setState(() {
+          _cropAnalysis = analysis;
+          _loadingCropAnalysis = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _cropAnalysisError = e.toString();
+          _loadingCropAnalysis = false;
+        });
+      }
+    }
+  }
+
   /// Delete measurement
   Future<void> _deleteMeasurement() async {
     final confirmed = await showDialog<bool>(
@@ -264,6 +300,11 @@ class _SoilMeasurementDetailsScreenState
             const SizedBox(height: 24),
               // AI Prediction Section
                _buildAiSection(),
+
+            const SizedBox(height: 24),
+
+            // Crop Suitability Analysis Section
+            _buildCropAnalysisSection(),
 
             const SizedBox(height: 24),
             
@@ -442,6 +483,488 @@ Widget _buildAiSection() {
     ),
   );
 }
+
+  /// Build crop suitability analysis section
+  Widget _buildCropAnalysisSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColorPalette.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColorPalette.softSlate.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section title with icon
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColorPalette.success.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.eco,
+                  size: 20,
+                  color: AppColorPalette.success,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Crop Suitability Analysis',
+                  style: AppTextStyles.h4(),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Analyze existing crops or get recommendations based on this soil measurement',
+            style: AppTextStyles.caption(
+              color: AppColorPalette.softSlate,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Parcel selector
+          Consumer<ParcelProvider>(
+            builder: (context, parcelProvider, _) {
+              final parcels = parcelProvider.parcels;
+              
+              if (parcels.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColorPalette.warning.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: AppColorPalette.warning,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'No parcels found. Create a parcel first to analyze crops.',
+                          style: AppTextStyles.bodySmall(
+                            color: AppColorPalette.charcoalGreen,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Parcel dropdown
+                  DropdownButtonFormField<String>(
+                    value: _selectedParcelId,
+                    decoration: InputDecoration(
+                      labelText: 'Select Parcel',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                    ),
+                    items: parcels.map((parcel) {
+                      return DropdownMenuItem<String>(
+                        value: parcel.id,
+                        child: Text(parcel.location),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        _loadCropAnalysis(value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Results
+                  if (_loadingCropAnalysis)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Column(
+                          children: [
+                            CircularProgressIndicator(
+                              color: AppColorPalette.success,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Analyzing crops...',
+                              style: AppTextStyles.bodyMedium(
+                                color: AppColorPalette.softSlate,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else if (_cropAnalysisError != null)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColorPalette.alertError.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            color: AppColorPalette.alertError,
+                            size: 36,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Analysis Failed',
+                            style: AppTextStyles.bodyMedium(),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _cropAnalysisError!,
+                            style: AppTextStyles.caption(
+                              color: AppColorPalette.softSlate,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (_cropAnalysis != null)
+                    _buildCropAnalysisResults(),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build crop analysis results
+  Widget _buildCropAnalysisResults() {
+    if (_cropAnalysis == null) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Soil health score and wilting risk
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColorPalette.success.withValues(alpha: 0.1),
+                AppColorPalette.info.withValues(alpha: 0.1),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColorPalette.success.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Soil Health Score',
+                      style: AppTextStyles.caption(
+                        color: AppColorPalette.softSlate,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${_cropAnalysis!.soilHealthScore.toStringAsFixed(0)}%',
+                      style: AppTextStyles.h3(
+                        color: AppColorPalette.success,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: AppColorPalette.softSlate.withValues(alpha: 0.2),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Wilting Risk',
+                      style: AppTextStyles.caption(
+                        color: AppColorPalette.softSlate,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _cropAnalysis!.wiltingRisk,
+                      style: AppTextStyles.bodyLarge(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Crops analysis
+        if (_cropAnalysis!.cropsAnalysis.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColorPalette.info.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: AppColorPalette.info,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'No crops planted on this parcel yet.',
+                    style: AppTextStyles.bodySmall(
+                      color: AppColorPalette.charcoalGreen,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Crops Analysis (${_cropAnalysis!.cropsAnalysis.length})',
+                style: AppTextStyles.h4(),
+              ),
+              const SizedBox(height: 12),
+              ..._cropAnalysis!.cropsAnalysis.map((crop) {
+                return _buildCropCard(crop);
+              }).toList(),
+            ],
+          ),
+      ],
+    );
+  }
+
+  /// Build individual crop analysis card
+  Widget _buildCropCard(CropAnalysisItem crop) {
+    Color decisionColor;
+    IconData decisionIcon;
+    
+    switch (crop.decision) {
+      case CropDecision.canPlant:
+        decisionColor = AppColorPalette.success;
+        decisionIcon = Icons.check_circle;
+        break;
+      case CropDecision.canPlantWithImprovement:
+        decisionColor = AppColorPalette.warning;
+        decisionIcon = Icons.warning;
+        break;
+      case CropDecision.cannotPlant:
+        decisionColor = AppColorPalette.alertError;
+        decisionIcon = Icons.cancel;
+        break;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColorPalette.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: decisionColor.withValues(alpha: 0.3),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Crop name and decision
+          Row(
+            children: [
+              Icon(
+                Icons.spa,
+                color: AppColorPalette.success,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  crop.crop.toUpperCase(),
+                  style: AppTextStyles.bodyLarge().copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: decisionColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      decisionIcon,
+                      size: 14,
+                      color: decisionColor,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      crop.decision.displayName,
+                      style: AppTextStyles.caption(
+                        color: decisionColor,
+                      ).copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Suitability score
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Suitability Score',
+                      style: AppTextStyles.caption(
+                        color: AppColorPalette.softSlate,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          '${crop.suitabilityScore.toStringAsFixed(0)}',
+                          style: AppTextStyles.h3(color: decisionColor),
+                        ),
+                        Text(
+                          '/100',
+                          style: AppTextStyles.bodyMedium(
+                            color: AppColorPalette.softSlate,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: crop.regionAllowed
+                      ? AppColorPalette.success.withValues(alpha: 0.1)
+                      : AppColorPalette.alertError.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      crop.regionAllowed ? Icons.location_on : Icons.location_off,
+                      size: 16,
+                      color: crop.regionAllowed
+                          ? AppColorPalette.success
+                          : AppColorPalette.alertError,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      crop.regionAllowed ? 'Region Allowed' : 'Not Allowed',
+                      style: AppTextStyles.caption(
+                        color: crop.regionAllowed
+                            ? AppColorPalette.success
+                            : AppColorPalette.alertError,
+                      ).copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          // Recommendations
+          if (crop.recommendations.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 8),
+            Text(
+              'Recommendations:',
+              style: AppTextStyles.bodySmall().copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...crop.recommendations.map((rec) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '• ',
+                      style: AppTextStyles.bodySmall(
+                        color: decisionColor,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        rec,
+                        style: AppTextStyles.bodySmall(
+                          color: AppColorPalette.charcoalGreen,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
+        ],
+      ),
+    );
+  }
+
   /// Build header card with overall status
   Widget _buildHeaderCard() {
     return Container(
