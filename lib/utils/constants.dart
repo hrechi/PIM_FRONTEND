@@ -5,14 +5,14 @@ import 'package:flutter/material.dart';
 // physical device. Run `ipconfig` (Windows) or `ifconfig` (Mac/Linux)
 // and use the IPv4 address from your WiFi adapter.
 class AppConfig {
-  static const String serverHost = '10.0.2.2'; // your PC's WiFi IP
-  static const int    serverPort = 3000;
+  static const String serverHost = '192.168.100.9'; // your PC's WiFi IP
+  static const int serverPort = 3000;
 }
 
 class AppColors {
   // ── Primary Surface Colors ─────────────────────────────────
   static const Color sageTint = Color(0xFFF1F8F5);
-  static const Color sageGreen = Color(0xFF2D5016);  // For UI elements
+  static const Color sageGreen = Color(0xFF2D5016); // For UI elements
   static const Color mistBlue = Color(0xFF309448);
   static const Color mistyBlue = Color(0xFF309448);
   static const Color wheat = Color(0xFFD4A574);
@@ -35,8 +35,8 @@ class AppColors {
   static const Color warning = Color(0xFF729944);
 
   // ── Text Colors ────────────────────────────────────────────
-  static const Color primaryText = Color(0xFF2C3E2D);      // Charcoal Green
-  static const Color secondaryText = Color(0xFF7F8C8D);    // Soft Slate
+  static const Color primaryText = Color(0xFF2C3E2D); // Charcoal Green
+  static const Color secondaryText = Color(0xFF7F8C8D); // Soft Slate
 
   // ── Accent / Alias Colors ─────────────────────────────────
   static const Color primaryGreen = Color(0xFF2ECC71);

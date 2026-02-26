@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
 
@@ -67,10 +69,13 @@ class AuthProvider with ChangeNotifier {
       );
 
       _user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
-      
+
       // Save user data for stateless services
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user', jsonEncode(data['user']));
+
+      // Register token with backend so AI engine auto-detects this user
+      await _registerAiToken();
 
       _isAuthenticated = true;
       _setLoading(false);
@@ -109,10 +114,13 @@ class AuthProvider with ChangeNotifier {
       await ApiService.setRememberMe(rememberMe);
 
       _user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
-      
+
       // Save user data for stateless services
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user', jsonEncode(data['user']));
+
+      // Register token with backend so AI engine auto-detects this user
+      await _registerAiToken();
 
       _isAuthenticated = true;
       _setLoading(false);
@@ -133,7 +141,7 @@ class AuthProvider with ChangeNotifier {
   Future<void> fetchProfile() async {
     final data = await ApiService.get('/user/profile', withAuth: true);
     _user = UserModel.fromJson(data);
-    
+
     // Update saved user data
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user', jsonEncode(data));
@@ -143,7 +151,6 @@ class AuthProvider with ChangeNotifier {
   }
 
   // ── Update Profile ─────────────────────────────────────────
-
 
   Future<bool> updateProfile({
     String? name,
@@ -163,7 +170,11 @@ class AuthProvider with ChangeNotifier {
       if (phone != null) body['phone'] = phone;
       if (password != null && password.isNotEmpty) body['password'] = password;
 
-      final data = await ApiService.patch('/user/profile', body, withAuth: true);
+      final data = await ApiService.patch(
+        '/user/profile',
+        body,
+        withAuth: true,
+      );
       _user = UserModel.fromJson(data);
       _setLoading(false);
       return true;
@@ -237,6 +248,64 @@ class AuthProvider with ChangeNotifier {
   }
 
   // ── Private Helpers ────────────────────────────────────────
+
+  /// Push the current JWT to the backend so the AI engine auto-detects
+  /// which user is logged in — no manual .env editing needed.
+  /// Also registers the FCM device token for push notifications.
+  Future<void> _registerAiToken() async {
+    try {
+      await ApiService.post('/security/register-ai', {}, withAuth: true);
+      print('[AuthProvider] ✓ AI engine registered for current user');
+    } catch (e) {
+      print('[AuthProvider] ⚠ Could not register AI token: $e');
+    }
+
+    // Register FCM device token for push notifications
+    try {
+      final messaging = FirebaseMessaging.instance;
+      // Request permission (iOS requires explicit ask)
+      await messaging.requestPermission(alert: true, badge: true, sound: true);
+
+      // iOS: APNS token must be ready before FCM token can be fetched.
+      // We retry up to 5 times with a short delay to handle the race condition.
+      String? fcmToken;
+      for (int attempt = 1; attempt <= 5; attempt++) {
+        try {
+          if (defaultTargetPlatform == TargetPlatform.iOS) {
+            // Wait for APNS token to be set by the OS
+            final apnsToken = await messaging.getAPNSToken();
+            if (apnsToken == null) {
+              print(
+                '[AuthProvider] APNS not ready (attempt $attempt/5), retrying...',
+              );
+              await Future.delayed(const Duration(seconds: 2));
+              continue;
+            }
+          }
+          fcmToken = await messaging.getToken();
+          break; // success — exit retry loop
+        } catch (_) {
+          if (attempt == 5) rethrow;
+          await Future.delayed(const Duration(seconds: 2));
+        }
+      }
+
+      if (fcmToken != null) {
+        await ApiService.post('/user/fcm-token', {
+          'token': fcmToken,
+        }, withAuth: true);
+        print(
+          '[AuthProvider] ✓ FCM token registered: ${fcmToken.substring(0, 20)}...',
+        );
+      } else {
+        print(
+          '[AuthProvider] ⚠ FCM token unavailable after retries (non-critical)',
+        );
+      }
+    } catch (e) {
+      print('[AuthProvider] ⚠ Could not register FCM token: $e');
+    }
+  }
 
   Future<void> _logout() async {
     await ApiService.clearTokens();

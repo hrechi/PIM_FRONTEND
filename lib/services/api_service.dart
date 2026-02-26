@@ -31,6 +31,20 @@ class ApiService {
     return 'http://$host:$port/api';
   }
 
+  /// Base URL without the /api suffix — used for media/uploads URLs.
+  static String get mediaBaseUrl {
+    final host = AppConfig.serverHost;
+    final port = AppConfig.serverPort;
+    if (kIsWeb) return 'http://localhost:$port';
+    if (Platform.isAndroid) {
+      final isEmulator = host == 'localhost' || host == '127.0.0.1';
+      return isEmulator ? 'http://10.0.2.2:$port' : 'http://$host:$port';
+    }
+    if (host == 'localhost' || host == '127.0.0.1')
+      return 'http://localhost:$port';
+    return 'http://$host:$port';
+  }
+
   // ── Token Management ───────────────────────────────────────
 
   static Future<void> saveTokens(

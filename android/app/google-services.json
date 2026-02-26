@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "653196752986",
+    "project_id": "fieldly-c1e95",
+    "storage_bucket": "fieldly-c1e95.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:653196752986:android:ebaab9ac2bb336771fc063",
+        "android_client_info": {
+          "package_name": "com.example.frontend_pim"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKWb8fVxNstab3GOeU17xVFxpeSjwwFWM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

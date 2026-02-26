@@ -264,8 +264,7 @@ class _StaffListScreenState extends State<StaffListScreen> {
         itemCount: _staff.length,
         itemBuilder: (context, index) {
           final staff = _staff[index];
-          final imageUrl =
-              '${ApiService.baseUrl.replaceAll('/api', '')}${staff['imagePath']}';
+          final imageUrl = '${ApiService.mediaBaseUrl}${staff['imagePath']}';
 
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
