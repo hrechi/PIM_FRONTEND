@@ -14,7 +14,7 @@ import 'screens/incident_detail_screen.dart';
 import 'screens/soil/soil_measurements_list_screen.dart';
 
 
-/// Global navigator key — used for navigating from notification callbacks
+/// Global navigator key — used for navigating from notification callbacks 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 /// Background message handler — must be a top-level function
