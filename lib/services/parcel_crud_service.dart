@@ -50,6 +50,18 @@ class ParcelCrudService {
     return Harvest.fromJson(response);
   }
 
+  /// Get crop suitability analysis for existing crops on a parcel
+  Future<AnalyzeExistingCropsResponse> analyzeExistingCrops(String parcelId) async {
+    final response = await ApiService.get('$_endpoint/$parcelId/analyze-existing-crops', withAuth: true);
+    return AnalyzeExistingCropsResponse.fromJson(response);
+  }
+
+  /// Get recommended crops for a parcel based on soil and location
+  Future<RecommendCropsResponse> recommendCrops(String parcelId) async {
+    final response = await ApiService.get('$_endpoint/$parcelId/recommend-crops', withAuth: true);
+    return RecommendCropsResponse.fromJson(response);
+  }
+
   Future<String> getAiAdvice(String parcelId) async {
     final response = await ApiService.get('$_endpoint/$parcelId/ai-advice', withAuth: true);
     return response['advice'] as String? ?? 'No advice available.';
