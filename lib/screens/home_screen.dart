@@ -28,7 +28,6 @@ import 'incident_history_screen.dart';
 import 'live_feed_screen.dart';
 import 'package:frontend_pim/screens/parcel_list_screen.dart';
 import 'plant_doctor_screen.dart';
-import '../widgets/app_drawer.dart';
 
 /// Main home screen displaying the farm dashboard
 class HomeScreen extends StatefulWidget {
@@ -125,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: AppColorPalette.wheatWarmClay,
-      drawer: const AppDrawer(),
+      drawer: _buildDrawer(),
       body: SafeArea(
         child: Responsive.constrainedContent(
           context: context,
@@ -150,8 +149,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ─────────────────────────────────────────────
-<<<<<<< HEAD
-=======
   // DRAWER
   // ─────────────────────────────────────────────
   Widget _buildDrawer() {
@@ -161,10 +158,11 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Expanded(
               child: ListView(
+                padding: EdgeInsets.zero,
                 children: [
+                  // Header
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(24),
@@ -201,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 8),
 
-                  // Farm
+                  // ── Farm ──────────────────────────────
                   _buildDrawerSection('Farm'),
                   _buildDrawerItem(
                     icon: Icons.grass,
@@ -235,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const Divider(height: 1),
 
-                  // Security
+                  // ── Security ──────────────────────────
                   _buildDrawerSection('Security'),
                   _buildDrawerItem(
                     icon: Icons.shield_rounded,
@@ -297,7 +295,41 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const Divider(height: 1),
 
-                  // Account
+                  // ── Animals ───────────────────────────
+                  _buildDrawerSection('Animals'),
+                  _buildDrawerItem(
+                    icon: Icons.pets,
+                    title: 'Animal List',
+                    subtitle: 'View all animals',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AnimalListScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.add_circle_outline,
+                    iconColor: AppColorPalette.emeraldGreen,
+                    title: 'Add Animal',
+                    subtitle: 'Register new animal',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AddAnimalScreen(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const Divider(height: 1),
+
+                  // ── Account ───────────────────────────
                   _buildDrawerSection('Account'),
                   _buildDrawerItem(
                     icon: Icons.person_outline_rounded,
@@ -380,7 +412,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ─────────────────────────────────────────────
->>>>>>> AmelSecurity
   // HEADER
   // ─────────────────────────────────────────────
   Widget _buildHeader() {
@@ -463,9 +494,9 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.only(right: 16.0),
           child: GestureDetector(
-            onTap: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
             child: CircleAvatar(
               backgroundColor: AppColorPalette.mistyBlue,
               child: const Icon(Icons.person, color: AppColorPalette.white),
@@ -967,12 +998,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ─────────────────────────────────────────────
   // FLOATING ACTION BUTTON
+  // Siren FAB (file 1) stacked above Chatbot FAB
   // ─────────────────────────────────────────────
   Widget _buildFloatingActionButton() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // ── Siren FAB ──────────────────────────────────────────
+        // ── Siren FAB ─────────────────────────
         FloatingActionButton(
           heroTag: 'siren',
           onPressed: _triggerSiren,
@@ -980,7 +1012,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: const Icon(Icons.volume_up, color: Colors.white),
         ),
         const SizedBox(height: 12),
-        // ── Chat FAB ───────────────────────────────────────────
+        // ── Chatbot mascot FAB ─────────────────
         GestureDetector(
           onTap: () => Navigator.push(
             context,
