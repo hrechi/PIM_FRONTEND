@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../utils/responsive.dart';
+import '../utils/constants.dart';
 import '../models/animal.dart';
 import '../models/alert_item.dart';
 import '../models/weather_info.dart';
@@ -22,6 +24,7 @@ import 'chat_assistant_screen.dart';
 import 'add_staff_screen.dart';
 import 'staff_list_screen.dart';
 import 'incident_history_screen.dart';
+import 'live_feed_screen.dart';
 import 'package:frontend_pim/screens/parcel_list_screen.dart';
 import 'plant_doctor_screen.dart';
 
@@ -38,11 +41,54 @@ class _HomeScreenState extends State<HomeScreen> {
   late List<AlertItem> alerts;
   late List<Animal> animals;
 
+  // Socket.io client for siren
+  late IO.Socket _socket;
+
   @override
   void initState() {
     super.initState();
     _loadMockData();
     _initFcmListener();
+    _initSocket();
+  }
+
+  @override
+  void dispose() {
+    _socket.disconnect();
+    _socket.dispose();
+    super.dispose();
+  }
+
+  void _initSocket() {
+    _socket = IO.io(
+      'http://${AppConfig.serverHost}:${AppConfig.serverPort}',
+      IO.OptionBuilder()
+          .setTransports(['websocket'])
+          .disableAutoConnect()
+          .build(),
+    );
+    _socket.connect();
+    _socket.onConnect((_) => debugPrint('[SOCKET] Connected to NestJS'));
+    _socket.onDisconnect((_) => debugPrint('[SOCKET] Disconnected'));
+  }
+
+  void _triggerSiren() {
+    _socket.emit('trigger_siren', {'timestamp': DateTime.now().toIso8601String()});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.volume_up, color: Colors.white),
+            SizedBox(width: 10),
+            Text('🚨 Siren triggered!'),
+          ],
+        ),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   void _initFcmListener() {
@@ -223,6 +269,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (_) => const IncidentHistoryScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.videocam_rounded,
+                    iconColor: AppColorPalette.emeraldGreen,
+                    title: 'Live Feed',
+                    subtitle: 'View live camera',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const LiveFeedScreen(),
                         ),
                       );
                     },
@@ -901,32 +962,46 @@ class _HomeScreenState extends State<HomeScreen> {
   // FLOATING ACTION BUTTON
   // ─────────────────────────────────────────────
   Widget _buildFloatingActionButton() {
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const ChatAssistantScreen()),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColorPalette.charcoalGreen.withOpacity(0.3),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // ── Siren FAB ──────────────────────────────────────────
+        FloatingActionButton(
+          heroTag: 'siren',
+          onPressed: _triggerSiren,
+          backgroundColor: Colors.red.shade700,
+          child: const Icon(Icons.volume_up, color: Colors.white),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Image.asset(
-            'assets/images/maskot_chatbot.png',
-            width: 65,
-            height: 85,
-            fit: BoxFit.contain,
+        const SizedBox(height: 12),
+        // ── Chat FAB ───────────────────────────────────────────
+        GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ChatAssistantScreen()),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColorPalette.charcoalGreen.withOpacity(0.3),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                'assets/images/maskot_chatbot.png',
+                width: 65,
+                height: 85,
+                fit: BoxFit.contain,
+              ),
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 }
