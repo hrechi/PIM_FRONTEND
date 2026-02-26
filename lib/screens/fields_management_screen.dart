@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../models/field_model.dart';
 import '../services/field_service.dart';
 import '../utils/constants.dart';
+import '../theme/color_palette.dart';
+import '../theme/text_styles.dart';
 import 'map_picker_screen.dart';
 import 'soil/soil_map_screen.dart';
 
@@ -422,12 +426,14 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColorPalette.wheatWarmClay,
       appBar: AppBar(
-        title: const Text('Manage Fields'),
+        title: Text('Manage Fields',
+            style: AppTextStyles.h3().copyWith(color: Colors.white)),
         backgroundColor: AppColors.mistBlue,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -438,27 +444,16 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.landscape,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
+                      Icon(Icons.landscape_outlined,
+                          size: 72, color: Colors.grey[350]),
                       const SizedBox(height: 16),
-                      Text(
-                        'No fields yet',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
-                        ),
-                      ),
+                      Text('No fields yet',
+                          style: AppTextStyles.h4()
+                              .copyWith(color: AppColorPalette.charcoalGreen)),
                       const SizedBox(height: 8),
-                      Text(
-                        'Add your first field to get started',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[500],
-                        ),
-                      ),
+                      Text('Tap + to add your first field',
+                          style: AppTextStyles.bodyMedium()
+                              .copyWith(color: AppColorPalette.softSlate)),
                     ],
                   ),
                 )
@@ -562,8 +557,189 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addNewField,
         backgroundColor: AppColors.mistBlue,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Field'),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: Text('Add Field',
+            style:
+                AppTextStyles.buttonLarge().copyWith(color: Colors.white)),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // FIELD CARD WITH MAP PREVIEW
+  // ─────────────────────────────────────────────────────────
+  Widget _buildFieldCard(FieldModel field) {
+    final coords = field.areaCoordinates;
+    final hasCoords = coords.isNotEmpty;
+
+    // Compute centroid for map center
+    LatLng center = const LatLng(36.8, 10.18);
+    List<LatLng> polygon = [];
+    if (hasCoords) {
+      double latSum = 0, lngSum = 0;
+      for (final c in coords) {
+        latSum += c[0];
+        lngSum += c[1];
+        polygon.add(LatLng(c[0], c[1]));
+      }
+      center = LatLng(latSum / coords.length, lngSum / coords.length);
+    }
+
+    final areaText = field.areaSize != null
+        ? '${(field.areaSize! / 10000).toStringAsFixed(2)} ha'
+        : '—';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Map preview ───────────────────────────────
+          SizedBox(
+            height: 160,
+            width: double.infinity,
+            child: IgnorePointer(
+              child: FlutterMap(
+                options: MapOptions(
+                  initialCenter: center,
+                  initialZoom: 15.5,
+                  interactionOptions: const InteractionOptions(
+                    flags: InteractiveFlag.none,
+                  ),
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.fieldly.app',
+                  ),
+                  if (polygon.isNotEmpty)
+                    PolygonLayer(
+                      polygons: [
+                        Polygon(
+                          points: polygon,
+                          color: AppColors.mistBlue.withOpacity(0.25),
+                          borderColor: AppColors.mistBlue,
+                          borderStrokeWidth: 2.5,
+                          isFilled: true,
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Info + actions ────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+            child: Row(
+              children: [
+                // Icon
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.mistBlue.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.landscape,
+                      color: AppColors.mistBlue, size: 24),
+                ),
+                const SizedBox(width: 12),
+
+                // Name + meta
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(field.name,
+                          style: AppTextStyles.bodyLarge()
+                              .copyWith(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          _metaChip(Icons.crop_square, areaText),
+                          if (field.cropType != null) ...[
+                            const SizedBox(width: 8),
+                            _metaChip(Icons.grass, field.cropType!),
+                          ],
+                          const SizedBox(width: 8),
+                          _metaChip(Icons.place_outlined,
+                              '${coords.length} pts'),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Action buttons
+                _actionButton(
+                  icon: Icons.edit_outlined,
+                  color: AppColors.mistBlue,
+                  tooltip: 'Edit',
+                  onTap: () => _editField(field),
+                ),
+                const SizedBox(width: 4),
+                _actionButton(
+                  icon: Icons.delete_outline,
+                  color: Colors.red.shade400,
+                  tooltip: 'Delete',
+                  onTap: () => _deleteField(field.id),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _metaChip(IconData icon, String text) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: AppColorPalette.softSlate),
+        const SizedBox(width: 3),
+        Text(text,
+            style: AppTextStyles.caption()
+                .copyWith(color: AppColorPalette.softSlate)),
+      ],
+    );
+  }
+
+  Widget _actionButton({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 20, color: color),
+        ),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../theme/color_palette.dart';
@@ -8,6 +9,7 @@ import '../utils/constants.dart';
 import '../models/animal.dart';
 import '../models/alert_item.dart';
 import '../models/weather_info.dart';
+import '../providers/weather_provider.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/status_chip.dart';
 import '../widgets/metric_card.dart';
@@ -26,6 +28,8 @@ import 'add_staff_screen.dart';
 import 'staff_list_screen.dart';
 import 'incident_history_screen.dart';
 import 'live_feed_screen.dart';
+import 'weather_screen.dart';
+import 'irrigation_scheduler_screen.dart';
 import 'package:frontend_pim/screens/parcel_list_screen.dart';
 import 'plant_doctor_screen.dart';
 
@@ -226,6 +230,36 @@ class _HomeScreenState extends State<HomeScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (_) => const PlantDoctorScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.cloud,
+                    iconColor: const Color(0xFF57A0D3),
+                    title: 'Weather & Advice',
+                    subtitle: 'Forecast & recommendations',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const WeatherScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.water_drop,
+                    iconColor: const Color(0xFF2196F3),
+                    title: 'Irrigation Scheduler',
+                    subtitle: 'Smart 7-day irrigation plan',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const IrrigationSchedulerScreen(),
                         ),
                       );
                     },
@@ -575,142 +609,151 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ─────────────────────────────────────────────
   // WEATHER & SOIL CARD
+  // Outer GestureDetector (file 2) → WeatherScreen
+  // Inner InkWell (both files) → SoilMeasurementsListScreen
   // ─────────────────────────────────────────────
   Widget _buildWeatherSoilCard() {
-    return GradientContainer.fieldFresh(
-      margin: EdgeInsets.symmetric(
-        horizontal: Responsive.horizontalPadding(context),
-        vertical: Responsive.verticalPadding(context),
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const WeatherScreen()),
       ),
-      padding: EdgeInsets.all(Responsive.cardPadding(context)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      child: GradientContainer.fieldFresh(
+        margin: EdgeInsets.symmetric(
+          horizontal: Responsive.horizontalPadding(context),
+          vertical: Responsive.verticalPadding(context),
+        ),
+        padding: EdgeInsets.all(Responsive.cardPadding(context)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Current Conditions',
+                        style: AppTextStyles.bodyMedium(
+                          color: AppColorPalette.white.withOpacity(0.9),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        weatherInfo.formattedTemperature,
+                        style: AppTextStyles.displayLarge(
+                          color: AppColorPalette.white,
+                        ).copyWith(fontSize: 56),
+                      ),
+                      Text(
+                        weatherInfo.condition,
+                        style: AppTextStyles.bodyLarge(
+                          color: AppColorPalette.white,
+                        ).copyWith(fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColorPalette.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    weatherInfo.weatherIcon,
+                    style: const TextStyle(fontSize: 48),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // Soil Moisture tappable section → SoilMeasurementsListScreen
+            InkWell(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SoilMeasurementsListScreen(),
+                ),
+              ),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColorPalette.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColorPalette.white.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
                   children: [
-                    Text(
-                      'Current Conditions',
-                      style: AppTextStyles.bodyMedium(
-                        color: AppColorPalette.white.withOpacity(0.9),
+                    Icon(
+                      Icons.water_drop,
+                      color: AppColorPalette.white,
+                      size: 32,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Soil Moisture',
+                            style: AppTextStyles.bodySmall(
+                              color: AppColorPalette.white.withOpacity(0.9),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Text(
+                                weatherInfo.formattedSoilMoisture,
+                                style: AppTextStyles.h2(
+                                  color: AppColorPalette.white,
+                                ).copyWith(fontSize: 28),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: weatherInfo.isSoilMoistureHealthy
+                                      ? AppColorPalette.success
+                                      : AppColorPalette.warning,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  weatherInfo.soilMoistureStatus,
+                                  style: AppTextStyles.caption(
+                                    color: AppColorPalette.white,
+                                  ).copyWith(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      weatherInfo.formattedTemperature,
-                      style: AppTextStyles.displayLarge(
-                        color: AppColorPalette.white,
-                      ).copyWith(fontSize: 56),
-                    ),
-                    Text(
-                      weatherInfo.condition,
-                      style: AppTextStyles.bodyLarge(
-                        color: AppColorPalette.white,
-                      ).copyWith(fontWeight: FontWeight.w500),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      color: AppColorPalette.white,
+                      size: 20,
                     ),
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColorPalette.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  weatherInfo.weatherIcon,
-                  style: const TextStyle(fontSize: 48),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          InkWell(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SoilMeasurementsListScreen(),
-              ),
             ),
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColorPalette.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColorPalette.white.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.water_drop,
-                    color: AppColorPalette.white,
-                    size: 32,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Soil Moisture',
-                          style: AppTextStyles.bodySmall(
-                            color: AppColorPalette.white.withOpacity(0.9),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Text(
-                              weatherInfo.formattedSoilMoisture,
-                              style: AppTextStyles.h2(
-                                color: AppColorPalette.white,
-                              ).copyWith(fontSize: 28),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: weatherInfo.isSoilMoistureHealthy
-                                    ? AppColorPalette.success
-                                    : AppColorPalette.warning,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                weatherInfo.soilMoistureStatus,
-                                style: AppTextStyles.caption(
-                                  color: AppColorPalette.white,
-                                ).copyWith(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    color: AppColorPalette.white,
-                    size: 20,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -998,7 +1041,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ─────────────────────────────────────────────
   // FLOATING ACTION BUTTON
-  // Siren FAB (file 1) stacked above Chatbot FAB
+  // Siren FAB (file 1) stacked above Chatbot FAB (both files)
   // ─────────────────────────────────────────────
   Widget _buildFloatingActionButton() {
     return Column(

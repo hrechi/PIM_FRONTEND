@@ -5,6 +5,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/parcel_provider.dart';
+import 'providers/weather_provider.dart';
+import 'providers/irrigation_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'screens/incident_detail_screen.dart';
@@ -73,6 +75,8 @@ class _FieldlyAppState extends State<FieldlyApp> {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => SoilMeasurementsProvider()),
         ChangeNotifierProvider(create: (_) => ParcelProvider()),
+        ChangeNotifierProvider(create: (_) => WeatherProvider()),
+        ChangeNotifierProvider(create: (_) => IrrigationProvider()),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
