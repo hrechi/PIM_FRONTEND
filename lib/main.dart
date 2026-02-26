@@ -54,8 +54,7 @@ class _FieldlyAppState extends State<FieldlyApp> {
 
   Future<void> _setupNotificationNavigation() async {
     // App was terminated → user tapped notification to open it
-    final initialMessage =
-        await FirebaseMessaging.instance.getInitialMessage();
+    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {
       // Small delay to let the navigator finish building
       Future.delayed(const Duration(milliseconds: 500), () {

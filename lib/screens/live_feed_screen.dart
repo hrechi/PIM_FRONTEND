@@ -32,8 +32,7 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
   DateTime _lastFpsUpdate = DateTime.now();
 
   /// Single-frame JPEG endpoint served by Flask
-  String get _snapshotUrl =>
-      'http://${AppConfig.serverHost}:5050/snapshot';
+  String get _snapshotUrl => 'http://${AppConfig.serverHost}:5050/snapshot';
 
   // ── Lifecycle ──────────────────────────────────────────────
 
@@ -135,8 +134,7 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
             Center(
               child: Container(
                 margin: const EdgeInsets.only(right: 8),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.greenAccent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
@@ -199,14 +197,11 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
           // ── Info Bar ───────────────────────────────────────────
           Container(
             margin: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: BoxDecoration(
               color: const Color(0xFF1A1A2E),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.08),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: Row(
               children: [

@@ -73,7 +73,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _triggerSiren() {
-    _socket.emit('trigger_siren', {'timestamp': DateTime.now().toIso8601String()});
+    _socket.emit('trigger_siren', {
+      'timestamp': DateTime.now().toIso8601String(),
+    });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Row(
@@ -977,7 +979,9 @@ class _HomeScreenState extends State<HomeScreen> {
         GestureDetector(
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const ChatAssistantScreen()),
+            MaterialPageRoute(
+              builder: (context) => const ChatAssistantScreen(),
+            ),
           ),
           child: Container(
             decoration: BoxDecoration(

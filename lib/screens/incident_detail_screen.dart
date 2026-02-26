@@ -125,8 +125,8 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _buildError()
-              : _buildContent(),
+          ? _buildError()
+          : _buildContent(),
     );
   }
 
@@ -286,19 +286,20 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
           colors: _isResolved
               ? [const Color(0xFF1B5E20), const Color(0xFF2E7D32)]
               : _isIntruder
-                  ? [const Color(0xFFB71C1C), const Color(0xFFC62828)]
-                  : [const Color(0xFF4A148C), const Color(0xFF6A1B9A)],
+              ? [const Color(0xFFB71C1C), const Color(0xFFC62828)]
+              : [const Color(0xFF4A148C), const Color(0xFF6A1B9A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         boxShadow: [
           BoxShadow(
-            color: (_isResolved
-                    ? Colors.green
-                    : _isIntruder
+            color:
+                (_isResolved
+                        ? Colors.green
+                        : _isIntruder
                         ? Colors.red
                         : Colors.purple)
-                .withValues(alpha: 0.35),
+                    .withValues(alpha: 0.35),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -310,9 +311,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
           Row(
             children: [
               Icon(
-                _isResolved
-                    ? Icons.check_circle
-                    : Icons.warning_amber_rounded,
+                _isResolved ? Icons.check_circle : Icons.warning_amber_rounded,
                 color: Colors.white,
                 size: 28,
               ),
@@ -333,8 +332,8 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
             _isResolved
                 ? 'This incident has been reviewed and marked as resolved.'
                 : _isIntruder
-                    ? 'An unknown person was detected on your property. Review the footage and take appropriate action.'
-                    : 'An animal was detected in a restricted area. Review the footage below.',
+                ? 'An unknown person was detected on your property. Review the footage and take appropriate action.'
+                : 'An animal was detected in a restricted area. Review the footage below.',
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.9),
               fontSize: 14,
@@ -371,20 +370,26 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
         children: [
           Text(
             'Incident Details',
-            style: AppTextStyles.h3(color: AppColorPalette.charcoalGreen).copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: AppTextStyles.h3(
+              color: AppColorPalette.charcoalGreen,
+            ).copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
-          _detailRow(Icons.category_rounded, 'Detection Type',
-              _isIntruder ? 'Intruder' : 'Animal'),
+          _detailRow(
+            Icons.category_rounded,
+            'Detection Type',
+            _isIntruder ? 'Intruder' : 'Animal',
+          ),
           const Divider(height: 24),
           _detailRow(Icons.calendar_today_rounded, 'Date', formattedDate),
           const Divider(height: 24),
           _detailRow(Icons.access_time_rounded, 'Time', formattedTime),
           const Divider(height: 24),
-          _detailRow(Icons.fingerprint_rounded, 'Incident ID',
-              widget.incidentId.substring(0, 8).toUpperCase()),
+          _detailRow(
+            Icons.fingerprint_rounded,
+            'Incident ID',
+            widget.incidentId.substring(0, 8).toUpperCase(),
+          ),
         ],
       ),
     );
@@ -452,8 +457,9 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
               ),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  _isResolved ? Colors.green.shade600 : AppColorPalette.fieldFreshMid,
+              backgroundColor: _isResolved
+                  ? Colors.green.shade600
+                  : AppColorPalette.fieldFreshMid,
               foregroundColor: Colors.white,
               disabledBackgroundColor: Colors.green.shade400,
               disabledForegroundColor: Colors.white,
@@ -475,8 +481,10 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
             height: 54,
             child: OutlinedButton.icon(
               onPressed: _alertAuthorities,
-              icon: Icon(Icons.local_police_outlined,
-                  color: Colors.red.shade700),
+              icon: Icon(
+                Icons.local_police_outlined,
+                color: Colors.red.shade700,
+              ),
               label: Text(
                 'ALERT AUTHORITIES',
                 style: TextStyle(

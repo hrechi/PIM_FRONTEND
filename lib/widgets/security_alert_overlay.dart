@@ -71,10 +71,10 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, -1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
+    _slideAnim = Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
+        );
 
     _pulseController = AnimationController(
       vsync: this,
@@ -169,8 +169,9 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
         ),
         boxShadow: [
           BoxShadow(
-            color: (_isIntruder ? Colors.red : Colors.purple)
-                .withValues(alpha: 0.5),
+            color: (_isIntruder ? Colors.red : Colors.purple).withValues(
+              alpha: 0.5,
+            ),
             blurRadius: 32,
             spreadRadius: 2,
           ),
@@ -225,10 +226,7 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
                 fontWeight: FontWeight.w900,
                 letterSpacing: 2,
                 shadows: [
-                  Shadow(
-                    color: Colors.redAccent,
-                    blurRadius: _glowAnim.value,
-                  ),
+                  Shadow(color: Colors.redAccent, blurRadius: _glowAnim.value),
                   Shadow(
                     color: Colors.orange.withValues(alpha: 0.6),
                     blurRadius: _glowAnim.value * 1.5,
@@ -263,7 +261,10 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
           height: 88,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.3),
+              width: 1.5,
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.4),
@@ -290,9 +291,9 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
             children: [
               Text(
                 _isIntruder ? 'Intruder Detected' : 'Animal Detected',
-                style: AppTextStyles.h3(color: Colors.white).copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+                style: AppTextStyles.h3(
+                  color: Colors.white,
+                ).copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 6),
               Text(
@@ -306,8 +307,10 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
               const SizedBox(height: 10),
               // Live badge
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
@@ -329,8 +332,9 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
                     const SizedBox(width: 6),
                     Text(
                       'LIVE',
-                      style: AppTextStyles.overline(color: Colors.white)
-                          .copyWith(fontWeight: FontWeight.w800),
+                      style: AppTextStyles.overline(
+                        color: Colors.white,
+                      ).copyWith(fontWeight: FontWeight.w800),
                     ),
                   ],
                 ),
@@ -370,8 +374,9 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
             ),
             child: Text(
               'DISMISS',
-              style: AppTextStyles.buttonMedium(color: Colors.white)
-                  .copyWith(letterSpacing: 1.5),
+              style: AppTextStyles.buttonMedium(
+                color: Colors.white,
+              ).copyWith(letterSpacing: 1.5),
             ),
           ),
         ),
@@ -380,10 +385,8 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
         Expanded(
           child: AnimatedBuilder(
             animation: _pulseAnim,
-            builder: (_, child) => Transform.scale(
-              scale: _pulseAnim.value,
-              child: child,
-            ),
+            builder: (_, child) =>
+                Transform.scale(scale: _pulseAnim.value, child: child),
             child: ElevatedButton(
               onPressed: () => _viewIncident(context),
               style: ElevatedButton.styleFrom(

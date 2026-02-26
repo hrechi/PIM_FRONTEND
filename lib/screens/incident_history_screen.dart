@@ -120,10 +120,7 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
 
   Future<void> _deleteIncident(String id, int index) async {
     try {
-      await ApiService.delete(
-        '/security/incidents/$id',
-        withAuth: true,
-      );
+      await ApiService.delete('/security/incidents/$id', withAuth: true);
       setState(() {
         _incidents.removeAt(index);
       });
@@ -143,9 +140,9 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
       // Restore the item if delete failed
       _loadIncidents();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
       }
     }
   }
@@ -291,105 +288,110 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
                       ),
                     ),
                     child: Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Incident Image
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              '${ApiService.mediaBaseUrl}${incident.imagePath}',
-                              width: 80,
-                              height: 80,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  width: 80,
-                                  height: 80,
-                                  color: AppColorPalette.lightGrey,
-                                  child: Icon(
-                                    Icons.broken_image,
-                                    color: AppColorPalette.softSlate,
-                                  ),
-                                );
-                              },
+                      margin: const EdgeInsets.only(bottom: 12),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Incident Image
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                '${ApiService.mediaBaseUrl}${incident.imagePath}',
+                                width: 80,
+                                height: 80,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    width: 80,
+                                    height: 80,
+                                    color: AppColorPalette.lightGrey,
+                                    child: Icon(
+                                      Icons.broken_image,
+                                      color: AppColorPalette.softSlate,
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          // Incident Details
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      _getIconForType(incident.type),
-                                      color: _getColorForType(incident.type),
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      incident.type == 'intruder'
-                                          ? 'Intruder Detected'
-                                          : 'Animal Detected',
-                                      style: AppTextStyles.h4().copyWith(
-                                        color: _getColorForType(incident.type),
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _formatTimestamp(incident.timestamp),
-                                  style: AppTextStyles.bodySmall().copyWith(
-                                    color: AppColorPalette.softSlate
-                                        .withOpacity(0.6),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${incident.timestamp.hour.toString().padLeft(2, '0')}:${incident.timestamp.minute.toString().padLeft(2, '0')}',
-                                  style: AppTextStyles.bodySmall().copyWith(
-                                    color: AppColorPalette.charcoalGreen
-                                        .withOpacity(0.8),
-                                  ),
-                                ),
-                                if (incident.latitude != null &&
-                                    incident.longitude != null) ...[                                  const SizedBox(height: 4),
+                            const SizedBox(width: 12),
+                            // Incident Details
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                   Row(
                                     children: [
                                       Icon(
-                                        Icons.location_on,
-                                        size: 14,
-                                        color: AppColorPalette.emeraldGreen,
+                                        _getIconForType(incident.type),
+                                        color: _getColorForType(incident.type),
+                                        size: 20,
                                       ),
-                                      const SizedBox(width: 4),
+                                      const SizedBox(width: 8),
                                       Text(
-                                        '${incident.latitude!.toStringAsFixed(4)}, ${incident.longitude!.toStringAsFixed(4)}',
-                                        style: AppTextStyles.bodySmall().copyWith(
-                                          color: AppColorPalette.emeraldGreen,
-                                          fontSize: 11,
+                                        incident.type == 'intruder'
+                                            ? 'Intruder Detected'
+                                            : 'Animal Detected',
+                                        style: AppTextStyles.h4().copyWith(
+                                          color: _getColorForType(
+                                            incident.type,
+                                          ),
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
                                     ],
                                   ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _formatTimestamp(incident.timestamp),
+                                    style: AppTextStyles.bodySmall().copyWith(
+                                      color: AppColorPalette.softSlate
+                                          .withOpacity(0.6),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${incident.timestamp.hour.toString().padLeft(2, '0')}:${incident.timestamp.minute.toString().padLeft(2, '0')}',
+                                    style: AppTextStyles.bodySmall().copyWith(
+                                      color: AppColorPalette.charcoalGreen
+                                          .withOpacity(0.8),
+                                    ),
+                                  ),
+                                  if (incident.latitude != null &&
+                                      incident.longitude != null) ...[
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.location_on,
+                                          size: 14,
+                                          color: AppColorPalette.emeraldGreen,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${incident.latitude!.toStringAsFixed(4)}, ${incident.longitude!.toStringAsFixed(4)}',
+                                          style: AppTextStyles.bodySmall()
+                                              .copyWith(
+                                                color: AppColorPalette
+                                                    .emeraldGreen,
+                                                fontSize: 11,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
                   );
                 },
               ),
