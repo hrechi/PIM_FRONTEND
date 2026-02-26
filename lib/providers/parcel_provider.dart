@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/parcel.dart';
-import '../services/parcel_crud_service.dart';
+import '../services/parcel_crud_service.dart'; 
 
 class ParcelProvider with ChangeNotifier {
   final ParcelCrudService _service = ParcelCrudService();
