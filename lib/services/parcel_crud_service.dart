@@ -48,4 +48,9 @@ class ParcelCrudService {
     final response = await ApiService.post('$_endpoint/$parcelId/harvests', harvestData, withAuth: true);
     return Harvest.fromJson(response);
   }
+
+  Future<String> getAiAdvice(String parcelId) async {
+    final response = await ApiService.get('$_endpoint/$parcelId/ai-advice', withAuth: true);
+    return response['advice'] as String? ?? 'No advice available.';
+  }
 }
