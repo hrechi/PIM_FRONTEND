@@ -7,7 +7,7 @@ class PlantService {
   // Run 'ifconfig' (Mac) or 'ipconfig' (Windows) in terminal to find it.
   // Example: http://192.168.1.15:8000
   // Update this line:
-  static const String baseUrl = 'http://192.168.100.9:8000';
+  static const String baseUrl = 'http://192.168.1.18:8000';
   static Future<Map<String, dynamic>> scanPlant(File imageFile) async {
     try {
       var request = http.MultipartRequest(
