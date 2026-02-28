@@ -43,6 +43,27 @@ class SoilMeasurement {
     required this.updatedAt,
   });
 
+  /// Helper method to get nutrient value with fallback for different key formats
+  /// Tries uppercase (N, P, K) first, then lowercase (nitrogen, phosphorus, potassium)
+  double _getNutrientValue(String nutrientType) {
+    switch (nutrientType.toLowerCase()) {
+      case 'n':
+      case 'nitrogen':
+        final value = (nutrients['N'] ?? nutrients['nitrogen'] ?? 0) as num?;
+        return value?.toDouble() ?? 0.0;
+      case 'p':
+      case 'phosphorus':
+        final value = (nutrients['P'] ?? nutrients['phosphorus'] ?? 0) as num?;
+        return value?.toDouble() ?? 0.0;
+      case 'k':
+      case 'potassium':
+        final value = (nutrients['K'] ?? nutrients['potassium'] ?? 0) as num?;
+        return value?.toDouble() ?? 0.0;
+      default:
+        return 0.0;
+    }
+  }
+
   /// Get pH status: Acidic, Neutral, or Alkaline
   String get phStatus {
     if (ph < 6.0) return 'Acidic';
@@ -71,22 +92,104 @@ class SoilMeasurement {
     return MoistureStatus.optimal;
   }
 
-  /// Check if measurement is healthy
+  /// Check if measurement is healthy (considers all parameters)
   bool get isHealthy {
-    return ph >= 6.0 &&
+    // Check pH, moisture, and temperature
+    final basicHealth = ph >= 6.0 &&
         ph <= 7.5 &&
         soilMoisture >= 30 &&
         soilMoisture <= 80 &&
         temperature >= 15 &&
         temperature <= 30;
+    
+    // Check nutrients using helper method
+    final nValue = _getNutrientValue('N');
+    final pValue = _getNutrientValue('P');
+    final kValue = _getNutrientValue('K');
+    
+    final nutrientsHealthy = nValue >= 20 && pValue >= 15 && kValue >= 20;
+    
+    return basicHealth && nutrientsHealthy;
   }
 
-  /// Get overall health score (0-100)
+  /// Get overall health score (0-100) based on all soil parameters
   double get healthScore {
-    double phScore = (ph >= 6.0 && ph <= 7.5) ? 100 : 50;
-    double moistureScore = (soilMoisture >= 30 && soilMoisture <= 80) ? 100 : 50;
-    double tempScore = (temperature >= 15 && temperature <= 30) ? 100 : 50;
-    return (phScore + moistureScore + tempScore) / 3;
+    // pH score (6.0-7.5 is optimal)
+    double phScore = 0;
+    if (ph >= 6.0 && ph <= 7.5) {
+      phScore = 100;
+    } else if (ph >= 5.5 && ph <= 8.0) {
+      phScore = 70;
+    } else if (ph >= 5.0 && ph <= 8.5) {
+      phScore = 40;
+    } else {
+      phScore = 20;
+    }
+    
+    // Moisture score (30-80% is optimal)
+    double moistureScore = 0;
+    if (soilMoisture >= 30 && soilMoisture <= 80) {
+      moistureScore = 100;
+    } else if (soilMoisture >= 20 && soilMoisture <= 90) {
+      moistureScore = 70;
+    } else if (soilMoisture >= 10 && soilMoisture <= 95) {
+      moistureScore = 40;
+    } else {
+      moistureScore = 20;
+    }
+    
+    // Temperature score (15-30°C is optimal)
+    double tempScore = 0;
+    if (temperature >= 15 && temperature <= 30) {
+      tempScore = 100;
+    } else if (temperature >= 10 && temperature <= 35) {
+      tempScore = 70;
+    } else if (temperature >= 5 && temperature <= 40) {
+      tempScore = 40;
+    } else {
+      tempScore = 20;
+    }
+    
+    // Nutrient scores (N, P, K) using helper method
+    final nValue = _getNutrientValue('N');
+    final pValue = _getNutrientValue('P');
+    final kValue = _getNutrientValue('K');
+    
+    double nScore = 0;
+    if (nValue >= 30 && nValue <= 60) {
+      nScore = 100;
+    } else if (nValue >= 20 && nValue <= 70) {
+      nScore = 70;
+    } else if (nValue >= 10 && nValue <= 80) {
+      nScore = 40;
+    } else {
+      nScore = 20;
+    }
+    
+    double pScore = 0;
+    if (pValue >= 20 && pValue <= 50) {
+      pScore = 100;
+    } else if (pValue >= 15 && pValue <= 60) {
+      pScore = 70;
+    } else if (pValue >= 10 && pValue <= 70) {
+      pScore = 40;
+    } else {
+      pScore = 20;
+    }
+    
+    double kScore = 0;
+    if (kValue >= 30 && kValue <= 60) {
+      kScore = 100;
+    } else if (kValue >= 20 && kValue <= 70) {
+      kScore = 70;
+    } else if (kValue >= 10 && kValue <= 80) {
+      kScore = 40;
+    } else {
+      kScore = 20;
+    }
+    
+    // Calculate weighted average (all parameters are important)
+    return (phScore + moistureScore + tempScore + nScore + pScore + kScore) / 6;
   }
 
   /// Format nutrients as string
