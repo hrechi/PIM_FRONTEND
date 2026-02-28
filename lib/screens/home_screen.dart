@@ -32,6 +32,7 @@ import 'weather_screen.dart';
 import 'irrigation_scheduler_screen.dart';
 import 'package:frontend_pim/screens/parcel_list_screen.dart';
 import 'plant_doctor_screen.dart';
+import 'agricultural_news_screen.dart';
 
 /// Main home screen displaying the farm dashboard
 class HomeScreen extends StatefulWidget {
@@ -245,6 +246,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (_) => const WeatherScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.newspaper,
+                    iconColor: Colors.orange,
+                    title: 'Agricultural News',
+                    subtitle: 'Latest farming updates',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AgriculturalNewsScreen(),
                         ),
                       );
                     },

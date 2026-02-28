@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../screens/agricultural_news_screen.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../screens/animals/animal_list_screen.dart';
@@ -88,6 +89,21 @@ class AppDrawer extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const PlantDoctorScreen()),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.newspaper,
+                    iconColor: Colors.orange,
+                    title: 'Agricultural News',
+                    subtitle: 'Latest farming updates',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AgriculturalNewsScreen(),
+                        ),
                       );
                     },
                   ),
