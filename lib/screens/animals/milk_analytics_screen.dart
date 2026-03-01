@@ -4,7 +4,6 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../utils/constants.dart';
 import '../../services/milk_production_service.dart';
-import '../../widgets/app_drawer.dart';
 import 'milk_production_screen.dart';
 
 class MilkAnalyticsScreen extends StatefulWidget {
@@ -125,15 +124,12 @@ class _MilkAnalyticsScreenState extends State<MilkAnalyticsScreen> with SingleTi
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8F6),
-      drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: Color(0xFF1E293B)),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF1E293B)),
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Milk Analytics',

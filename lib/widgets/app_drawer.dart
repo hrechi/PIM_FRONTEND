@@ -6,6 +6,7 @@ import '../screens/animals/animal_dashboard_screen.dart';
 import '../screens/animals/add_animal_screen.dart';
 import '../screens/animals/milk_production_screen.dart';
 import '../screens/animals/milk_analytics_screen.dart';
+import '../screens/vaccines/vaccine_dashboard_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/parcel_list_screen.dart';
 import '../screens/plant_doctor_screen.dart';
@@ -158,6 +159,18 @@ class AppDrawer extends StatelessWidget {
                         },
                       ),
                     ],
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.vaccines_rounded,
+                    title: 'Vaccination',
+                    subtitle: 'Herd Health & Planning',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const VaccineDashboardScreen()),
+                      );
+                    },
                   ),
 
                   const Divider(height: 1),

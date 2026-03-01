@@ -32,6 +32,8 @@ import 'weather_screen.dart';
 import 'irrigation_scheduler_screen.dart';
 import 'package:frontend_pim/screens/parcel_list_screen.dart';
 import 'plant_doctor_screen.dart';
+import 'animals/milk_production_screen.dart';
+import 'animals/milk_analytics_screen.dart';
 
 /// Main home screen displaying the farm dashboard
 class HomeScreen extends StatefulWidget {
@@ -127,26 +129,31 @@ class _HomeScreenState extends State<HomeScreen> {
     final attentionRequired = AlertItem.getAttentionRequired(alerts);
 
     return Scaffold(
-      backgroundColor: AppColorPalette.wheatWarmClay,
+      backgroundColor: AppColors.sageTint,
       drawer: _buildDrawer(),
-      body: SafeArea(
-        child: Responsive.constrainedContent(
-          context: context,
-          child: CustomScrollView(
-            slivers: [
-              _buildHeader(),
-              SliverToBoxAdapter(child: _buildQuickAccessButtons()),
-              SliverToBoxAdapter(child: _buildWeatherSoilCard()),
-              if (attentionRequired.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: _buildAttentionRequiredSection(attentionRequired),
-                ),
-              SliverToBoxAdapter(child: _buildLivestockLocationSection()),
-              SliverToBoxAdapter(child: _buildLiveHealthMetrics()),
-              const SliverToBoxAdapter(child: SizedBox(height: 100)),
-            ],
+      body: Stack(
+        children: [
+          _buildHeaderBackground(),
+          SafeArea(
+            child: Responsive.constrainedContent(
+              context: context,
+              child: CustomScrollView(
+                slivers: [
+                  _buildHeader(),
+                  SliverToBoxAdapter(child: _buildQuickAccessButtons()),
+                  SliverToBoxAdapter(child: _buildWeatherSoilCard()),
+                  if (attentionRequired.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: _buildAttentionRequiredSection(attentionRequired),
+                    ),
+                  SliverToBoxAdapter(child: _buildLivestockLocationSection()),
+                  SliverToBoxAdapter(child: _buildLiveHealthMetrics()),
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                ],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
       floatingActionButton: _buildFloatingActionButton(),
     );
@@ -330,35 +337,79 @@ class _HomeScreenState extends State<HomeScreen> {
                   const Divider(height: 1),
 
                   // ── Animals ───────────────────────────
-                  _buildDrawerSection('Animals'),
-                  _buildDrawerItem(
-                    icon: Icons.pets,
-                    title: 'Animal List',
-                    subtitle: 'View all animals',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const AnimalListScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.add_circle_outline,
-                    iconColor: AppColorPalette.emeraldGreen,
-                    title: 'Add Animal',
-                    subtitle: 'Register new animal',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const AddAnimalScreen(),
-                        ),
-                      );
-                    },
+                  _buildDrawerSection('Livestock'),
+                  _buildExpansionDrawerItem(
+                    context: context,
+                    icon: Icons.pets_rounded,
+                    title: 'Animal Management',
+                    subtitle: 'Dashboard & Records',
+                    children: [
+                      _buildDrawerSubItem(
+                        icon: Icons.dashboard_rounded,
+                        title: 'Livestock Dashboard',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AnimalDashboardScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _buildDrawerSubItem(
+                        icon: Icons.list_alt_rounded,
+                        title: 'Livestock List',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AnimalListScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _buildDrawerSubItem(
+                        icon: Icons.add_circle_outline_rounded,
+                        title: 'Add New Animal',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AddAnimalScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _buildDrawerSubItem(
+                        icon: Icons.analytics_rounded,
+                        title: 'Milk Analytics',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const MilkAnalyticsScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _buildDrawerSubItem(
+                        icon: Icons.opacity_rounded,
+                        title: 'Milk Production',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const MilkProductionScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
 
                   const Divider(height: 1),
@@ -453,7 +504,7 @@ class _HomeScreenState extends State<HomeScreen> {
       floating: true,
       elevation: 0,
       automaticallyImplyLeading: false,
-      backgroundColor: AppColorPalette.wheatWarmClay,
+      backgroundColor: Colors.transparent,
       toolbarHeight: 80,
       leading: Builder(
         builder: (context) => IconButton(
@@ -1086,6 +1137,110 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildExpansionDrawerItem({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required List<Widget> children,
+    Color? iconColor,
+  }) {
+    final color = iconColor ?? AppColorPalette.fieldFreshStart;
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: color, size: 24),
+        ),
+        title: Text(
+          title,
+          style: AppTextStyles.bodyLarge(color: AppColorPalette.charcoalGreen),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate),
+        ),
+        childrenPadding: const EdgeInsets.only(left: 64),
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildDrawerSubItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      dense: true,
+      leading: Icon(
+        icon,
+        size: 18,
+        color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.7),
+      ),
+      title: Text(
+        title,
+        style: AppTextStyles.bodyMedium(color: AppColorPalette.charcoalGreen),
+      ),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildHeaderBackground() {
+    return Positioned(
+      top: -100,
+      left: -100,
+      right: -100,
+      height: 400,
+      child: Opacity(
+        opacity: 0.6,
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              child: Container(
+                width: 400,
+                height: 400,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.fieldFreshStart.withValues(alpha: 0.2),
+                      AppColors.fieldFreshStart.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: -50,
+              right: -50,
+              child: Container(
+                width: 350,
+                height: 350,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.mistyBlue.withValues(alpha: 0.2),
+                      AppColors.mistyBlue.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

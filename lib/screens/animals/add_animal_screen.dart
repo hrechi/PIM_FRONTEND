@@ -3,7 +3,11 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../models/animal.dart';
 import '../../services/animal_service.dart';
 import '../../utils/constants.dart';
-import '../../widgets/app_drawer.dart';
+import '../../services/field_service.dart';
+import '../../models/field_model.dart';
+import '../../services/vaccine_service.dart';
+import '../../models/vaccine_models.dart';
+import 'package:intl/intl.dart';
 
 class AddAnimalScreen extends StatefulWidget {
   final Animal? animal;
@@ -16,6 +20,8 @@ class AddAnimalScreen extends StatefulWidget {
 class _AddAnimalScreenState extends State<AddAnimalScreen> {
   final _formKey = GlobalKey<FormState>();
   final AnimalService _animalService = AnimalService();
+  final FieldService _fieldService = FieldService();
+  final VaccineService _vaccineService = VaccineService();
 
   // Controllers
   final _nameController = TextEditingController();
@@ -35,6 +41,10 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   bool _isVaccinated = false;
   bool? _isPregnant; // null = unknown, true = yes, false = no
   bool _isLoading = false;
+  
+  // Field-based ownership
+  List<FieldModel> _fields = [];
+  String? _selectedFieldId;
 
   // Species-specific state
   String? _raceCategory;   // course, loisir, sport
@@ -42,8 +52,16 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   String? _meatGrade;      // A, B, C
   String? _dogRole;        // garde, berger, compagnie
 
-  // Vaccine list
+  // Vaccine list (legacy/manual)
   List<Map<String, dynamic>> _vaccines = [];
+
+  // Dynamic Vaccine Regulations
+  List<VaccineRegulation> _regulations = [];
+  bool _isLoadingRegulations = false;
+  
+  // Tracked data for each regulation/vaccine
+  // Key: vaccine code, Value: {checked: bool, date: String, dose: double, isOther: bool, lot: String}
+  final Map<String, Map<String, dynamic>> _vaccineSelections = {};
 
   bool get isEditMode => widget.animal != null;
 
@@ -62,14 +80,12 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
       _ageInMonths = a.age.toDouble();
       _isVaccinated = a.vaccination;
       
-      // Prefer vaccineRecords for modern sync, fallback to vaccines
+      // Prefer vaccineRecords for modern sync
       if (a.vaccineRecords != null && a.vaccineRecords!.isNotEmpty) {
         _vaccines = a.vaccineRecords!.map((v) => {
-          'name': v.vaccineName,
-          'date': v.vaccineDate.toIso8601String().split('T')[0],
+          'name': (v.vaccine?.code == 'OTHER' ? v.notes : v.vaccine?.nameFr) ?? v.notes ?? 'Vaccin',
+          'date': v.administeredAt.toIso8601String().split('T')[0],
         }).toList();
-      } else {
-        _vaccines = a.vaccines != null ? List<Map<String, dynamic>>.from(a.vaccines!) : [];
       }
       
       _isPregnant = a.isPregnant;
@@ -83,6 +99,58 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         setState(() => _ageInMonths = val);
       }
     });
+    _fetchFields();
+  }
+
+  Future<void> _fetchFields() async {
+    try {
+      final fields = await _fieldService.getFields();
+      setState(() {
+        _fields = fields;
+        if (!isEditMode && _fields.isNotEmpty) {
+          _selectedFieldId = _fields.first.id;
+          _fetchRegulations(); // Start fetching for default field
+        } else if (isEditMode) {
+          _selectedFieldId = widget.animal?.fieldId;
+        }
+      });
+    } catch (e) {
+      debugPrint('Error fetching fields: $e');
+    }
+  }
+
+  Future<void> _fetchRegulations() async {
+    if (_selectedFieldId == null) return;
+    
+    setState(() => _isLoadingRegulations = true);
+    try {
+      final field = _fields.firstWhere((f) => f.id == _selectedFieldId);
+      final countryCode = field.countryCode;
+      
+      if (countryCode != null) {
+        final regs = await _vaccineService.getCountryRegulations(countryCode, species: _selectedType);
+        setState(() {
+          _regulations = regs;
+          // Pre-populate selections for existing regulations if not already present
+          for (var reg in _regulations) {
+             if (!_vaccineSelections.containsKey(reg.vaccineId)) {
+               _vaccineSelections[reg.vaccineId] = {
+                 'checked': false,
+                 'date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
+                 'dose': 1.0,
+                 'lot': '',
+                 'isOther': false,
+                 'name': reg.vaccine?.nameEn ?? reg.vaccineId,
+               };
+             }
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching regulations: $e');
+    } finally {
+      setState(() => _isLoadingRegulations = false);
+    }
   }
 
   @override
@@ -114,6 +182,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         'weight': double.tryParse(_weightController.text),
         'tagNumber': _tagController.text,
         'notes': _notesController.text,
+        'fieldId': _selectedFieldId,
         'vaccination': _isVaccinated,
         'vaccines': _isVaccinated ? _vaccines : null,
         // COW + female
@@ -133,16 +202,44 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         'dogRole': _selectedType == 'dog' ? _dogRole : null,
       };
 
+      Animal animal;
       if (isEditMode) {
-        await _animalService.updateAnimal(widget.animal!.nodeId, animalData);
+        animal = await _animalService.updateAnimal(widget.animal!.nodeId, animalData);
       } else {
-        await _animalService.createAnimal(animalData);
+        animal = await _animalService.createAnimal(animalData);
+      }
+
+      // ── Record selected vaccinations ──
+      final checkedSelections = _vaccineSelections.entries.where((e) => e.value['checked'] == true).toList();
+      for (var entry in checkedSelections) {
+        final sel = entry.value;
+        try {
+          await _vaccineService.createRecord(
+            animalId: animal.id,
+            vaccineCode: sel['isOther'] == true ? 'OTHER' : entry.key,
+            administeredBy: 'Farmer',
+            administeredAt: DateTime.parse(sel['date']),
+            doseGiven: (sel['dose'] as num).toDouble(),
+            notes: sel['isOther'] == true ? sel['name'] : null, // Store name in notes for OTHER
+          );
+        } catch (ve) {
+          debugPrint('Failed to record vaccine ${entry.key}: $ve');
+        }
+      }
+
+      // ── Generate Smart Planning ──
+      if (!isEditMode) {
+        try {
+          await _vaccineService.generateSmartPlan(animal.id);
+        } catch (pe) {
+          debugPrint('Failed to generate smart plan: $pe');
+        }
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isEditMode ? 'Animal updated successfully!' : 'Animal added successfully!'),
+            content: Text(isEditMode ? 'Animal mis à jour avec succès !' : 'Animal enregistré avec succès ! Plan généré.'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -151,7 +248,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(content: Text('Erreur : ${e.toString()}')),
         );
       }
     } finally {
@@ -169,7 +266,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.sageTint,
-      drawer: const AppDrawer(),
       body: Container(
         color: AppColors.sageTint,
         child: Stack(
@@ -257,13 +353,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
             children: [
               Row(
                 children: [
-                  Builder(
-                    builder: (context) => GestureDetector(
-                      onTap: () => Scaffold.of(context).openDrawer(),
-                      child: _buildIconButton(Icons.menu_rounded),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: _buildIconButton(Symbols.arrow_back_ios_new),
@@ -315,7 +404,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         _buildStepIndicatorLine(_currentStep > 1),
         _buildStepIndicator(2, 'Details', _currentStep >= 2),
         _buildStepIndicatorLine(_currentStep > 2),
-        _buildStepIndicator(3, 'Species Info', _currentStep >= 3),
+        _buildStepIndicator(3, 'Vaccines', _currentStep >= 3),
       ],
     );
   }
@@ -400,6 +489,34 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildLabel('Select Farm / Field'),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedFieldId,
+              isExpanded: true,
+              hint: const Text('Select a field'),
+              items: _fields.map((field) {
+                return DropdownMenuItem<String>(
+                  value: field.id,
+                  child: Text(field.name),
+                );
+              }).toList(),
+              onChanged: isEditMode ? null : (value) {
+                setState(() => _selectedFieldId = value);
+                _fetchRegulations();
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 32),
         const Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -428,7 +545,10 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
             final type = types[index];
             final isSelected = _selectedType == type['id'];
             return GestureDetector(
-              onTap: isEditMode ? null : () => setState(() => _selectedType = type['id'] as String),
+              onTap: isEditMode ? null : () {
+                setState(() => _selectedType = type['id'] as String);
+                _fetchRegulations();
+              },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 decoration: BoxDecoration(
@@ -581,66 +701,13 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           prefixIcon: Symbols.qr_code_2,
           readOnly: isEditMode,
         ),
-      ],
-    );
-  }
+        const SizedBox(height: 32),
 
-  Widget _buildAgeSlider() {
-    return SliderTheme(
-      data: SliderThemeData(
-        activeTrackColor: AppColors.mistyBlue,
-        inactiveTrackColor: const Color(0xFFF1F5F9),
-        thumbColor: Colors.white,
-        overlayColor: AppColors.mistyBlue.withValues(alpha: 0.2),
-        trackHeight: 6,
-        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12, elevation: 3),
-      ),
-      child: Slider(
-        min: 0,
-        max: 240,
-        value: _ageInMonths,
-        onChanged: (val) {
-          setState(() {
-            _ageInMonths = val;
-            _ageMonthsController.text = val.toInt().toString();
-          });
-        },
-      ),
-    );
-  }
-
-  // ─── Step 3: Species-specific fields ────────────────────────────────────────
-  Widget _buildStep3() {
-    final isCow   = _selectedType == 'cow';
-    final isHorse = _selectedType == 'horse';
-    final isSheep = _selectedType == 'sheep';
-    final isDog   = _selectedType == 'dog';
-    final isCowFemale = isCow && _selectedSex == 'female';
-
-    // Species emoji & name for the title
-    final speciesLabel = {
-      'cow': '🐄 Vache', 'horse': '🐎 Cheval',
-      'sheep': '🐑 Mouton', 'dog': '🐕 Chien',
-    }[_selectedType] ?? _selectedType;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Informations $speciesLabel',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Les données avancées (reproduction, finance) seront ajoutées dans le profil.',
-          style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-        ),
-        const SizedBox(height: 28),
-
-        // ── COW + FEMALE ──────────────────────────────────────────────────────
-        if (isCowFemale) ...[
+        // --- Species-Specific Fields (Consolidated in Step 2) ---
+        if (_selectedType == 'cow' && _selectedSex == 'female') ...[
+          _buildLabel('Reproduction'),
           _buildSectionCard(
-            title: 'Reproduction & Production',
+            title: 'Gestation & Lactation',
             icon: Symbols.water_drop,
             iconColor: const Color(0xFF3B82F6),
             children: [
@@ -655,7 +722,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                 suffix: 'N°',
               ),
               const SizedBox(height: 20),
-              _buildLabel('Production laitière moyenne / jour'),
+              _buildLabel('Production laitière moyenne'),
               _buildTextField(
                 _dailyMilkAvgController,
                 'Ex : 18.5',
@@ -664,13 +731,11 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
         ],
-
-        // ── HORSE ─────────────────────────────────────────────────────────────
-        if (isHorse) ...[
+        if (_selectedType == 'horse') ...[
+          _buildLabel('Profil Sportif'),
           _buildSectionCard(
-            title: 'Profil sportif',
+            title: 'Compétition',
             icon: Symbols.sprint,
             iconColor: const Color(0xFFF59E0B),
             children: [
@@ -701,17 +766,15 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
         ],
-
-        // ── SHEEP ─────────────────────────────────────────────────────────────
-        if (isSheep) ...[
+        if (_selectedType == 'sheep') ...[
+          _buildLabel('Qualité Viande'),
           _buildSectionCard(
-            title: 'Qualité viande',
+            title: 'Grade',
             icon: Symbols.star,
             iconColor: const Color(0xFF10B981),
             children: [
-              _buildLabel('Grade viande'),
+              _buildLabel('Grade Qualité'),
               _buildDropdown(
                 value: _meatGrade,
                 hint: 'Optionnel...',
@@ -724,72 +787,286 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
         ],
-
-        // ── DOG ───────────────────────────────────────────────────────────────
-        if (isDog) ...[
+        if (_selectedType == 'dog') ...[
+          _buildLabel('Rôle Professionnel'),
           _buildSectionCard(
-            title: 'Rôle du chien',
+            title: 'Spécialisation',
             icon: Symbols.shield,
             iconColor: const Color(0xFF8B5CF6),
             children: [
-              _buildLabel('Rôle'),
+              _buildLabel('Sélectionner le Rôle'),
               _buildDogRolePicker(),
             ],
           ),
-          const SizedBox(height: 24),
         ],
+      ],
+    );
+  }
 
-        // ── General management (all species) ──────────────────────────────────
-        _buildSectionCard(
-          title: 'Gestion générale',
-          icon: Symbols.medical_services,
-          iconColor: const Color(0xFF6B7280),
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Statut vaccinal',
-                      style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF1F2937)),
-                    ),
-                    Text(
-                      'Enregistrer les vaccins',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-                Switch.adaptive(
-                  value: _isVaccinated,
-                  activeColor: AppColors.fieldFreshStart,
-                  onChanged: (val) => setState(() => _isVaccinated = val),
-                ),
-              ],
+  Widget _buildAgeSlider() {
+    return SliderTheme(
+      data: SliderThemeData(
+        activeTrackColor: AppColors.mistyBlue,
+        inactiveTrackColor: const Color(0xFFF1F5F9),
+        thumbColor: Colors.white,
+        overlayColor: AppColors.mistyBlue.withValues(alpha: 0.2),
+        trackHeight: 6,
+        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12, elevation: 3),
+      ),
+      child: Slider(
+        min: 0,
+        max: 240,
+        value: _ageInMonths,
+        onChanged: (val) {
+          setState(() {
+            _ageInMonths = val;
+            _ageMonthsController.text = val.toInt().toString();
+          });
+        },
+      ),
+    );
+  }
+
+  // ─── Step 3: Species-specific fields ────────────────────────────────────────
+  Widget _buildStep3() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Health & Vaccines',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Enregistrer le statut vaccinal passé pour générer un planning précis.',
+          style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+        ),
+        const SizedBox(height: 28),
+
+        if (_isLoadingRegulations)
+          const Center(child: Padding(
+            padding: EdgeInsets.all(40.0),
+            child: CircularProgressIndicator(),
+          ))
+        else if (_regulations.isEmpty)
+          _buildSectionCard(
+            title: 'No specific regulations found',
+            icon: Symbols.info,
+            iconColor: Colors.blue,
+            children: [
+              const Text('Aucun vaccin obligatoire détecté pour cette zone. Ajoutez-en manuellement.'),
+              const SizedBox(height: 16),
+              _buildAddOtherButton(),
+            ],
+          )
+        else
+          _buildSectionCard(
+            title: 'Recommended Vaccinations',
+            icon: Symbols.medical_services,
+            iconColor: AppColors.mistyBlue,
+            children: [
+              ..._regulations.map((reg) => _buildDynamicVaccineItem(reg)).toList(),
+              const Divider(height: 32),
+              _buildAddOtherButton(),
+            ],
+          ),
+
+        const SizedBox(height: 24),
+        
+        // Show selected "Other" vaccines
+        ..._vaccineSelections.entries
+            .where((e) => e.value['isOther'] == true)
+            .map((e) => _buildOtherVaccineItem(e.key))
+            .toList(),
+
+        const SizedBox(height: 24),
+        _buildLabel('Observations & Notes'),
+        _buildTextField(
+          _notesController, 
+          'Observations particulières...', 
+          maxLines: 4,
+          prefixIcon: Symbols.notes,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAddOtherButton() {
+    return TextButton.icon(
+      onPressed: () {
+        final id = 'OTHER_${DateTime.now().millisecondsSinceEpoch}';
+        setState(() {
+          _vaccineSelections[id] = {
+            'checked': true,
+            'date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
+            'dose': 1.0,
+            'lot': '',
+            'isOther': true,
+            'name': '',
+          };
+        });
+      },
+      icon: const Icon(Symbols.add_circle, size: 20),
+      label: const Text('Ajouter un autre vaccin'),
+      style: TextButton.styleFrom(
+        foregroundColor: AppColors.mistyBlue,
+        textStyle: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildDynamicVaccineItem(VaccineRegulation reg) {
+    final sel = _vaccineSelections[reg.vaccineId]!;
+    final isChecked = sel['checked'] as bool;
+    final isMandatory = reg.isMandatory;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: isChecked ? AppColors.mistyBlue.withValues(alpha: 0.05) : Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isChecked ? AppColors.mistyBlue.withValues(alpha: 0.3) : Colors.transparent),
+      ),
+      child: Column(
+        children: [
+          CheckboxListTile(
+            value: isChecked,
+            onChanged: (val) => setState(() => sel['checked'] = val),
+            title: Text(
+              reg.vaccine?.nameFr ?? reg.vaccineId,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isChecked ? AppColors.mistyBlue : Colors.black87,
+              ),
             ),
-            if (_isVaccinated) ...[
-              const Divider(height: 24, color: Color(0xFFF1F5F9)),
-              ...List.generate(_vaccines.length, (index) => _buildVaccineItem(index)),
-              const SizedBox(height: 8),
-              TextButton.icon(
-                onPressed: _addVaccine,
-                icon: const Icon(Symbols.add_circle, size: 20),
-                label: const Text('Ajouter un vaccin'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.mistyBlue,
-                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
+            subtitle: Text(
+              isMandatory ? 'Obligatoire • ${reg.status}' : 'Recommandé',
+              style: TextStyle(
+                fontSize: 12,
+                color: isMandatory ? Colors.red.withValues(alpha: 0.7) : Colors.grey,
+              ),
+            ),
+            secondary: Icon(
+              isMandatory ? Symbols.verified_user : Symbols.vaccines,
+              color: isMandatory ? Colors.red.withValues(alpha: 0.5) : AppColors.mistyBlue,
+            ),
+            activeColor: AppColors.mistyBlue,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+          if (isChecked)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(64, 0, 16, 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildInlineDateField(sel),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildTextField(
+                      null,
+                      'Dose (ml)',
+                      initialValue: sel['dose'].toString(),
+                      keyboardType: TextInputType.number,
+                      onChanged: (v) => sel['dose'] = double.tryParse(v) ?? 1.0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOtherVaccineItem(String id) {
+    final sel = _vaccineSelections[id]!;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.mistyBlue.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(Symbols.edit_note, color: AppColors.mistyBlue),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  initialValue: sel['name'],
+                  onChanged: (v) => sel['name'] = v,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  decoration: const InputDecoration(
+                    hintText: 'Nom du vaccin (ex: Grippe)',
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Symbols.delete, color: Colors.red, size: 20),
+                onPressed: () => setState(() => _vaccineSelections.remove(id)),
+              )
+            ],
+          ),
+          const Divider(),
+          Row(
+            children: [
+              Expanded(child: _buildInlineDateField(sel)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildTextField(
+                  null,
+                  'Dose',
+                  initialValue: sel['dose'].toString(),
+                  onChanged: (v) => sel['dose'] = double.tryParse(v) ?? 1.0,
                 ),
               ),
             ],
-            const SizedBox(height: 16),
-            _buildLabel('Notes'),
-            _buildTextField(_notesController, 'Observations particulières...', maxLines: 3),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInlineDateField(Map<String, dynamic> sel) {
+    return GestureDetector(
+      onTap: () async {
+        final DateTime? picked = await showDatePicker(
+          context: context,
+          initialDate: DateTime.parse(sel['date']),
+          firstDate: DateTime(2000),
+          lastDate: DateTime.now(),
+        );
+        if (picked != null) {
+          setState(() {
+            sel['date'] = DateFormat('yyyy-MM-dd').format(picked);
+          });
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Symbols.calendar_today, size: 16, color: Color(0xFF64748B)),
+            const SizedBox(width: 8),
+            Text(
+              sel['date'],
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
           ],
         ),
-      ],
+      ),
     );
   }
 
@@ -1172,7 +1449,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                       height: 64,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [AppColors.fieldFreshStart, AppColors.mistyBlue],
+                          colors: [AppColors.mistBlue, AppColors.mistyBlue],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
