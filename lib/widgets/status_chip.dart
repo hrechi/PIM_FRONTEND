@@ -16,13 +16,14 @@ class StatusChip extends StatelessWidget {
   const StatusChip({
     super.key,
     required this.label,
-    this.backgroundColor,
+    Color? backgroundColor,
     this.textColor,
     this.icon,
     this.iconSize,
     this.padding,
     this.statusType,
-  });
+    Color? color,
+  }) : backgroundColor = backgroundColor ?? color;
 
   @override
   Widget build(BuildContext context) {
