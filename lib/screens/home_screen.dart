@@ -210,7 +210,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ─────────────────────────────────────────────
   // DRAWER
-  // Full inline drawer (Doc4 structure) + Milk/Vaccine items (Doc3)
   // ─────────────────────────────────────────────
   Widget _buildDrawer() {
     return Drawer(
@@ -251,8 +250,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Text(
                           'Smart Farm System',
                           style: AppTextStyles.bodySmall(
-                            color:
-                                AppColorPalette.white.withValues(alpha: 0.9),
+                            color: AppColorPalette.white.withValues(alpha: 0.9),
                           ),
                         ),
                       ],
@@ -269,10 +267,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'View farm parcels',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const ParcelListScreen()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const ParcelListScreen()));
                     },
                   ),
                   _buildDrawerItem(
@@ -282,10 +278,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'Diagnose plant issues',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const PlantDoctorScreen()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const PlantDoctorScreen()));
                     },
                   ),
                   _buildDrawerItem(
@@ -295,10 +289,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'Forecast & recommendations',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const WeatherScreen()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const WeatherScreen()));
                     },
                   ),
                   _buildDrawerItem(
@@ -308,10 +300,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'Latest farming updates',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => AgriculturalNewsScreen()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => AgriculturalNewsScreen()));
                     },
                   ),
                   _buildDrawerItem(
@@ -321,11 +311,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'Smart 7-day irrigation plan',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  const IrrigationSchedulerScreen()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const IrrigationSchedulerScreen()));
                     },
                   ),
 
@@ -339,10 +326,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'View authorized staff',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const StaffListScreen()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const StaffListScreen()));
                     },
                   ),
                   _buildDrawerItem(
@@ -351,10 +336,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'Add to whitelist',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const AddStaffScreen()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const AddStaffScreen()));
                     },
                   ),
                   _buildDrawerItem(
@@ -363,10 +346,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'View security logs',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const IncidentHistoryScreen()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const IncidentHistoryScreen()));
                     },
                   ),
                   _buildDrawerItem(
@@ -376,12 +357,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'View live camera',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const LiveFeedScreen()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const LiveFeedScreen()));
                     },
                   ),
+                  // ── New from Doc6 ──
                   _buildDrawerItem(
                     icon: Icons.assessment_rounded,
                     iconColor: AppColorPalette.fieldFreshMid,
@@ -389,12 +369,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'AI security digest',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const DailyReportScreen(),
-                        ),
-                      );
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const DailyReportScreen()));
                     },
                   ),
                   _buildDrawerItem(
@@ -404,12 +380,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'Sound threat detection',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const AcousticMonitorScreen(),
-                        ),
-                      );
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const AcousticMonitorScreen()));
                     },
                   ),
 
@@ -423,10 +395,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'View all animals',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const AnimalListScreen()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const AnimalListScreen()));
                     },
                   ),
                   _buildDrawerItem(
@@ -436,10 +406,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'Register new animal',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const AddAnimalScreen()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const AddAnimalScreen()));
                     },
                   ),
                   _buildDrawerItem(
@@ -449,10 +417,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'Track daily yield',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const MilkProductionScreen()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const MilkProductionScreen()));
                     },
                   ),
                   _buildDrawerItem(
@@ -462,10 +428,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'Production insights',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const MilkAnalyticsScreen()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const MilkAnalyticsScreen()));
                     },
                   ),
                   _buildDrawerItem(
@@ -475,10 +439,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'Vaccination schedule',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const VaccineDashboardScreen()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const VaccineDashboardScreen()));
                     },
                   ),
 
@@ -492,10 +454,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'Manage account',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const ProfileScreen()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const ProfileScreen()));
                     },
                   ),
                   _buildDrawerItem(
@@ -509,8 +469,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.all(16),
                     child: Text(
                       'Version 1.0.0',
-                      style: AppTextStyles.caption(
-                          color: AppColorPalette.softSlate),
+                      style: AppTextStyles.caption(color: AppColorPalette.softSlate),
                     ),
                   ),
                 ],
@@ -551,8 +510,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Icon(icon, color: color, size: 24),
       ),
       title: Text(title,
-          style:
-              AppTextStyles.bodyLarge(color: AppColorPalette.charcoalGreen)),
+          style: AppTextStyles.bodyLarge(color: AppColorPalette.charcoalGreen)),
       subtitle: Text(subtitle,
           style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate)),
       onTap: onTap,
@@ -560,7 +518,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ─────────────────────────────────────────────
-  // HEADER BACKGROUND DECORATION (Doc3)
+  // HEADER BACKGROUND DECORATION
   // ─────────────────────────────────────────────
   Widget _buildHeaderBackground() {
     return Positioned(
@@ -614,7 +572,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ─────────────────────────────────────────────
   // HEADER
-  // Transparent AppBar (Doc3)
+  // Transparent AppBar + notification bell → IncidentHistoryScreen (Doc6)
   // ─────────────────────────────────────────────
   Widget _buildHeader() {
     return SliverAppBar(
@@ -693,9 +651,8 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.only(right: 16.0),
           child: GestureDetector(
-            onTap: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
+            onTap: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
             child: CircleAvatar(
               backgroundColor: AppColorPalette.mistyBlue,
               child: const Icon(Icons.person, color: AppColorPalette.white),
@@ -719,10 +676,8 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const FieldsManagementScreen())),
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => const FieldsManagementScreen())),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorPalette.mistyBlue,
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -734,10 +689,8 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const MissionListScreen())),
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => const MissionListScreen())),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorPalette.mistyBlue,
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -749,10 +702,8 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const ChatAssistantScreen())),
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => const ChatAssistantScreen())),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorPalette.mistyBlue,
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -806,9 +757,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       Text(
                         weatherInfo.condition,
-                        style:
-                            AppTextStyles.bodyLarge(color: AppColorPalette.white)
-                                .copyWith(fontWeight: FontWeight.w500),
+                        style: AppTextStyles.bodyLarge(
+                                color: AppColorPalette.white)
+                            .copyWith(fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
@@ -831,8 +782,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) =>
-                          const SoilMeasurementsListScreen())),
+                      builder: (context) => const SoilMeasurementsListScreen())),
               borderRadius: BorderRadius.circular(12),
               child: Container(
                 padding: const EdgeInsets.all(16),
@@ -854,8 +804,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(
                             'Soil Moisture',
                             style: AppTextStyles.bodySmall(
-                                color:
-                                    AppColorPalette.white.withOpacity(0.9)),
+                                color: AppColorPalette.white.withOpacity(0.9)),
                           ),
                           const SizedBox(height: 4),
                           Row(
@@ -901,7 +850,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ─────────────────────────────────────────────
-  // ANIMAL STATS GRID (Doc3)
+  // ANIMAL STATS GRID
   // ─────────────────────────────────────────────
   Widget _buildAnimalStatsGrid() {
     if (_animalStats == null) return const SizedBox();
@@ -923,24 +872,17 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Expanded(
                 child: _buildDashboardStatCard(
-                  'Total Animals',
-                  '$totalAnimals',
-                  'Across all types',
-                  Symbols.pets,
-                  const Color(0xFF10B981),
+                  'Total Animals', '$totalAnimals', 'Across all types',
+                  Symbols.pets, const Color(0xFF10B981),
                   onTap: () => Navigator.push(context,
-                      MaterialPageRoute(
-                          builder: (_) => const AnimalListScreen())),
+                      MaterialPageRoute(builder: (_) => const AnimalListScreen())),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildDashboardStatCard(
-                  'Health Alerts',
-                  '$healthAlerts',
-                  'Needing attention',
-                  Symbols.warning,
-                  const Color(0xFFEF4444),
+                  'Health Alerts', '$healthAlerts', 'Needing attention',
+                  Symbols.warning, const Color(0xFFEF4444),
                   onTap: () {},
                 ),
               ),
@@ -951,24 +893,17 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Expanded(
                 child: _buildDashboardStatCard(
-                  'Vaccines Due',
-                  '$vaccinesDue',
-                  'Next 7 days',
-                  Symbols.vaccines,
-                  const Color(0xFF3B82F6),
+                  'Vaccines Due', '$vaccinesDue', 'Next 7 days',
+                  Symbols.vaccines, const Color(0xFF3B82F6),
                   onTap: () => Navigator.push(context,
-                      MaterialPageRoute(
-                          builder: (_) => const VaccineDashboardScreen())),
+                      MaterialPageRoute(builder: (_) => const VaccineDashboardScreen())),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildDashboardStatCard(
-                  'Monthly Spend',
-                  '${_animalStats!['monthlySpend'] ?? 0} DT',
-                  'Feed & Care',
-                  Symbols.payments,
-                  const Color(0xFFF59E0B),
+                  'Monthly Spend', '${_animalStats!['monthlySpend'] ?? 0} DT',
+                  'Feed & Care', Symbols.payments, const Color(0xFFF59E0B),
                   onTap: () {},
                 ),
               ),
@@ -980,13 +915,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildDashboardStatCard(
-    String title,
-    String value,
-    String subtitle,
-    IconData icon,
-    Color color, {
-    VoidCallback? onTap,
-  }) {
+    String title, String value, String subtitle,
+    IconData icon, Color color, {VoidCallback? onTap}
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1016,19 +947,16 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 12),
             Text(value,
                 style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
+                    fontSize: 22, fontWeight: FontWeight.w900,
                     color: Color(0xFF1E293B))),
             const SizedBox(height: 2),
             Text(title,
                 style: const TextStyle(
-                    color: Color(0xFF64748B),
-                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF64748B), fontWeight: FontWeight.bold,
                     fontSize: 11)),
             const SizedBox(height: 2),
             Text(subtitle,
-                style: const TextStyle(
-                    color: Color(0xFF94A3B8), fontSize: 10)),
+                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10)),
           ],
         ),
       ),
@@ -1036,7 +964,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ─────────────────────────────────────────────
-  // MILK PRODUCTION BANNER (Doc3)
+  // MILK PRODUCTION BANNER
   // ─────────────────────────────────────────────
   Widget _buildMilkProductionBanner() {
     if (_animalStats == null) return const SizedBox();
@@ -1057,10 +985,7 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                AppColors.mistBlue,
-                AppColors.mistBlue.withOpacity(0.8)
-              ],
+              colors: [AppColors.mistBlue, AppColors.mistBlue.withOpacity(0.8)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -1080,18 +1005,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Symbols.water_drop,
-                          color: Colors.white, size: 24),
+                      const Icon(Symbols.water_drop, color: Colors.white, size: 24),
                       const SizedBox(width: 8),
                       Text("Today's Yield",
-                          style: AppTextStyles.h4()
-                              .copyWith(color: Colors.white)),
+                          style: AppTextStyles.h4().copyWith(color: Colors.white)),
                     ],
                   ),
                   if (yesterday > 0)
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
@@ -1102,15 +1024,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             trendPercent >= 0
                                 ? Symbols.trending_up
                                 : Symbols.trending_down,
-                            color: Colors.white,
-                            size: 14,
+                            color: Colors.white, size: 14,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '${trendPercent.abs().toStringAsFixed(1)}%',
                             style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
+                                color: Colors.white, fontSize: 12,
                                 fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -1126,15 +1046,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     '${today.toStringAsFixed(1)}',
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 40,
+                        color: Colors.white, fontSize: 40,
                         fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(width: 4),
                   const Text('Liters',
                       style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
+                          color: Colors.white, fontSize: 18,
                           fontWeight: FontWeight.w500)),
                   const Spacer(),
                   Text(
@@ -1153,7 +1071,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ─────────────────────────────────────────────
   // ATTENTION REQUIRED
-  // Combined field alerts + animal alerts (Doc3)
+  // Combined field alerts + animal alerts
   // ─────────────────────────────────────────────
   Widget _buildAttentionRequiredSection(
       List<AlertItem> attentionAlerts, List<dynamic> animalAlerts) {
@@ -1179,8 +1097,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Text('Attention Required', style: AppTextStyles.h3()),
               const SizedBox(width: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColorPalette.alertError,
                   borderRadius: BorderRadius.circular(12),
@@ -1333,7 +1250,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Icon(Icons.map,
                               size: 48,
-                              color: AppColorPalette.softSlate.withOpacity(0.5)),
+                              color:
+                                  AppColorPalette.softSlate.withOpacity(0.5)),
                           const SizedBox(height: 8),
                           Text('Interactive Map View',
                               style: AppTextStyles.bodyMedium(
@@ -1402,7 +1320,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ─────────────────────────────────────────────
   // LIVE HEALTH METRICS
-  // DASHBOARD button (Doc4) → AnimalDashboardScreen
+  // DASHBOARD button → AnimalDashboardScreen
   // ─────────────────────────────────────────────
   Widget _buildLiveHealthMetrics() {
     return Column(
@@ -1457,8 +1375,7 @@ class _HomeScreenState extends State<HomeScreen> {
             itemBuilder: (context, index) {
               return MetricCard(
                 animal: animals[index],
-                onTap: () => Navigator.push(
-                    context,
+                onTap: () => Navigator.push(context,
                     MaterialPageRoute(
                         builder: (context) => const AnimalListScreen())),
               );
@@ -1477,7 +1394,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // ── Chatbot mascot FAB ─────────────────
+        FloatingActionButton(
+          heroTag: 'siren',
+          onPressed: _triggerSiren,
+          backgroundColor: Colors.red.shade700,
+          child: const Icon(Icons.volume_up, color: Colors.white),
+        ),
+        const SizedBox(height: 12),
         GestureDetector(
           onTap: () => Navigator.push(context,
               MaterialPageRoute(

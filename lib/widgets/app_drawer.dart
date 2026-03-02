@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend_pim/screens/animals/animal_dashboard_screen.dart';
 import '../screens/agricultural_news_screen.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
@@ -13,12 +14,10 @@ import '../screens/parcel_list_screen.dart';
 import '../screens/plant_doctor_screen.dart';
 import '../screens/staff_list_screen.dart';
 import '../screens/add_staff_screen.dart';
-import '../screens/incident_history_screen.dart';
 import '../screens/weather_screen.dart';
 import '../screens/irrigation_scheduler_screen.dart';
 import '../screens/live_feed_screen.dart';
 import '../screens/soil/soil_measurements_list_screen.dart';
-import '../screens/soil/soil_analytics_screen.dart';
 import '../screens/security/incident_history_screen.dart';
 
 class AppDrawer extends StatelessWidget {
@@ -112,7 +111,9 @@ class AppDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const SoilMeasurementsListScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const SoilMeasurementsListScreen(),
+                        ),
                       );
                     },
                   ),
@@ -155,7 +156,9 @@ class AppDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const WeatherScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const WeatherScreen(),
+                        ),
                       );
                     },
                   ),
@@ -260,7 +263,9 @@ class AppDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const VaccineDashboardScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const VaccineDashboardScreen(),
+                        ),
                       );
                     },
                   ),
@@ -320,7 +325,9 @@ class AppDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const LiveFeedScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const LiveFeedScreen(),
+                        ),
                       );
                     },
                   ),
