@@ -11,7 +11,7 @@ import '../screens/parcel_list_screen.dart';
 import '../screens/plant_doctor_screen.dart';
 import '../screens/staff_list_screen.dart';
 import '../screens/add_staff_screen.dart';
-import '../screens/incident_history_screen.dart';
+import '../screens/security/incident_history_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});

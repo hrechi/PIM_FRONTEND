@@ -1,14 +1,13 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../screens/incident_detail_screen.dart';
+import '../screens/security/incident_detail_screen.dart';
+import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 
-/// High-fidelity security alert overlay shown when a push notification arrives
-/// while the app is in the foreground.
+/// Modern security alert overlay matching the Fieldly Agri-Tech design system.
 ///
-/// Slides down from the top with a deep-red glassmorphism card,
-/// blurred background, glowing header, incident thumbnail, and
-/// two action buttons (DISMISS + VIEW INCIDENT with pulse animation).
+/// Slides down from top with a clean glassmorphism card on a blurred scrim.
+/// Supports intruder, animal, and all acoustic incident types.
 class SecurityAlertOverlay extends StatefulWidget {
   final String incidentId;
   final String type;
@@ -49,19 +48,85 @@ class SecurityAlertOverlay extends StatefulWidget {
 
 class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
     with TickerProviderStateMixin {
-  // Slide-in animation
   late final AnimationController _slideController;
   late final Animation<Offset> _slideAnim;
 
-  // Pulse animation for VIEW INCIDENT button
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnim;
 
-  // Glow animation for CRITICAL ALERT header
   late final AnimationController _glowController;
   late final Animation<double> _glowAnim;
 
   bool get _isIntruder => widget.type == 'intruder';
+  bool get _isAcoustic => widget.type.startsWith('acoustic');
+
+  Color get _accentColor {
+    switch (widget.type) {
+      case 'intruder':
+        return AppColorPalette.alertError;
+      case 'acoustic_engine':
+        return const Color(0xFFE65100);
+      case 'acoustic_glass':
+        return const Color(0xFF1565C0);
+      case 'acoustic_loud':
+        return const Color(0xFF6A1B9A);
+      case 'acoustic_anomaly':
+        return AppColorPalette.robotTechStart;
+      default:
+        return AppColorPalette.warning;
+    }
+  }
+
+  String get _alertTitle {
+    switch (widget.type) {
+      case 'intruder':
+        return 'Intruder Detected';
+      case 'acoustic_engine':
+        return 'Suspicious Engine';
+      case 'acoustic_glass':
+        return 'Glass Break Detected';
+      case 'acoustic_loud':
+        return 'Loud Anomaly';
+      case 'acoustic_anomaly':
+        return 'Acoustic Threat';
+      default:
+        return 'Animal Detected';
+    }
+  }
+
+  String get _alertBody {
+    switch (widget.type) {
+      case 'intruder':
+        return 'An unknown person was detected on your farm. Immediate action required.';
+      case 'acoustic_engine':
+        return 'A suspicious engine sound was detected near the perimeter.';
+      case 'acoustic_glass':
+        return 'A high-frequency impact detected — possible glass break or forced entry.';
+      case 'acoustic_loud':
+        return 'An unusually loud sound was detected by the acoustic system.';
+      case 'acoustic_anomaly':
+        return 'An acoustic anomaly was flagged by the sound monitoring system.';
+      default:
+        return 'An animal was detected in a restricted area of your farm.';
+    }
+  }
+
+  IconData get _alertIcon {
+    switch (widget.type) {
+      case 'intruder':
+        return Icons.person_off_rounded;
+      case 'acoustic_engine':
+        return Icons.directions_car_rounded;
+      case 'acoustic_glass':
+        return Icons.broken_image_rounded;
+      case 'acoustic_loud':
+        return Icons.volume_up_rounded;
+      case 'acoustic_anomaly':
+        return Icons.graphic_eq_rounded;
+      default:
+        return Icons.pets_rounded;
+    }
+  }
 
   @override
   void initState() {
@@ -80,7 +145,7 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 1.0, end: 1.08).animate(
+    _pulseAnim = Tween<double>(begin: 1.0, end: 1.06).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
@@ -88,7 +153,7 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
-    _glowAnim = Tween<double>(begin: 4.0, end: 18.0).animate(
+    _glowAnim = Tween<double>(begin: 4.0, end: 16.0).animate(
       CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
     );
 
@@ -123,12 +188,12 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
       color: Colors.transparent,
       child: Stack(
         children: [
-          // ── Blurred background scrim ──────────────────────────
+          // ── Blurred scrim ─────────────────────────────────────
           GestureDetector(
             onTap: _dismiss,
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-              child: Container(color: Colors.black.withValues(alpha: 0.45)),
+              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+              child: Container(color: Colors.black.withValues(alpha: 0.4)),
             ),
           ),
 
@@ -155,264 +220,265 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
   Widget _buildCard(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        gradient: LinearGradient(
-          colors: _isIntruder
-              ? [const Color(0xFFB71C1C), const Color(0xFF7B0000)]
-              : [const Color(0xFF4A148C), const Color(0xFF1A0033)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        borderRadius: BorderRadius.circular(24),
+        color: Colors.white,
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.18),
-          width: 1.2,
+          color: _accentColor.withValues(alpha: 0.2),
+          width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: (_isIntruder ? Colors.red : Colors.purple).withValues(
-              alpha: 0.5,
-            ),
-            blurRadius: 32,
+            color: _accentColor.withValues(alpha: 0.2),
+            blurRadius: 30,
             spreadRadius: 2,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(30),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── Accent header bar ───────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            decoration: BoxDecoration(
+              color: _accentColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: _accentColor.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
               children: [
-                _buildHeader(),
-                const SizedBox(height: 16),
-                _buildBody(),
-                const SizedBox(height: 20),
-                _buildButtons(context),
+                AnimatedBuilder(
+                  animation: _glowAnim,
+                  builder: (_, __) => Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.white,
+                    size: 24,
+                    shadows: [
+                      Shadow(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        blurRadius: _glowAnim.value,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _isIntruder
+                        ? 'CRITICAL ALERT'
+                        : _isAcoustic
+                            ? 'ACOUSTIC ALERT'
+                            : 'SECURITY ALERT',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _dismiss,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close, color: Colors.white, size: 18),
+                  ),
+                ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        // Pulsing warning icon
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.warning_amber_rounded,
-            color: Colors.white,
-            size: 28,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: AnimatedBuilder(
-            animation: _glowAnim,
-            builder: (_, __) => Text(
-              'CRITICAL ALERT',
-              style: AppTextStyles.h2(color: Colors.white).copyWith(
-                fontWeight: FontWeight.w900,
-                letterSpacing: 2,
-                shadows: [
-                  Shadow(color: Colors.redAccent, blurRadius: _glowAnim.value),
-                  Shadow(
-                    color: Colors.orange.withValues(alpha: 0.6),
-                    blurRadius: _glowAnim.value * 1.5,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        // Close button
-        GestureDetector(
-          onTap: _dismiss,
-          child: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.close, color: Colors.white70, size: 18),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBody() {
-    return Row(
-      children: [
-        // ── Thumbnail ───────────────────────────────────────────
-        Container(
-          width: 88,
-          height: 88,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.3),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
-                blurRadius: 12,
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: widget.imageUrl.isNotEmpty
-                ? Image.network(
-                    widget.imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _placeholderThumbnail(),
-                  )
-                : _placeholderThumbnail(),
-          ),
-        ),
-        const SizedBox(width: 16),
-        // ── Alert info ──────────────────────────────────────────
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _isIntruder ? 'Intruder Detected' : 'Animal Detected',
-                style: AppTextStyles.h3(
-                  color: Colors.white,
-                ).copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                _isIntruder
-                    ? 'An unknown person was detected on your farm. Immediate action required.'
-                    : 'An animal was detected in a restricted area.',
-                style: AppTextStyles.bodySmall(
-                  color: Colors.white.withValues(alpha: 0.85),
-                ),
-              ),
-              const SizedBox(height: 10),
-              // Live badge
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.25),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+          // ── Body content ────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
                   children: [
+                    // ── Thumbnail ────────────────────────────────
                     Container(
-                      width: 7,
-                      height: 7,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF76FF03),
-                        shape: BoxShape.circle,
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: _accentColor.withValues(alpha: 0.2),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 12,
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: widget.imageUrl.isNotEmpty
+                            ? Image.network(
+                                widget.imageUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    _placeholderThumbnail(),
+                              )
+                            : _placeholderThumbnail(),
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'LIVE',
-                      style: AppTextStyles.overline(
-                        color: Colors.white,
-                      ).copyWith(fontWeight: FontWeight.w800),
+                    const SizedBox(width: 16),
+                    // ── Alert info ───────────────────────────────
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _alertTitle,
+                            style: AppTextStyles.h4(
+                              color: AppColorPalette.charcoalGreen,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _alertBody,
+                            style: AppTextStyles.bodySmall(
+                              color: AppColorPalette.softSlate,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 10),
+                          // Live badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _accentColor.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: _accentColor.withValues(alpha: 0.15),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: BoxDecoration(
+                                    color: AppColorPalette.healthGlow,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'LIVE',
+                                  style: AppTextStyles.overline(
+                                    color: _accentColor,
+                                  ).copyWith(fontWeight: FontWeight.w800),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 20),
+                // ── Buttons ──────────────────────────────────────
+                Row(
+                  children: [
+                    // DISMISS
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _dismiss,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColorPalette.softSlate,
+                          side: BorderSide(
+                            color: AppColorPalette.mediumGrey,
+                            width: 1.5,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: Text(
+                          'DISMISS',
+                          style: AppTextStyles.buttonMedium(
+                            color: AppColorPalette.softSlate,
+                          ).copyWith(letterSpacing: 1),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // VIEW INCIDENT
+                    Expanded(
+                      child: AnimatedBuilder(
+                        animation: _pulseAnim,
+                        builder: (_, child) => Transform.scale(
+                          scale: _pulseAnim.value,
+                          child: child,
+                        ),
+                        child: ElevatedButton(
+                          onPressed: () => _viewIncident(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _accentColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            elevation: 4,
+                            shadowColor:
+                                _accentColor.withValues(alpha: 0.4),
+                          ),
+                          child: Text(
+                            'VIEW INCIDENT',
+                            style: AppTextStyles.buttonMedium(
+                              color: Colors.white,
+                            ).copyWith(letterSpacing: 0.8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _placeholderThumbnail() {
     return Container(
-      color: Colors.white.withValues(alpha: 0.1),
+      color: _accentColor.withValues(alpha: 0.08),
       child: Icon(
-        _isIntruder ? Icons.person_off_rounded : Icons.pets,
-        color: Colors.white54,
+        _alertIcon,
+        color: _accentColor.withValues(alpha: 0.4),
         size: 36,
       ),
-    );
-  }
-
-  Widget _buildButtons(BuildContext context) {
-    return Row(
-      children: [
-        // ── DISMISS (outline) ───────────────────────────────────
-        Expanded(
-          child: OutlinedButton(
-            onPressed: _dismiss,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
-              side: const BorderSide(color: Colors.white54, width: 1.5),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            child: Text(
-              'DISMISS',
-              style: AppTextStyles.buttonMedium(
-                color: Colors.white,
-              ).copyWith(letterSpacing: 1.5),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        // ── VIEW INCIDENT (pulse animated elevated) ─────────────
-        Expanded(
-          child: AnimatedBuilder(
-            animation: _pulseAnim,
-            builder: (_, child) =>
-                Transform.scale(scale: _pulseAnim.value, child: child),
-            child: ElevatedButton(
-              onPressed: () => _viewIncident(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: _isIntruder
-                    ? const Color(0xFFB71C1C)
-                    : const Color(0xFF4A148C),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 8,
-                shadowColor: Colors.white.withValues(alpha: 0.4),
-              ),
-              child: Text(
-                'VIEW INCIDENT',
-                style: AppTextStyles.buttonMedium(
-                  color: _isIntruder
-                      ? const Color(0xFFB71C1C)
-                      : const Color(0xFF4A148C),
-                ).copyWith(letterSpacing: 0.8),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

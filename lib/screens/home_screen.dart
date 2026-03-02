@@ -26,8 +26,10 @@ import 'mission_list_screen.dart';
 import 'chat_assistant_screen.dart';
 import 'add_staff_screen.dart';
 import 'staff_list_screen.dart';
-import 'incident_history_screen.dart';
-import 'live_feed_screen.dart';
+import 'security/incident_history_screen.dart';
+import 'security/live_feed_screen.dart';
+import 'security/daily_report_screen.dart';
+import 'security/acoustic_monitor_screen.dart';
 import 'weather_screen.dart';
 import 'irrigation_scheduler_screen.dart';
 import 'package:frontend_pim/screens/parcel_list_screen.dart';
@@ -326,6 +328,36 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     },
                   ),
+                  _buildDrawerItem(
+                    icon: Icons.assessment_rounded,
+                    iconColor: AppColorPalette.fieldFreshMid,
+                    title: 'Daily Reports',
+                    subtitle: 'AI security digest',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const DailyReportScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.graphic_eq_rounded,
+                    iconColor: Colors.cyanAccent,
+                    title: 'Acoustic Monitor',
+                    subtitle: 'Sound threat detection',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AcousticMonitorScreen(),
+                        ),
+                      );
+                    },
+                  ),
 
                   const Divider(height: 1),
 
@@ -502,7 +534,13 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             IconButton(
               icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {},
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const IncidentHistoryScreen(),
+                  ),
+                );
+              },
             ),
             if (alerts.where((a) => !a.isRead).isNotEmpty)
               Positioned(
@@ -528,9 +566,9 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.only(right: 16.0),
           child: GestureDetector(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ProfileScreen()),
-            ),
+            onTap: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
             child: CircleAvatar(
               backgroundColor: AppColorPalette.mistyBlue,
               child: const Icon(Icons.person, color: AppColorPalette.white),
@@ -1047,14 +1085,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // ── Siren FAB ─────────────────────────
-        FloatingActionButton(
-          heroTag: 'siren',
-          onPressed: _triggerSiren,
-          backgroundColor: Colors.red.shade700,
-          child: const Icon(Icons.volume_up, color: Colors.white),
-        ),
-        const SizedBox(height: 12),
         // ── Chatbot mascot FAB ─────────────────
         GestureDetector(
           onTap: () => Navigator.push(
@@ -1088,4 +1118,4 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
-} 
+}

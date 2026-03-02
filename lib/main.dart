@@ -10,7 +10,7 @@ import 'providers/weather_provider.dart';
 import 'providers/irrigation_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
-import 'screens/incident_detail_screen.dart';
+import 'screens/security/incident_detail_screen.dart';
 import 'screens/soil/soil_measurements_list_screen.dart';
 
 
