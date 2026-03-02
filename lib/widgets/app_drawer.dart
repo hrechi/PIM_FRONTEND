@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 import '../screens/agricultural_news_screen.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
+import '../screens/home_screen.dart';
 import '../screens/animals/animal_list_screen.dart';
-import '../screens/animals/animal_dashboard_screen.dart';
 import '../screens/animals/add_animal_screen.dart';
 import '../screens/animals/milk_production_screen.dart';
 import '../screens/animals/milk_analytics_screen.dart';
+import '../screens/vaccines/vaccine_dashboard_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/parcel_list_screen.dart';
 import '../screens/plant_doctor_screen.dart';
 import '../screens/staff_list_screen.dart';
 import '../screens/add_staff_screen.dart';
 import '../screens/incident_history_screen.dart';
+import '../screens/weather_screen.dart';
+import '../screens/irrigation_scheduler_screen.dart';
+import '../screens/live_feed_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -63,7 +67,23 @@ class AppDrawer extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 8),
+                  // Home
+                  _buildDrawerItem(
+                    icon: Icons.home_rounded,
+                    title: 'Home',
+                    subtitle: 'Main Dashboard',
+                    onTap: () {
+                      Navigator.pop(context);
+                      // Navigate to HomeScreen (usually already the root, but for safety)
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => const HomeScreen()),
+                        (route) => false,
+                      );
+                    },
+                  ),
+
+                  const Divider(height: 1),
 
                   // Farm
                   _buildDrawerSection('Farm'),
@@ -119,17 +139,6 @@ class AppDrawer extends StatelessWidget {
                     subtitle: 'Dashboard & Records',
                     children: [
                       _buildDrawerSubItem(
-                        icon: Icons.dashboard_rounded,
-                        title: 'Livestock Dashboard',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const AnimalDashboardScreen()),
-                          );
-                        },
-                      ),
-                      _buildDrawerSubItem(
                         icon: Icons.list_alt_rounded,
                         title: 'Livestock List',
                         onTap: () {
@@ -175,6 +184,18 @@ class AppDrawer extends StatelessWidget {
                       ),
                     ],
                   ),
+                  _buildDrawerItem(
+                    icon: Icons.vaccines_rounded,
+                    title: 'Vaccination',
+                    subtitle: 'Herd Health & Planning',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const VaccineDashboardScreen()),
+                      );
+                    },
+                  ),
 
                   const Divider(height: 1),
 
@@ -213,6 +234,19 @@ class AppDrawer extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const IncidentHistoryScreen()),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.videocam_rounded,
+                    iconColor: const Color(0xFF10B981),
+                    title: 'Live Feed',
+                    subtitle: 'View live camera',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LiveFeedScreen()),
                       );
                     },
                   ),

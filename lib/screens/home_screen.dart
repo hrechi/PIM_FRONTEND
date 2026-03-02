@@ -10,15 +10,19 @@ import '../models/animal.dart';
 import '../models/alert_item.dart';
 import '../models/weather_info.dart';
 import '../providers/weather_provider.dart';
+import '../services/animal_service.dart';
+import '../services/milk_production_service.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:intl/intl.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/status_chip.dart';
 import '../widgets/metric_card.dart';
 import '../widgets/alert_tile.dart';
 import '../widgets/gradient_container.dart';
 import '../widgets/security_alert_overlay.dart';
+import '../widgets/app_drawer.dart';
 import 'soil/soil_measurements_list_screen.dart';
 import 'animals/animal_list_screen.dart';
-import 'animals/animal_dashboard_screen.dart';
 import 'animals/add_animal_screen.dart';
 import 'profile_screen.dart';
 import 'fields_management_screen.dart';
@@ -32,7 +36,11 @@ import 'weather_screen.dart';
 import 'irrigation_scheduler_screen.dart';
 import 'package:frontend_pim/screens/parcel_list_screen.dart';
 import 'plant_doctor_screen.dart';
+import 'animals/milk_production_screen.dart';
+import 'animals/milk_analytics_screen.dart';
+import 'vaccines/vaccine_dashboard_screen.dart';
 import 'agricultural_news_screen.dart';
+
 
 /// Main home screen displaying the farm dashboard
 class HomeScreen extends StatefulWidget {
@@ -46,6 +54,13 @@ class _HomeScreenState extends State<HomeScreen> {
   late WeatherInfo weatherInfo;
   late List<AlertItem> alerts;
   late List<Animal> animals;
+  
+  final AnimalService _animalService = AnimalService();
+  final MilkProductionService _milkService = MilkProductionService();
+  
+  Map<String, dynamic>? _animalStats;
+  Map<String, dynamic>? _milkStats;
+  bool _isLoadingStats = true;
 
   // Socket.io client for siren
   late IO.Socket _socket;
@@ -54,8 +69,29 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadMockData();
+    _fetchDashboardStats();
     _initFcmListener();
     _initSocket();
+  }
+
+  Future<void> _fetchDashboardStats() async {
+    setState(() => _isLoadingStats = true);
+    try {
+      final results = await Future.wait([
+        _animalService.getStatistics(),
+        _milkService.getStatistics(),
+      ]);
+      if (mounted) {
+        setState(() {
+          _animalStats = results[0];
+          _milkStats = results[1];
+          _isLoadingStats = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching dashboard stats: $e');
+      if (mounted) setState(() => _isLoadingStats = false);
+    }
   }
 
   @override
@@ -126,6 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final attentionRequired = AlertItem.getAttentionRequired(alerts);
+    final animalAlerts = _animalStats?['needingAttention'] as List<dynamic>? ?? [];
 
     return Scaffold(
       backgroundColor: AppColorPalette.wheatWarmClay,
@@ -469,7 +506,7 @@ class _HomeScreenState extends State<HomeScreen> {
       floating: true,
       elevation: 0,
       automaticallyImplyLeading: false,
-      backgroundColor: AppColorPalette.wheatWarmClay,
+      backgroundColor: Colors.transparent,
       toolbarHeight: 80,
       leading: Builder(
         builder: (context) => IconButton(
@@ -777,7 +814,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // ─────────────────────────────────────────────
   // ATTENTION REQUIRED
   // ─────────────────────────────────────────────
-  Widget _buildAttentionRequiredSection(List<AlertItem> attentionAlerts) {
+  Widget _buildAttentionRequiredSection(List<AlertItem> attentionAlerts, List<dynamic> animalAlerts) {
+    final totalCount = attentionAlerts.length + animalAlerts.length;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -807,7 +846,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${attentionAlerts.length}',
+                  '$totalCount',
                   style: AppTextStyles.caption(
                     color: AppColorPalette.white,
                   ).copyWith(fontWeight: FontWeight.bold),
@@ -820,18 +859,78 @@ class _HomeScreenState extends State<HomeScreen> {
         DashboardCard(
           padding: const EdgeInsets.all(16),
           child: Column(
-            children: attentionAlerts
-                .take(3)
-                .map(
-                  (alert) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: AlertTile.compact(alert: alert, onTap: () {}),
+            children: [
+              // Field Alerts
+              ...attentionAlerts.take(2).map(
+                    (alert) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: AlertTile.compact(alert: alert, onTap: () {}),
+                    ),
                   ),
-                )
-                .toList(),
+              // Animal Alerts
+              ...animalAlerts.take(2).map((aRaw) {
+                final animal = Animal.fromJson(aRaw);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildAnimalAlertTile(animal),
+                );
+              }),
+            ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAnimalAlertTile(Animal animal) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AnimalListScreen()),
+        );
+      },
+      borderRadius: BorderRadius.circular(12.0),
+      child: Container(
+        padding: const EdgeInsets.all(12.0),
+        decoration: BoxDecoration(
+          color: AppColorPalette.warning.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12.0),
+          border: Border.all(
+            color: AppColorPalette.warning.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8.0),
+              decoration: BoxDecoration(
+                color: AppColorPalette.warning.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              child: const Icon(Symbols.pets, size: 18.0, color: AppColorPalette.warning),
+            ),
+            const SizedBox(width: 12.0),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${animal.name} needs attention',
+                    style: AppTextStyles.bodySmall(color: AppColorPalette.charcoalGreen).copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    'Status: ${animal.healthStatus} • Score: ${animal.vitalityScore}%',
+                    style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 20, color: AppColorPalette.softSlate),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1008,20 +1107,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text('Live Health Metrics', style: AppTextStyles.h3()),
                 ],
               ),
-              TextButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AnimalDashboardScreen(),
-                  ),
-                ),
-                child: Text(
-                  'DASHBOARD',
-                  style: AppTextStyles.buttonSmall(
-                    color: AppColorPalette.mistyBlue,
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -1102,6 +1187,272 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+
+
+  double _toDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
+  Widget _buildAnimalStatsGrid() {
+    if (_animalStats == null) return const SizedBox();
+    
+    final totalAnimals = _animalStats!['totalAnimals'] ?? 0;
+    final healthAlerts = _animalStats!['healthAlerts'] ?? 0;
+    final vaccinesDue = _animalStats!['vaccinesDue'] ?? 0;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 12),
+            child: Text('Livestock Overview', style: AppTextStyles.h3()),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: _buildDashboardStatCard(
+                  'Total Animals',
+                  '$totalAnimals',
+                  'Across all types',
+                  Symbols.pets,
+                  const Color(0xFF10B981),
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnimalListScreen())),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildDashboardStatCard(
+                  'Health Alerts',
+                  '$healthAlerts',
+                  'Needing attention',
+                  Symbols.warning,
+                  const Color(0xFFEF4444),
+                  onTap: () {}, // Scroll to attention section?
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildDashboardStatCard(
+                  'Vaccines Due',
+                  '$vaccinesDue',
+                  'Next 7 days',
+                  Symbols.vaccines,
+                  const Color(0xFF3B82F6),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const VaccineDashboardScreen()),
+                  ), 
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildDashboardStatCard(
+                  'Monthly Spend',
+                  '${_animalStats!['monthlySpend'] ?? 0} DT',
+                  'Feed & Care',
+                  Symbols.payments,
+                  const Color(0xFFF59E0B),
+                  onTap: () {},
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDashboardStatCard(String title, String value, String subtitle, IconData icon, Color color, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(height: 12),
+            Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
+            const SizedBox(height: 2),
+            Text(title, style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold, fontSize: 11)),
+            const SizedBox(height: 2),
+            Text(subtitle, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMilkProductionBanner() {
+    if (_animalStats == null) return const SizedBox();
+    
+    final double today = _toDouble(_animalStats!['todayMilk']);
+    final double yesterday = _toDouble(_animalStats!['yesterdayMilk']);
+    double trendPercent = 0;
+    if (yesterday > 0) {
+      trendPercent = ((today - yesterday) / yesterday) * 100;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: GestureDetector(
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MilkProductionScreen())),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.mistBlue, AppColors.mistBlue.withOpacity(0.8)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.mistBlue.withOpacity(0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Symbols.water_drop, color: Colors.white, size: 24),
+                      const SizedBox(width: 8),
+                      Text("Today's Yield", style: AppTextStyles.h4().copyWith(color: Colors.white)),
+                    ],
+                  ),
+                  if (yesterday > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            trendPercent >= 0 ? Symbols.trending_up : Symbols.trending_down,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${trendPercent.abs().toStringAsFixed(1)}%',
+                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '${today.toStringAsFixed(1)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text('Liters', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500)),
+                  const Spacer(),
+                  Text(
+                    'vs ${yesterday.toStringAsFixed(0)}L yesterday',
+                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderBackground() {
+    return Positioned(
+      top: -100,
+      left: -100,
+      right: -100,
+      height: 400,
+      child: Opacity(
+        opacity: 0.6,
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              child: Container(
+                width: 400,
+                height: 400,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.fieldFreshStart.withValues(alpha: 0.2),
+                      AppColors.fieldFreshStart.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: -50,
+              right: -50,
+              child: Container(
+                width: 350,
+                height: 350,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.mistyBlue.withValues(alpha: 0.2),
+                      AppColors.mistyBlue.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import '../../models/animal.dart';
 import '../../services/animal_service.dart';
 import '../../utils/constants.dart';
-import '../../widgets/app_drawer.dart';
 import 'add_animal_screen.dart';
 
 class AnimalDetailsScreen extends StatefulWidget {
@@ -78,7 +77,6 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.sageTint,
-      drawer: const AppDrawer(),
       body: Container(
         color: AppColors.sageTint,
         child: Stack(
@@ -124,10 +122,6 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
         children: [
           Row(
             children: [
-              Builder(
-                builder: (context) => _buildCircleIconButton(Icons.menu_rounded, onPressed: () => Scaffold.of(context).openDrawer()),
-              ),
-              const SizedBox(width: 8),
               _buildCircleIconButton(Symbols.arrow_back_ios_new, onPressed: () => Navigator.pop(context)),
             ],
           ),
@@ -386,11 +380,22 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
           if (_animal.vaccineRecords == null || _animal.vaccineRecords!.isEmpty)
             const Text('Aucun vaccin enregistré.', style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)))
           else
-            ..._animal.vaccineRecords!.map((v) => _buildMedicalItem(v.vaccineName, _df.format(v.vaccineDate), Symbols.vaccines, Colors.amber)),
+            ..._animal.vaccineRecords!.map((v) => _buildMedicalItem(
+              (v.vaccine?.code == 'OTHER' ? v.notes : v.vaccine?.nameFr) ?? v.notes ?? 'Vaccin', 
+              _df.format(v.administeredAt), 
+              Symbols.vaccines, 
+              Colors.amber
+            )),
           
           if (_animal.medicalEvents != null && _animal.medicalEvents!.isNotEmpty) ...[
             const Divider(height: 32),
-            ..._animal.medicalEvents!.map((e) => _buildMedicalItem(e.eventType.toUpperCase(), _df.format(e.eventDate), Symbols.medical_services, Colors.blue, subtitle: e.diagnosis)),
+            ..._animal.medicalEvents!.map((e) => _buildMedicalItem(
+              e.eventType.toUpperCase(), 
+              _df.format(e.eventDate), 
+              Symbols.medical_services, 
+              Colors.blue, 
+              subtitle: e.diagnosis
+            )),
           ],
         ],
       ),
@@ -490,9 +495,9 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
                 child: Container(
                   height: 56,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [Color(0xFF34C759), Color(0xFF32ADE6)]),
+                    gradient: LinearGradient(colors: [AppColors.mistBlue, const Color(0xFF32ADE6)]),
                     borderRadius: BorderRadius.circular(20),
-                    boxShadow: [BoxShadow(color: const Color(0xFF34C759).withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 8))],
+                    boxShadow: [BoxShadow(color: AppColors.mistBlue.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 8))],
                   ),
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
