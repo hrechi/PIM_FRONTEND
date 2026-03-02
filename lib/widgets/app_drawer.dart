@@ -12,6 +12,7 @@ import '../screens/plant_doctor_screen.dart';
 import '../screens/staff_list_screen.dart';
 import '../screens/add_staff_screen.dart';
 import '../screens/incident_history_screen.dart';
+import '../screens/shorts_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -88,6 +89,19 @@ class AppDrawer extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const PlantDoctorScreen()),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.play_circle_filled,
+                    iconColor: const Color(0xFFFF6B6B),
+                    title: 'Farm Reels',
+                    subtitle: 'Agriculture video feed',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ShortsScreen()),
                       );
                     },
                   ),

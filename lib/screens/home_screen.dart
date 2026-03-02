@@ -32,6 +32,7 @@ import 'weather_screen.dart';
 import 'irrigation_scheduler_screen.dart';
 import 'package:frontend_pim/screens/parcel_list_screen.dart';
 import 'plant_doctor_screen.dart';
+import 'shorts_screen.dart';
 
 /// Main home screen displaying the farm dashboard
 class HomeScreen extends StatefulWidget {
@@ -137,6 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildHeader(),
               SliverToBoxAdapter(child: _buildQuickAccessButtons()),
               SliverToBoxAdapter(child: _buildWeatherSoilCard()),
+              SliverToBoxAdapter(child: _buildFarmReelsCard()),
               if (attentionRequired.isNotEmpty)
                 SliverToBoxAdapter(
                   child: _buildAttentionRequiredSection(attentionRequired),
@@ -245,6 +247,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (_) => const WeatherScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.play_circle_filled,
+                    iconColor: const Color(0xFFFF6B6B),
+                    title: 'Farm Reels',
+                    subtitle: 'Agriculture video feed',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ShortsScreen(),
                         ),
                       );
                     },
@@ -753,6 +770,93 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // FARM REELS CARD
+  // ─────────────────────────────────────────────
+  Widget _buildFarmReelsCard() {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ShortsScreen()),
+      ),
+      child: Container(
+        margin: EdgeInsets.symmetric(
+          horizontal: Responsive.horizontalPadding(context),
+          vertical: 8,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1DB954), Color(0xFF1ABC9C), Color(0xFF00D2FF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1DB954).withOpacity(0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              // Play icon
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.play_circle_filled,
+                  color: Colors.white,
+                  size: 36,
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Text content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Farm Reels',
+                          style: AppTextStyles.h3().copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text('🌾', style: TextStyle(fontSize: 18)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Watch agriculture tips & tricks',
+                      style: AppTextStyles.bodySmall(
+                        color: Colors.white.withOpacity(0.85),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.white.withOpacity(0.7),
+                size: 20,
+              ),
+            ],
+          ),
         ),
       ),
     );
