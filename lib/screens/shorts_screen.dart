@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 import '../models/short_video.dart';
 import '../providers/shorts_provider.dart';
 import '../services/shorts_service.dart';
@@ -23,6 +25,11 @@ class _ShortsScreenState extends State<ShortsScreen> {
   );
   int _currentPage = 0;
   bool _isMuted = false; // Videos play with sound by default
+
+  // Pull-to-refresh state
+  double _pullDistance = 0.0;
+  bool _isRefreshTriggered = false;
+  static const double _refreshThreshold = 120.0;
 
   @override
   void initState() {
@@ -74,25 +81,103 @@ class _ShortsScreenState extends State<ShortsScreen> {
           }
           return Stack(
             children: [
-              // ── Video PageView ─────────────────────
-              PageView.builder(
-                controller: _pageController,
-                scrollDirection: Axis.vertical,
-                physics: const ClampingScrollPhysics(
-                  parent: PageScrollPhysics(),
-                ),
-                itemCount: provider.videos.length,
-                onPageChanged: _onPageChanged,
-                itemBuilder: (context, index) {
-                  final video = provider.videos[index];
-                  return _ShortVideoPage(
-                    video: video,
-                    isActive: index == _currentPage,
-                    isMuted: _isMuted,
-                    onToggleMute: _toggleMute,
-                  );
+              // ── Video PageView with overscroll detection ──
+              NotificationListener<OverscrollNotification>(
+                onNotification: (notification) {
+                  // Only handle pull-down overscroll when on first page
+                  if (_currentPage == 0 &&
+                      notification.overscroll < 0 &&
+                      !provider.isRefreshing) {
+                    setState(() {
+                      _pullDistance += notification.overscroll.abs();
+                      if (_pullDistance >= _refreshThreshold &&
+                          !_isRefreshTriggered) {
+                        _isRefreshTriggered = true;
+                      }
+                    });
+                  }
+                  return false;
                 },
+                child: NotificationListener<ScrollEndNotification>(
+                  onNotification: (notification) {
+                    if (_isRefreshTriggered && !provider.isRefreshing) {
+                      // Trigger refresh, then reset page to 0
+                      provider.refreshShorts().then((_) {
+                        if (mounted && _pageController.hasClients) {
+                          _pageController.jumpToPage(0);
+                          setState(() => _currentPage = 0);
+                        }
+                      });
+                    }
+                    // Reset pull state on scroll end
+                    if (_pullDistance > 0) {
+                      setState(() {
+                        _pullDistance = 0.0;
+                        _isRefreshTriggered = false;
+                      });
+                    }
+                    return false;
+                  },
+                  child: PageView.builder(
+                    controller: _pageController,
+                    scrollDirection: Axis.vertical,
+                    physics: const ClampingScrollPhysics(
+                      parent: PageScrollPhysics(),
+                    ),
+                    itemCount: provider.videos.length,
+                    onPageChanged: _onPageChanged,
+                    itemBuilder: (context, index) {
+                      final video = provider.videos[index];
+                      return _ShortVideoPage(
+                        key: ValueKey(video.videoId),
+                        video: video,
+                        isActive: index == _currentPage,
+                        isMuted: _isMuted,
+                        onToggleMute: _toggleMute,
+                      );
+                    },
+                  ),
+                ),
               ),
+
+              // ── Pull-to-refresh indicator (Instagram-style circle) ──
+              if (_currentPage == 0 &&
+                  (_pullDistance > 0 || provider.isRefreshing))
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 80,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: AnimatedOpacity(
+                      opacity: provider.isRefreshing
+                          ? 1.0
+                          : (_pullDistance / _refreshThreshold).clamp(0.0, 1.0),
+                      duration: const Duration(milliseconds: 150),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.65),
+                          shape: BoxShape.circle,
+                        ),
+                        padding: const EdgeInsets.all(8),
+                        child: provider.isRefreshing
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              )
+                            : CircularProgressIndicator(
+                                value: (_pullDistance / _refreshThreshold)
+                                    .clamp(0.0, 1.0),
+                                color: _isRefreshTriggered
+                                    ? Colors.white
+                                    : Colors.white54,
+                                strokeWidth: 2.5,
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
 
               // ── Top bar: back + mute + category chips ─
               _buildTopBar(provider),
@@ -307,6 +392,7 @@ class _ShortVideoPage extends StatefulWidget {
   final VoidCallback onToggleMute;
 
   const _ShortVideoPage({
+    super.key,
     required this.video,
     required this.isActive,
     required this.isMuted,
@@ -338,8 +424,13 @@ class _ShortVideoPageState extends State<_ShortVideoPage> {
   @override
   void didUpdateWidget(covariant _ShortVideoPage oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Reinit if became active, or if the video changed while active (refresh/shuffle)
     if (widget.isActive && !oldWidget.isActive) {
       _isPaused = false;
+      _initWebView();
+    } else if (widget.isActive && widget.video.videoId != oldWidget.video.videoId) {
+      _isPaused = false;
+      _isLoaded = false;
       _initWebView();
     } else if (!widget.isActive && oldWidget.isActive) {
       setState(() {
@@ -361,8 +452,12 @@ class _ShortVideoPageState extends State<_ShortVideoPage> {
     if (_controller == null) return;
     _controller!.runJavaScript('''
       (function() {
+        window._fieldlyMuted = ${widget.isMuted};
         var v = document.querySelector('video');
-        if (v) { v.muted = ${widget.isMuted}; }
+        if (v) {
+          v.muted = ${widget.isMuted};
+          if (!${widget.isMuted}) v.volume = 1.0;
+        }
       })();
     ''');
   }
@@ -371,83 +466,117 @@ class _ShortVideoPageState extends State<_ShortVideoPage> {
     final ctrl = WebViewController();
     ctrl.setJavaScriptMode(JavaScriptMode.unrestricted);
     ctrl.setBackgroundColor(Colors.black);
+
+    // CRITICAL: Allow autoplay without user gesture on Android
+    if (Platform.isAndroid) {
+      final androidCtrl = ctrl.platform as AndroidWebViewController;
+      androidCtrl.setMediaPlaybackRequiresUserGesture(false);
+    }
+
     ctrl.setNavigationDelegate(
       NavigationDelegate(
         onPageFinished: (_) {
           if (mounted) {
             setState(() => _isLoaded = true);
-            // Inject CSS to hide YouTube UI chrome, then set audio state
+            // Inject CSS to hide ALL YouTube UI chrome + JS for playback control
             ctrl.runJavaScript('''
               (function() {
                 var style = document.createElement('style');
-                style.textContent = \`
-                  ytm-mobile-topbar-renderer,
-                  .page-header-banner,
-                  ytm-comment-section-renderer,
-                  ytm-item-section-renderer,
-                  .slim-video-metadata-header-modern,
-                  .related-chips-slot-wrapper,
-                  ytm-engagement-panel-section-list-renderer,
-                  .watch-below-the-player,
-                  .music-button,
-                  #menu-button,
-                  .slim-video-action-bar-renderer,
-                  ytm-slim-video-action-bar-renderer,
-                  .player-controls-top,
-                  .EndScreenModule,
-                  ytm-reel-multi-format-link-renderer,
-                  /* Hide YouTube native mute / volume buttons */
-                  .volume-button,
-                  .mute-button,
-                  button[aria-label="Mute"],
-                  button[aria-label="Unmute"],
-                  .ytShortsLockupViewModelHostEndpoint,
-                  .player-controls-bottom,
-                  .reel-player-overlay-actions,
-                  [class*="mute"],
-                  [class*="volume"],
-                  .player-controls-content {
-                    display: none !important;
-                    pointer-events: none !important;
-                  }
-                  body {
-                    overflow: hidden !important;
-                    background: black !important;
-                  }
-                \`;
+                style.textContent = ""
+                  // Hide every YouTube overlay, header, bottom bar, and controls
+                  + "ytm-mobile-topbar-renderer,"
+                  + ".page-header-banner,"
+                  + "ytm-comment-section-renderer,"
+                  + "ytm-item-section-renderer,"
+                  + ".slim-video-metadata-header-modern,"
+                  + ".related-chips-slot-wrapper,"
+                  + "ytm-engagement-panel-section-list-renderer,"
+                  + ".watch-below-the-player,"
+                  + ".music-button,"
+                  + "#menu-button,"
+                  + ".slim-video-action-bar-renderer,"
+                  + "ytm-slim-video-action-bar-renderer,"
+                  + ".player-controls-top,"
+                  + ".player-controls-bottom,"
+                  + ".player-controls-content,"
+                  + ".EndScreenModule,"
+                  + "ytm-reel-multi-format-link-renderer,"
+                  + ".ytShortsLockupViewModelHostEndpoint,"
+                  + ".reel-player-overlay-actions,"
+                  // Aggressively hide any mute/volume/unmute UI
+                  + ".volume-button,"
+                  + ".mute-button,"
+                  + "button[aria-label=Mute],"
+                  + "button[aria-label=Unmute],"
+                  + "[class*=mute],"
+                  + "[class*=Mute],"
+                  + "[class*=volume],"
+                  + "[class*=Volume],"
+                  + "[aria-label*=mute],"
+                  + "[aria-label*=Mute],"
+                  + "[aria-label*=volume],"
+                  + "[aria-label*=Volume],"
+                  + "[data-tooltip*=mute],"
+                  + "[data-tooltip*=Mute],"
+                  // Hide the entire shorts overlay actions column on the right
+                  + ".reel-player-overlay-actions,"
+                  + "ytm-shorts-player-controls,"
+                  + ".shorts-player-controls,"
+                  + "ytm-reel-player-overlay-renderer .overlay-action-bar"
+                  + "{ display:none!important; visibility:hidden!important; "
+                  + "  width:0!important; height:0!important; overflow:hidden!important; "
+                  + "  pointer-events:none!important; opacity:0!important; }"
+                  // Make body clean
+                  + " body { overflow:hidden!important; background:black!important; }";
                 document.head.appendChild(style);
 
-                // Force unmute + autoplay, keep retrying to beat YT default mute
-                var unmuteTries = 0;
-                function setup() {
+                // Also run a periodic DOM cleaner to remove dynamically-injected buttons
+                function removeUnwantedUI() {
+                  document.querySelectorAll(
+                    '[aria-label*="ute"],[aria-label*="olume"],[class*="mute"],[class*="volume"]'
+                  ).forEach(function(el) { el.remove(); });
+                }
+
+                // ── Mute state controlled from Dart via window._fieldlyMuted ──
+                window._fieldlyMuted = ${widget.isMuted};
+
+                // ── Prevent YouTube JS from pausing the video ──
+                window._fieldlyAllowPause = false;
+
+                function patchVideo(v) {
+                  if (v._fieldlyPatched) return;
+                  v._fieldlyPatched = true;
+                  var origPause = v.pause.bind(v);
+                  v.pause = function() {
+                    if (window._fieldlyAllowPause) {
+                      origPause();
+                    }
+                  };
+                  v._origPause = origPause;
+                }
+
+                // Watchdog: force play + unmute + remove UI
+                function watchdog() {
                   var v = document.querySelector('video');
                   if (v) {
-                    v.muted = ${widget.isMuted};
-                    v.volume = 1.0;
-                    v.play();
-                    // YouTube may re-mute after a short delay, so keep forcing
-                    if (unmuteTries < 10) {
-                      unmuteTries++;
-                      setTimeout(setup, 300);
+                    patchVideo(v);
+                    v.muted = !!window._fieldlyMuted;
+                    if (!window._fieldlyMuted) v.volume = 1.0;
+                    if (v.paused && !window._fieldlyAllowPause) {
+                      v.play().catch(function(e){ console.log('play blocked: '+e); });
                     }
-                  } else {
-                    setTimeout(setup, 500);
                   }
+                  removeUnwantedUI();
                 }
-                setup();
 
-                // Also click any native mute buttons YouTube may show
-                function clickUnmute() {
-                  var btns = document.querySelectorAll(
-                    'button[aria-label=\"Unmute\"], button[aria-label=\"Mute\"], .volume-button, .mute-button, [class*=\"mute\"]'
-                  );
-                  btns.forEach(function(b) {
-                    var v = document.querySelector('video');
-                    if (v && v.muted) b.click();
-                  });
-                }
-                setTimeout(clickUnmute, 1000);
-                setTimeout(clickUnmute, 2000);
+                // Fast watchdog for first 15s, then slower
+                var fastId = setInterval(watchdog, 150);
+                setTimeout(function() {
+                  clearInterval(fastId);
+                  setInterval(watchdog, 2000);
+                }, 15000);
+
+                watchdog();
               })();
             ''');
           }
@@ -501,12 +630,13 @@ class _ShortVideoPageState extends State<_ShortVideoPage> {
     if (_controller == null) return;
     setState(() => _isPaused = !_isPaused);
     if (_isPaused) {
+      // Allow our pause through the monkey-patch
       _controller!.runJavaScript(
-        '(function(){ var v=document.querySelector("video"); if(v) v.pause(); })();',
+        '(function(){ window._fieldlyAllowPause=true; var v=document.querySelector("video"); if(v&&v._origPause) v._origPause(); else if(v) v.pause(); })();',
       );
     } else {
       _controller!.runJavaScript(
-        '(function(){ var v=document.querySelector("video"); if(v) v.play(); })();',
+        '(function(){ window._fieldlyAllowPause=false; var v=document.querySelector("video"); if(v) v.play(); })();',
       );
     }
     // Reset auto-hide timer after interacting

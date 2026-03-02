@@ -11,6 +11,7 @@ class ShortsProvider extends ChangeNotifier {
   String? _nextPageToken;
   bool _isLoading = false;
   bool _isLoadingMore = false;
+  bool _isRefreshing = false;
   String? _error;
 
   // ── Getters ──────────────────────────────────────────────
@@ -19,6 +20,7 @@ class ShortsProvider extends ChangeNotifier {
   String get activeCategory => _activeCategory;
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
+  bool get isRefreshing => _isRefreshing;
   String? get error => _error;
   bool get hasMore => _nextPageToken != null;
 
@@ -86,6 +88,29 @@ class ShortsProvider extends ChangeNotifier {
       }
     } catch (_) {
       // Keep default categories on error
+    }
+  }
+
+  /// Refresh shorts: reload from API and shuffle order (pull-to-refresh)
+  Future<void> refreshShorts() async {
+    if (_isRefreshing || _isLoading) return;
+
+    _isRefreshing = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final response = await _service.fetchShorts(
+        category: _activeCategory,
+      );
+      _videos = response.videos;
+      _videos.shuffle(); // Randomize order
+      _nextPageToken = response.nextPageToken;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+    } finally {
+      _isRefreshing = false;
+      notifyListeners();
     }
   }
 }
