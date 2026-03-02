@@ -8,6 +8,7 @@ import '../../models/soil_measurement.dart';
 import '../../models/ai_prediction.dart';
 import '../../widgets/soil/ai_prediction_card.dart';
 import '../../widgets/soil/chart_container.dart';
+import '../../widgets/app_drawer.dart';
 
 
 /// Screen displaying soil analytics and AI predictions
@@ -101,7 +102,14 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColorPalette.wheatWarmClay,
+      drawer: const AppDrawer(),
       appBar: AppBar(
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu_rounded),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -198,7 +198,7 @@ class _ScheduleCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    vaccine?.nameFr ?? 'Vaccin',
+                    (vaccine?.code == 'OTHER' ? schedule.notes : vaccine?.nameFr) ?? schedule.notes ?? 'Vaccin',
                     style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: Color(0xFF1E293B)),
                   ),
                 ),

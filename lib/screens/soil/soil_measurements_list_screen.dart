@@ -12,6 +12,7 @@ import 'soil_measurement_form_screen.dart';
 import 'soil_measurement_details_screen.dart';
 import 'soil_analytics_screen.dart';
 import 'soil_map_screen.dart';
+import '../../widgets/app_drawer.dart';
 
 /// Provider for managing Soil Measurements state
 class SoilMeasurementsProvider extends ChangeNotifier {
@@ -344,7 +345,14 @@ class _SoilMeasurementsListScreenState
 
           return Scaffold(
             backgroundColor: AppColorPalette.wheatWarmClay,
+            drawer: const AppDrawer(),
             appBar: AppBar(
+              leading: Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu_rounded),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

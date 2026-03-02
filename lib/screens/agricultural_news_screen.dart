@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../widgets/app_drawer.dart';
 
 class AgriculturalNewsScreen extends StatefulWidget {
   const AgriculturalNewsScreen({super.key});
@@ -211,6 +212,7 @@ class _AgriculturalNewsScreenState extends State<AgriculturalNewsScreen> with Si
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
+      drawer: const AppDrawer(),
       body: CustomScrollView(
         slivers: [
           _buildSliverAppBar(),
@@ -249,6 +251,12 @@ class _AgriculturalNewsScreenState extends State<AgriculturalNewsScreen> with Si
       elevation: 0,
       backgroundColor: Colors.white,
       foregroundColor: Colors.black,
+      leading: Builder(
+        builder: (context) => IconButton(
+          icon: const Icon(Icons.menu_rounded, color: Colors.black),
+          onPressed: () => Scaffold.of(context).openDrawer(),
+        ),
+      ),
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: const EdgeInsetsDirectional.only(start: 16, bottom: 16),
         title: const Text(

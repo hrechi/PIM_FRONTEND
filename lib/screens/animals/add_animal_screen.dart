@@ -131,18 +131,18 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         final regs = await _vaccineService.getCountryRegulations(countryCode, species: _selectedType);
         setState(() {
           _regulations = regs;
-          // Pre-populate selections for existing regulations if not already present
           for (var reg in _regulations) {
-             if (!_vaccineSelections.containsKey(reg.vaccineId)) {
-               _vaccineSelections[reg.vaccineId] = {
-                 'checked': false,
-                 'date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
-                 'dose': 1.0,
-                 'lot': '',
-                 'isOther': false,
-                 'name': reg.vaccine?.nameEn ?? reg.vaccineId,
-               };
-             }
+            final vCode = reg.vaccine?.code ?? reg.vaccineId;
+            if (!_vaccineSelections.containsKey(vCode)) {
+              _vaccineSelections[vCode] = {
+                'checked': false,
+                'date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
+                'dose': 1.0,
+                'lot': '',
+                'isOther': false,
+                'name': reg.vaccine?.nameFr ?? reg.vaccine?.nameEn ?? reg.vaccineId,
+              };
+            }
           }
         });
       }
@@ -917,7 +917,8 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   }
 
   Widget _buildDynamicVaccineItem(VaccineRegulation reg) {
-    final sel = _vaccineSelections[reg.vaccineId]!;
+    final vCode = reg.vaccine?.code ?? reg.vaccineId;
+    final sel = _vaccineSelections[vCode]!;
     final isChecked = sel['checked'] as bool;
     final isMandatory = reg.isMandatory;
 

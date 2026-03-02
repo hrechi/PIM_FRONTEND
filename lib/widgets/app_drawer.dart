@@ -17,6 +17,8 @@ import '../screens/incident_history_screen.dart';
 import '../screens/weather_screen.dart';
 import '../screens/irrigation_scheduler_screen.dart';
 import '../screens/live_feed_screen.dart';
+import '../screens/soil/soil_measurements_list_screen.dart';
+import '../screens/soil/soil_analytics_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -100,6 +102,18 @@ class AppDrawer extends StatelessWidget {
                     },
                   ),
                   _buildDrawerItem(
+                    icon: Icons.science_rounded,
+                    title: 'Soil Health',
+                    subtitle: 'Measurements & Analytics',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SoilMeasurementsListScreen()),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
                     icon: Icons.medical_services,
                     iconColor: AppColorPalette.alertError,
                     title: 'AI Plant Doctor',
@@ -123,6 +137,34 @@ class AppDrawer extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (_) => AgriculturalNewsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.cloud,
+                    iconColor: const Color(0xFF57A0D3),
+                    title: 'Weather & Advice',
+                    subtitle: 'Forecast & recommendations',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const WeatherScreen()),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.water_drop,
+                    iconColor: const Color(0xFF2196F3),
+                    title: 'Irrigation Scheduler',
+                    subtitle: 'Smart 7-day irrigation plan',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const IrrigationSchedulerScreen(),
                         ),
                       );
                     },
