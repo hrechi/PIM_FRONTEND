@@ -38,7 +38,9 @@ class SoilRepository {
 
   /// Get a single measurement by ID
   Future<SoilMeasurement> getMeasurementById(String id) async {
-    return await _apiService.getMeasurementById(id);
+    final measurement = await _apiService.getMeasurementById(id);
+    print('📊 Loaded measurement: soilType=${measurement.soilType}, confidence=${measurement.detectionConfidence}, imagePath=${measurement.imagePath}');
+    return measurement;
   }
 
   /// Create a new soil measurement
@@ -64,6 +66,34 @@ class SoilRepository {
     );
 
     return await _apiService.createMeasurement(dto);
+  }
+
+  /// Create a new soil measurement with image upload
+  /// 
+  /// Uploads a soil photo for AI classification
+  Future<SoilMeasurement> createMeasurementWithImage({
+    required String imagePath,
+    required double ph,
+    required double soilMoisture,
+    required double sunlight,
+    required Map<String, dynamic> nutrients,
+    required double temperature,
+    required double latitude,
+    required double longitude,
+    String? fieldId,
+  }) async {
+    final dto = CreateSoilMeasurementDto(
+      ph: ph,
+      soilMoisture: soilMoisture,
+      sunlight: sunlight,
+      nutrients: nutrients,
+      temperature: temperature,
+      latitude: latitude,
+      longitude: longitude,
+      fieldId: fieldId,
+    );
+
+    return await _apiService.createMeasurementWithImage(dto, imagePath);
   }
 
   /// Update an existing measurement
