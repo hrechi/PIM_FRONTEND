@@ -1492,46 +1492,33 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ─────────────────────────────────────────────
   // FLOATING ACTION BUTTON
-  // Siren FAB stacked above Chatbot FAB
   // ─────────────────────────────────────────────
   Widget _buildFloatingActionButton() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        FloatingActionButton(
-          heroTag: 'siren',
-          onPressed: _triggerSiren,
-          backgroundColor: Colors.red.shade700,
-          child: const Icon(Icons.volume_up, color: Colors.white),
+    return GestureDetector(
+      onTap: () => Navigator.push(context,
+          MaterialPageRoute(
+              builder: (context) => const ChatAssistantScreen())),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColorPalette.charcoalGreen.withOpacity(0.3),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        GestureDetector(
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(
-                  builder: (context) => const ChatAssistantScreen())),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColorPalette.charcoalGreen.withOpacity(0.3),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.asset(
-                'assets/images/maskot_chatbot.png',
-                width: 65,
-                height: 85,
-                fit: BoxFit.contain,
-              ),
-            ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Image.asset(
+            'assets/images/maskot_chatbot.png',
+            width: 65,
+            height: 85,
+            fit: BoxFit.contain,
           ),
         ),
-      ],
+      ),
     );
   }
 
