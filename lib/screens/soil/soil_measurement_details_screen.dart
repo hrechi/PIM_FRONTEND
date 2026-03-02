@@ -9,9 +9,11 @@ import '../../widgets/soil/status_badge.dart';
 import '../../widgets/soil/soil_metric_card.dart';
 import '../../services/field_service.dart';
 import '../../services/soil_crop_analysis_service.dart';
+import '../../services/soil_repository.dart';
 import '../../services/parcel_crud_service.dart';
 import '../../models/crop_suitability.dart';
 import '../../models/parcel.dart';
+import '../../config/api_config.dart';
 import 'soil_measurement_form_screen.dart';
 import 'soil_measurements_list_screen.dart';
 
@@ -35,7 +37,9 @@ class _SoilMeasurementDetailsScreenState
   late soil_models.SoilMeasurement measurement;
   FieldModel? _field;
   bool _isLoadingField = false;
+  bool _isLoadingMeasurement = false;
   final FieldService _fieldService = FieldService();
+  final SoilRepository _soilRepository = SoilRepository();
   
   // Plant recommendation state (REPLACED WITH ML)
   // PlantRecommendations? _plantRecommendations;
@@ -176,11 +180,31 @@ class _SoilMeasurementDetailsScreenState
       );
     }
   }
+  /// Reload measurement from API to get latest data
+  Future<void> _reloadMeasurement() async {
+    setState(() => _isLoadingMeasurement = true);
+    try {
+      final freshMeasurement = await _soilRepository.getMeasurementById(measurement.id);
+      if (mounted) {
+        setState(() {
+          measurement = freshMeasurement;
+          _isLoadingMeasurement = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingMeasurement = false);
+      }
+    }
+  }
+
   /// Analyze soil health based on current measurement
   @override
   void initState() {
     super.initState();
     measurement = widget.measurement;
+    // Reload measurement to get fresh data with soil type
+    _reloadMeasurement();
     // Load field data if measurement is linked to a field
     if (measurement.fieldId != null) {
       _loadField();
@@ -367,6 +391,12 @@ class _SoilMeasurementDetailsScreenState
             _buildStatusBadges(),
 
             const SizedBox(height: 24),
+
+            // Soil Photo Section (if available)
+            if (measurement.imagePath != null) ...[
+              _buildSoilPhotoSection(),
+              const SizedBox(height: 24),
+            ],
 
             // Metrics Grid
             _buildMetricsGrid(),
@@ -1123,6 +1153,138 @@ class _SoilMeasurementDetailsScreenState
     );
   }
 
+  /// Build soil photo section
+  Widget _buildSoilPhotoSection() {
+    final imageUrl = measurement.imagePath != null
+        ? ApiConfig.baseUrl.replaceFirst('/api', '') + '/' + measurement.imagePath!
+        : null;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColorPalette.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColorPalette.softSlate.withOpacity(0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColorPalette.charcoalGreen.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.photo_camera,
+                  size: 20,
+                  color: AppColorPalette.charcoalGreen,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Soil Photo',
+                      style: AppTextStyles.h4(),
+                    ),
+                    if (measurement.soilType != null)
+                      Text(
+                        'AI detected: ${measurement.soilType}',
+                        style: AppTextStyles.caption(
+                          color: AppColorPalette.success,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (imageUrl != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                imageUrl,
+                width: double.infinity,
+                height: 250,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 250,
+                    color: AppColorPalette.softSlate.withOpacity(0.1),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.broken_image,
+                            size: 48,
+                            color: AppColorPalette.softSlate,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Unable to load image',
+                            style: AppTextStyles.caption(
+                              color: AppColorPalette.softSlate,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    height: 250,
+                    color: AppColorPalette.softSlate.withOpacity(0.1),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          if (measurement.detectionConfidence != null) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(
+                  Icons.psychology,
+                  size: 16,
+                  color: measurement.detectionConfidence! >= 0.7
+                      ? AppColorPalette.success
+                      : AppColorPalette.warning,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'AI Confidence: ${(measurement.detectionConfidence! * 100).toStringAsFixed(0)}%',
+                  style: AppTextStyles.bodySmall(
+                    color: measurement.detectionConfidence! >= 0.7
+                        ? AppColorPalette.success
+                        : AppColorPalette.warning,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   /// Build metrics grid
   Widget _buildMetricsGrid() {
     return Column(
@@ -1169,8 +1331,79 @@ class _SoilMeasurementDetailsScreenState
               value: measurement.temperature,
               compact: true,
             ),
+            if (measurement.soilType != null)
+              SoilMetricCard.soilType(
+                soilType: measurement.soilType,
+                confidence: measurement.detectionConfidence,
+                compact: true,
+              ),
           ],
         ),
+        // AI Detected Soil Type Text Display
+        if (measurement.soilType != null) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColorPalette.success.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColorPalette.success.withOpacity(0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.psychology,
+                  color: AppColorPalette.success,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'AI Detected: ',
+                            style: AppTextStyles.bodyMedium(
+                              color: AppColorPalette.softSlate,
+                            ),
+                          ),
+                          Text(
+                            measurement.soilType!,
+                            style: AppTextStyles.h4().copyWith(
+                              color: AppColorPalette.success,
+                            ),
+                          ),
+                          Text(
+                            ' Soil',
+                            style: AppTextStyles.bodyMedium(
+                              color: AppColorPalette.softSlate,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (measurement.detectionConfidence != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Confidence: ${(measurement.detectionConfidence! * 100).toStringAsFixed(0)}%',
+                          style: AppTextStyles.caption(
+                            color: measurement.detectionConfidence! >= 0.7
+                                ? AppColorPalette.success
+                                : AppColorPalette.warning,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }

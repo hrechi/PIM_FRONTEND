@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../theme/color_palette.dart';
 import '../../theme/text_styles.dart';
 import '../../utils/responsive.dart';
@@ -43,7 +45,13 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
   bool isEditing = false;
   bool isSaving = false;
 
+  // Photo upload state
+  File? _selectedImage;
+  String? _detectedSoilType;
+  double? _detectionConfidence;
+
   final FieldService _fieldService = FieldService();
+  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -181,16 +189,32 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
         );
       } else {
         // Create new measurement
-        success = await provider.createMeasurement(
-          ph: double.parse(_phController.text),
-          soilMoisture: double.parse(_moistureController.text),
-          sunlight: double.parse(_sunlightController.text),
-          nutrients: nutrients,
-          temperature: double.parse(_temperatureController.text),
-          latitude: _latitude!,
-          longitude: _longitude!,
-          fieldId: _selectedFieldId,
-        );
+        if (_selectedImage != null) {
+          // Create with image
+          success = await provider.createMeasurementWithImage(
+            imagePath: _selectedImage!.path,
+            ph: double.parse(_phController.text),
+            soilMoisture: double.parse(_moistureController.text),
+            sunlight: double.parse(_sunlightController.text),
+            nutrients: nutrients,
+            temperature: double.parse(_temperatureController.text),
+            latitude: _latitude!,
+            longitude: _longitude!,
+            fieldId: _selectedFieldId,
+          );
+        } else {
+          // Create without image
+          success = await provider.createMeasurement(
+            ph: double.parse(_phController.text),
+            soilMoisture: double.parse(_moistureController.text),
+            sunlight: double.parse(_sunlightController.text),
+            nutrients: nutrients,
+            temperature: double.parse(_temperatureController.text),
+            latitude: _latitude!,
+            longitude: _longitude!,
+            fieldId: _selectedFieldId,
+          );
+        }
       }
 
       setState(() => isSaving = false);
@@ -515,6 +539,16 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
             ),
             const SizedBox(height: 24),
 
+            // Soil Photo Section (Optional)
+            _SectionHeader(
+              icon: Icons.camera_alt,
+              title: 'Soil Photo (Optional)',
+              color: AppColorPalette.charcoalGreen,
+            ),
+            const SizedBox(height: 12),
+            _buildPhotoUploadSection(),
+            const SizedBox(height: 24),
+
             // Location Section
             _SectionHeader(
               icon: Icons.location_on,
@@ -632,6 +666,364 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
         ),
       ),
     ));
+  }
+
+  /// Build photo upload section
+  Widget _buildPhotoUploadSection() {
+    return Column(
+      children: [
+        // Helper text
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColorPalette.info.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: AppColorPalette.info.withOpacity(0.3),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: AppColorPalette.info,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Upload a soil photo for AI to detect soil type automatically',
+                  style: AppTextStyles.caption(
+                    color: AppColorPalette.softSlate,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Camera/Gallery buttons or image preview
+        if (_selectedImage == null)
+          // Camera and Gallery buttons
+          Row(
+            children: [
+              // Camera button
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColorPalette.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColorPalette.charcoalGreen.withOpacity(0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () async {
+                        try {
+                          final XFile? image = await _imagePicker.pickImage(
+                            source: ImageSource.camera,
+                            maxWidth: 1920,
+                            maxHeight: 1920,
+                            imageQuality: 85,
+                          );
+                          
+                          if (image != null) {
+                            setState(() {
+                              _selectedImage = File(image.path);
+                              _detectedSoilType = null;
+                              _detectionConfidence = null;
+                            });
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to capture photo: $e'),
+                                backgroundColor: AppColorPalette.alertError,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppColorPalette.charcoalGreen.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.camera_alt,
+                                size: 32,
+                                color: AppColorPalette.charcoalGreen,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Camera',
+                              style: AppTextStyles.bodyMedium().copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Gallery button
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColorPalette.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColorPalette.mistyBlue.withOpacity(0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () async {
+                        try {
+                          final XFile? image = await _imagePicker.pickImage(
+                            source: ImageSource.gallery,
+                            maxWidth: 1920,
+                            maxHeight: 1920,
+                            imageQuality: 85,
+                          );
+                          
+                          if (image != null) {
+                            setState(() {
+                              _selectedImage = File(image.path);
+                              _detectedSoilType = null;
+                              _detectionConfidence = null;
+                            });
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to select photo: $e'),
+                                backgroundColor: AppColorPalette.alertError,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppColorPalette.mistyBlue.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.photo_library,
+                                size: 32,
+                                color: AppColorPalette.mistyBlue,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Gallery',
+                              style: AppTextStyles.bodyMedium().copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          )
+        else
+          // Image preview
+          Container(
+            decoration: BoxDecoration(
+              color: AppColorPalette.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColorPalette.success.withOpacity(0.5),
+                width: 2,
+              ),
+            ),
+            child: Column(
+              children: [
+                Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(10),
+                      ),
+                      child: Image.file(
+                        _selectedImage!,
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    // Remove button
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColorPalette.alertError,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          onPressed: () {
+                            setState(() {
+                              _selectedImage = null;
+                              _detectedSoilType = null;
+                              _detectionConfidence = null;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            color: AppColorPalette.success,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Photo Selected',
+                            style: AppTextStyles.bodyLarge().copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColorPalette.success,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'AI will analyze the photo when you save',
+                        style: AppTextStyles.caption(
+                          color: AppColorPalette.softSlate,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                try {
+                                  final XFile? image = await _imagePicker.pickImage(
+                                    source: ImageSource.camera,
+                                    maxWidth: 1920,
+                                    maxHeight: 1920,
+                                    imageQuality: 85,
+                                  );
+                                  
+                                  if (image != null) {
+                                    setState(() {
+                                      _selectedImage = File(image.path);
+                                      _detectedSoilType = null;
+                                      _detectionConfidence = null;
+                                    });
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Failed to capture photo: $e'),
+                                        backgroundColor: AppColorPalette.alertError,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              icon: const Icon(Icons.camera_alt),
+                              label: const Text('Camera'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColorPalette.charcoalGreen,
+                                side: BorderSide(
+                                  color: AppColorPalette.charcoalGreen,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                try {
+                                  final XFile? image = await _imagePicker.pickImage(
+                                    source: ImageSource.gallery,
+                                    maxWidth: 1920,
+                                    maxHeight: 1920,
+                                    imageQuality: 85,
+                                  );
+                                  
+                                  if (image != null) {
+                                    setState(() {
+                                      _selectedImage = File(image.path);
+                                      _detectedSoilType = null;
+                                      _detectionConfidence = null;
+                                    });
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Failed to select photo: $e'),
+                                        backgroundColor: AppColorPalette.alertError,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              icon: const Icon(Icons.photo_library),
+                              label: const Text('Gallery'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColorPalette.mistyBlue,
+                                side: BorderSide(
+                                  color: AppColorPalette.mistyBlue,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
   }
 }
 

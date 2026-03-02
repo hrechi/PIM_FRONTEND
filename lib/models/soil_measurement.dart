@@ -26,6 +26,9 @@ class SoilMeasurement {
   final double latitude;
   final double longitude;
   final String? fieldId; // Optional field ID this measurement belongs to
+  final String? imagePath; // Path to uploaded soil image
+  final String? soilType; // AI-detected soil type (Clay, Sandy, Loam, etc.)
+  final double? detectionConfidence; // Confidence of soil type detection (0-1)
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -39,6 +42,9 @@ class SoilMeasurement {
     required this.latitude,
     required this.longitude,
     this.fieldId,
+    this.imagePath,
+    this.soilType,
+    this.detectionConfidence,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -241,6 +247,9 @@ class SoilMeasurement {
     double? latitude,
     double? longitude,
     String? fieldId,
+    String? imagePath,
+    String? soilType,
+    double? detectionConfidence,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -254,6 +263,9 @@ class SoilMeasurement {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       fieldId: fieldId ?? this.fieldId,
+      imagePath: imagePath ?? this.imagePath,
+      soilType: soilType ?? this.soilType,
+      detectionConfidence: detectionConfidence ?? this.detectionConfidence,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -271,6 +283,9 @@ class SoilMeasurement {
       'latitude': latitude,
       'longitude': longitude,
       if (fieldId != null) 'fieldId': fieldId,
+      if (imagePath != null) 'imagePath': imagePath,
+      if (soilType != null) 'soilType': soilType,
+      if (detectionConfidence != null) 'detectionConfidence': detectionConfidence,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -288,6 +303,11 @@ class SoilMeasurement {
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
       fieldId: json['fieldId'] as String?,
+      imagePath: json['imagePath'] as String?,
+      soilType: json['soilType'] as String?,
+      detectionConfidence: json['detectionConfidence'] != null
+          ? (json['detectionConfidence'] as num).toDouble()
+          : null,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );

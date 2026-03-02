@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import '../config/api_config.dart';
@@ -102,6 +103,47 @@ class SoilApiService {
         '',
         data: dto.toJson(),
       );
+      return SoilMeasurement.fromJson(response.data);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Create a new soil measurement with image upload
+  /// 
+  /// Uploads a soil photo for AI type detection and creates measurement
+  Future<SoilMeasurement> createMeasurementWithImage(
+    CreateSoilMeasurementDto dto,
+    String imagePath,
+  ) async {
+    try {
+      // Create multipart form data
+      final formData = FormData.fromMap({
+        'image': await MultipartFile.fromFile(
+          imagePath,
+          filename: imagePath.split('/').last,
+        ),
+        // Add all DTO fields as form fields
+        'ph': dto.ph.toString(),
+        'soilMoisture': dto.soilMoisture.toString(),
+        'sunlight': dto.sunlight.toString(),
+        'nutrients': jsonEncode(dto.nutrients),
+        'temperature': dto.temperature.toString(),
+        'latitude': dto.latitude.toString(),
+        'longitude': dto.longitude.toString(),
+        if (dto.fieldId != null) 'fieldId': dto.fieldId!,
+      });
+
+      final response = await _dio.post(
+        '/with-image',
+        data: formData,
+        options: Options(
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        ),
+      );
+      
       return SoilMeasurement.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleError(e);

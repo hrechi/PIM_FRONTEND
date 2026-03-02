@@ -128,6 +128,41 @@ class SoilMeasurementsProvider extends ChangeNotifier {
     }
   }
   
+  /// Create a new measurement with soil photo
+  Future<bool> createMeasurementWithImage({
+    required String imagePath,
+    required double ph,
+    required double soilMoisture,
+    required double sunlight,
+    required Map<String, dynamic> nutrients,
+    required double temperature,
+    required double latitude,
+    required double longitude,
+    String? fieldId,
+  }) async {
+    try {
+      await _repository.createMeasurementWithImage(
+        imagePath: imagePath,
+        ph: ph,
+        soilMoisture: soilMoisture,
+        sunlight: sunlight,
+        nutrients: nutrients,
+        temperature: temperature,
+        latitude: latitude,
+        longitude: longitude,
+        fieldId: fieldId,
+      );
+      
+      // Refresh the list
+      await loadMeasurements(refresh: true);
+      return true;
+    } catch (e) {
+      _error = e is SoilApiException ? e.userMessage : e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+  
   /// Update a measurement
   Future<bool> updateMeasurement({
     required String id,
