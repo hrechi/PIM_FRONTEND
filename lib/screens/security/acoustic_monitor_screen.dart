@@ -316,7 +316,11 @@ class _AcousticMonitorScreenState extends State<AcousticMonitorScreen>
           padding: const EdgeInsets.only(left: 4, bottom: 10),
           child: Row(
             children: [
-              Icon(Icons.notifications_active, size: 18, color: AppColorPalette.softSlate),
+              Icon(
+                Icons.notifications_active,
+                size: 18,
+                color: AppColorPalette.softSlate,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Alert History',
@@ -349,7 +353,10 @@ class _AcousticMonitorScreenState extends State<AcousticMonitorScreen>
       decoration: BoxDecoration(
         color: _statusColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _statusColor.withValues(alpha: 0.25), width: 1),
+        border: Border.all(
+          color: _statusColor.withValues(alpha: 0.25),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
@@ -386,7 +393,9 @@ class _AcousticMonitorScreenState extends State<AcousticMonitorScreen>
               if (_category != null)
                 Text(
                   _category!,
-                  style: AppTextStyles.caption(color: AppColorPalette.softSlate),
+                  style: AppTextStyles.caption(
+                    color: AppColorPalette.softSlate,
+                  ),
                 ),
             ],
           ),
@@ -473,11 +482,15 @@ class _AcousticMonitorScreenState extends State<AcousticMonitorScreen>
                   children: [
                     Text(
                       _db.toStringAsFixed(0),
-                      style: AppTextStyles.displaySmall(color: AppColorPalette.charcoalGreen),
+                      style: AppTextStyles.displaySmall(
+                        color: AppColorPalette.charcoalGreen,
+                      ),
                     ),
                     Text(
                       'dB',
-                      style: AppTextStyles.overline(color: AppColorPalette.softSlate),
+                      style: AppTextStyles.overline(
+                        color: AppColorPalette.softSlate,
+                      ),
                     ),
                   ],
                 ),
@@ -549,7 +562,9 @@ class _AcousticMonitorScreenState extends State<AcousticMonitorScreen>
                       _dominantFreq > 1000
                           ? '${(_dominantFreq / 1000).toStringAsFixed(1)}k'
                           : _dominantFreq.toStringAsFixed(0),
-                      style: AppTextStyles.displaySmall(color: AppColorPalette.charcoalGreen),
+                      style: AppTextStyles.displaySmall(
+                        color: AppColorPalette.charcoalGreen,
+                      ),
                     ),
                     Text(
                       'Hz · $freqLabel',
@@ -594,7 +609,10 @@ class _AcousticMonitorScreenState extends State<AcousticMonitorScreen>
             color: AppColorPalette.success.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 12),
-          Text('All Clear', style: AppTextStyles.h4(color: AppColorPalette.charcoalGreen)),
+          Text(
+            'All Clear',
+            style: AppTextStyles.h4(color: AppColorPalette.charcoalGreen),
+          ),
           const SizedBox(height: 4),
           Text(
             'No acoustic threats detected.',
@@ -662,11 +680,18 @@ class _AcousticMonitorScreenState extends State<AcousticMonitorScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(category, style: AppTextStyles.label(color: AppColorPalette.charcoalGreen)),
+                Text(
+                  category,
+                  style: AppTextStyles.label(
+                    color: AppColorPalette.charcoalGreen,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   '${db.toStringAsFixed(1)} dB · ${freq.toStringAsFixed(0)} Hz',
-                  style: AppTextStyles.caption(color: AppColorPalette.softSlate),
+                  style: AppTextStyles.caption(
+                    color: AppColorPalette.softSlate,
+                  ),
                 ),
               ],
             ),

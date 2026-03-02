@@ -50,7 +50,9 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
     );
     _socket.connect();
     _socket.onConnect((_) => debugPrint('[SOCKET] Siren socket connected'));
-    _socket.onDisconnect((_) => debugPrint('[SOCKET] Siren socket disconnected'));
+    _socket.onDisconnect(
+      (_) => debugPrint('[SOCKET] Siren socket disconnected'),
+    );
   }
 
   Future<void> _fetchIncident() async {
@@ -194,14 +196,18 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
       setState(() => _sirenActive = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(children: [
-            Icon(Icons.volume_off, color: Colors.white),
-            SizedBox(width: 10),
-            Text('Siren deactivated'),
-          ]),
+          content: const Row(
+            children: [
+              Icon(Icons.volume_off, color: Colors.white),
+              SizedBox(width: 10),
+              Text('Siren deactivated'),
+            ],
+          ),
           backgroundColor: AppColorPalette.charcoalGreen,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     } else {
@@ -211,14 +217,18 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
       setState(() => _sirenActive = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(children: [
-            Icon(Icons.volume_up, color: Colors.white),
-            SizedBox(width: 10),
-            Text('🚨 Siren activated!'),
-          ]),
+          content: const Row(
+            children: [
+              Icon(Icons.volume_up, color: Colors.white),
+              SizedBox(width: 10),
+              Text('🚨 Siren activated!'),
+            ],
+          ),
           backgroundColor: AppColorPalette.alertError,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     }
@@ -405,9 +415,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
           Row(
             children: [
               Icon(
-                _isResolved
-                    ? Icons.check_circle
-                    : Icons.warning_amber_rounded,
+                _isResolved ? Icons.check_circle : Icons.warning_amber_rounded,
                 color: Colors.white,
                 size: 28,
               ),
@@ -518,9 +526,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
               child: _detailTile(
                 Icons.sensors_rounded,
                 'Sensor',
-                _incident!.type.startsWith('acoustic')
-                    ? 'Acoustic'
-                    : 'Camera',
+                _incident!.type.startsWith('acoustic') ? 'Acoustic' : 'Camera',
                 AppColorPalette.robotTechStart,
               ),
             ),
@@ -530,8 +536,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
     );
   }
 
-  Widget _detailTile(
-      IconData icon, String label, String value, Color accent) {
+  Widget _detailTile(IconData icon, String label, String value, Color accent) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -593,9 +598,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
           child: ElevatedButton.icon(
             onPressed: _isResolved ? null : _markAsResolved,
             icon: Icon(
-              _isResolved
-                  ? Icons.check_circle
-                  : Icons.check_circle_outline,
+              _isResolved ? Icons.check_circle : Icons.check_circle_outline,
             ),
             label: Text(
               _isResolved ? 'RESOLVED' : 'MARK AS RESOLVED',
@@ -667,9 +670,9 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
           height: 54,
           child: OutlinedButton.icon(
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const LiveFeedScreen()),
-              );
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const LiveFeedScreen()));
             },
             icon: const Icon(Icons.videocam_rounded),
             label: const Text(

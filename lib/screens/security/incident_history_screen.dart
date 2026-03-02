@@ -270,21 +270,32 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
                 color: AppColorPalette.mediumGrey,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 16),
-            Text('Create Test Incident',
-                style: AppTextStyles.h3(color: AppColorPalette.charcoalGreen)),
+            Text(
+              'Create Test Incident',
+              style: AppTextStyles.h3(color: AppColorPalette.charcoalGreen),
+            ),
             const SizedBox(height: 20),
-            _testButton('intruder', Icons.person_off_rounded,
-                AppColorPalette.alertError, 'Intruder'),
+            _testButton(
+              'intruder',
+              Icons.person_off_rounded,
+              AppColorPalette.alertError,
+              'Intruder',
+            ),
             const SizedBox(height: 10),
-            _testButton('animal', Icons.pets_rounded,
-                AppColorPalette.warning, 'Animal'),
+            _testButton(
+              'animal',
+              Icons.pets_rounded,
+              AppColorPalette.warning,
+              'Animal',
+            ),
           ],
         ),
       ),
@@ -293,7 +304,8 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
 
   Widget _testButton(String type, IconData icon, Color color, String label) {
     return SizedBox(
-      width: double.infinity, height: 50,
+      width: double.infinity,
+      height: 50,
       child: ElevatedButton.icon(
         onPressed: () {
           Navigator.pop(context);
@@ -304,7 +316,9 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
     );
@@ -315,8 +329,10 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('Incident History',
-            style: AppTextStyles.h3(color: AppColorPalette.charcoalGreen)),
+        title: Text(
+          'Incident History',
+          style: AppTextStyles.h3(color: AppColorPalette.charcoalGreen),
+        ),
         backgroundColor: Colors.white,
         foregroundColor: AppColorPalette.charcoalGreen,
         elevation: 0,
@@ -326,8 +342,10 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppColorPalette.softSlate.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -335,12 +353,18 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.shield_outlined,
-                        size: 14, color: AppColorPalette.softSlate),
+                    Icon(
+                      Icons.shield_outlined,
+                      size: 14,
+                      color: AppColorPalette.softSlate,
+                    ),
                     const SizedBox(width: 4),
-                    Text('${_incidents.length}',
-                        style: AppTextStyles.caption(
-                            color: AppColorPalette.softSlate)),
+                    Text(
+                      '${_incidents.length}',
+                      style: AppTextStyles.caption(
+                        color: AppColorPalette.softSlate,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -353,10 +377,12 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
         child: _isLoading
             ? const Center(
                 child: CircularProgressIndicator(
-                    color: AppColorPalette.fieldFreshMid))
+                  color: AppColorPalette.fieldFreshMid,
+                ),
+              )
             : _incidents.isEmpty
-                ? _buildEmptyState()
-                : _buildIncidentList(),
+            ? _buildEmptyState()
+            : _buildIncidentList(),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showTestOptions,
@@ -377,16 +403,22 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
               color: AppColorPalette.success.withOpacity(0.08),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.shield_rounded,
-                size: 48, color: AppColorPalette.success.withOpacity(0.5)),
+            child: Icon(
+              Icons.shield_rounded,
+              size: 48,
+              color: AppColorPalette.success.withOpacity(0.5),
+            ),
           ),
           const SizedBox(height: 20),
-          Text('All Clear',
-              style: AppTextStyles.h3(color: AppColorPalette.charcoalGreen)),
+          Text(
+            'All Clear',
+            style: AppTextStyles.h3(color: AppColorPalette.charcoalGreen),
+          ),
           const SizedBox(height: 8),
-          Text('No incidents recorded yet.',
-              style:
-                  AppTextStyles.bodyMedium(color: AppColorPalette.softSlate)),
+          Text(
+            'No incidents recorded yet.',
+            style: AppTextStyles.bodyMedium(color: AppColorPalette.softSlate),
+          ),
         ],
       ),
     );
@@ -411,8 +443,11 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
             ),
             alignment: Alignment.centerRight,
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: const Icon(Icons.delete_forever,
-                color: Colors.white, size: 28),
+            child: const Icon(
+              Icons.delete_forever,
+              color: Colors.white,
+              size: 28,
+            ),
           ),
           child: _isAcousticType(incident.type)
               ? _buildAcousticCard(incident)
@@ -426,21 +461,22 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Delete Incident'),
-        content:
-            const Text('Are you sure you want to delete this incident?'),
+        content: const Text('Are you sure you want to delete this incident?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel',
-                style: TextStyle(color: AppColorPalette.softSlate)),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColorPalette.softSlate),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(
-                foregroundColor: AppColorPalette.alertError),
+              foregroundColor: AppColorPalette.alertError,
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -456,8 +492,7 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              IncidentDetailScreen(incidentId: incident.id),
+          builder: (_) => IncidentDetailScreen(incidentId: incident.id),
         ),
       ),
       child: Container(
@@ -483,15 +518,21 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
                   '${ApiService.mediaBaseUrl}${incident.imagePath}',
-                  width: 72, height: 72, fit: BoxFit.cover,
+                  width: 72,
+                  height: 72,
+                  fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
-                    width: 72, height: 72,
+                    width: 72,
+                    height: 72,
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(_getIconForType(incident.type),
-                        color: color.withOpacity(0.5), size: 28),
+                    child: Icon(
+                      _getIconForType(incident.type),
+                      color: color.withOpacity(0.5),
+                      size: 28,
+                    ),
                   ),
                 ),
               ),
@@ -501,59 +542,80 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(children: [
-                    Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          _getIconForType(incident.type),
+                          color: color,
+                          size: 16,
+                        ),
                       ),
-                      child: Icon(_getIconForType(incident.type),
-                          color: color, size: 16),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _getLabelForType(incident.type),
-                        style: AppTextStyles.label(
-                            color: AppColorPalette.charcoalGreen),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _getLabelForType(incident.type),
+                          style: AppTextStyles.label(
+                            color: AppColorPalette.charcoalGreen,
+                          ),
+                        ),
                       ),
-                    ),
-                  ]),
+                    ],
+                  ),
                   const SizedBox(height: 6),
                   Text(
                     _getSubtitleForType(incident.type),
                     style: AppTextStyles.caption(
-                        color: AppColorPalette.softSlate),
+                      color: AppColorPalette.softSlate,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 6),
-                  Row(children: [
-                    Icon(Icons.access_time_rounded,
-                        size: 12, color: AppColorPalette.softSlate),
-                    const SizedBox(width: 4),
-                    Text(
-                      _formatTimestamp(incident.timestamp),
-                      style: AppTextStyles.overline(
-                          color: AppColorPalette.softSlate),
-                    ),
-                    if (incident.latitude != null) ...[
-                      const SizedBox(width: 10),
-                      Icon(Icons.location_on_rounded,
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 12,
+                        color: AppColorPalette.softSlate,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _formatTimestamp(incident.timestamp),
+                        style: AppTextStyles.overline(
+                          color: AppColorPalette.softSlate,
+                        ),
+                      ),
+                      if (incident.latitude != null) ...[
+                        const SizedBox(width: 10),
+                        Icon(
+                          Icons.location_on_rounded,
                           size: 12,
-                          color: AppColorPalette.fieldFreshMid),
-                      const SizedBox(width: 2),
-                      Text('GPS',
+                          color: AppColorPalette.fieldFreshMid,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          'GPS',
                           style: AppTextStyles.overline(
-                              color: AppColorPalette.fieldFreshMid)),
+                            color: AppColorPalette.fieldFreshMid,
+                          ),
+                        ),
+                      ],
                     ],
-                  ]),
+                  ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded,
-                color: AppColorPalette.mediumGrey, size: 22),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppColorPalette.mediumGrey,
+              size: 22,
+            ),
           ],
         ),
       ),
@@ -568,8 +630,7 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              IncidentDetailScreen(incidentId: incident.id),
+          builder: (_) => IncidentDetailScreen(incidentId: incident.id),
         ),
       ),
       child: Container(
@@ -596,37 +657,45 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
             children: [
               // Mini waveform thumbnail
               Container(
-                width: 72, height: 72,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
                   color: const Color(0xFF0D1117),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Stack(children: [
-                    CustomPaint(
-                      size: const Size(72, 72),
-                      painter: _MiniWaveformPainter(color: color),
-                    ),
-                    Positioned(
-                      top: 4, right: 4,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 5, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColorPalette.healthGlow,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text('AUDIO',
+                  child: Stack(
+                    children: [
+                      CustomPaint(
+                        size: const Size(72, 72),
+                        painter: _MiniWaveformPainter(color: color),
+                      ),
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColorPalette.healthGlow,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'AUDIO',
                             style: TextStyle(
                               color: Colors.black,
                               fontSize: 7,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 0.5,
-                            )),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ]),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -634,64 +703,84 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(children: [
-                      Container(
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            _getIconForType(incident.type),
+                            color: color,
+                            size: 16,
+                          ),
                         ),
-                        child: Icon(_getIconForType(incident.type),
-                            color: color, size: 16),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _getLabelForType(incident.type),
-                          style: AppTextStyles.label(
-                              color: AppColorPalette.charcoalGreen),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _getLabelForType(incident.type),
+                            style: AppTextStyles.label(
+                              color: AppColorPalette.charcoalGreen,
+                            ),
+                          ),
                         ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          gradient: AppColorPalette.robotTechGradient,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text('ACOUSTIC',
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: AppColorPalette.robotTechGradient,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'ACOUSTIC',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 8,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.8,
-                            )),
-                      ),
-                    ]),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 6),
                     Text(
                       _getSubtitleForType(incident.type),
                       style: AppTextStyles.caption(
-                          color: AppColorPalette.softSlate),
+                        color: AppColorPalette.softSlate,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 6),
-                    Row(children: [
-                      Icon(Icons.access_time_rounded,
-                          size: 12, color: AppColorPalette.softSlate),
-                      const SizedBox(width: 4),
-                      Text(
-                        _formatTimestamp(incident.timestamp),
-                        style: AppTextStyles.overline(
-                            color: AppColorPalette.softSlate),
-                      ),
-                    ]),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time_rounded,
+                          size: 12,
+                          color: AppColorPalette.softSlate,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _formatTimestamp(incident.timestamp),
+                          style: AppTextStyles.overline(
+                            color: AppColorPalette.softSlate,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right_rounded,
-                  color: AppColorPalette.mediumGrey, size: 22),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppColorPalette.mediumGrey,
+                size: 22,
+              ),
             ],
           ),
         ),

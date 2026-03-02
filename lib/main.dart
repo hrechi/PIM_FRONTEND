@@ -13,7 +13,6 @@ import 'screens/splash_screen.dart';
 import 'screens/security/incident_detail_screen.dart';
 import 'screens/soil/soil_measurements_list_screen.dart';
 
-
 /// Global navigator key — used for navigating from notification callbacks
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 

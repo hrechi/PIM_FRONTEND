@@ -89,10 +89,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
         elevation: 0,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(
-            height: 1,
-            color: AppColorPalette.lightGrey,
-          ),
+          child: Container(height: 1, color: AppColorPalette.lightGrey),
         ),
         actions: [
           IconButton(
@@ -205,9 +202,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   void _openDetail(DailyReport report) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => ReportDetailScreen(report: report),
-      ),
+      MaterialPageRoute(builder: (_) => ReportDetailScreen(report: report)),
     );
   }
 
@@ -238,111 +233,115 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
           ],
         ),
         child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header row
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header row
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.shield_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.shield_rounded,
-                    color: Colors.white,
-                    size: 24,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Latest Report',
+                          style: AppTextStyles.h4(color: Colors.white),
+                        ),
+                        Text(
+                          _formatDate(report.createdAt),
+                          style: AppTextStyles.caption(color: Colors.white70),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Latest Report',
-                        style: AppTextStyles.h4(color: Colors.white),
-                      ),
-                      Text(
-                        _formatDate(report.createdAt),
-                        style: AppTextStyles.caption(color: Colors.white70),
-                      ),
-                    ],
+                  // Threat badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: threatColor.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: threatColor, width: 1.5),
+                    ),
+                    child: Text(
+                      '${_threatEmoji(report.averageThreatLevel)} ${report.averageThreatLevel.toUpperCase()}',
+                      style: AppTextStyles.buttonSmall(color: threatColor),
+                    ),
                   ),
-                ),
-                // Threat badge
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: threatColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: threatColor, width: 1.5),
-                  ),
-                  child: Text(
-                    '${_threatEmoji(report.averageThreatLevel)} ${report.averageThreatLevel.toUpperCase()}',
-                    style: AppTextStyles.buttonSmall(color: threatColor),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // AI summary
-            Text(
-              report.summary,
-              style: AppTextStyles.bodyMedium(
-                color: Colors.white.withOpacity(0.9),
+                ],
               ),
-            ),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-            // Stats row
-            Row(
-              children: [
-                _buildHeroStat(
-                  report.totalIncidents.toString(),
-                  'Incidents',
-                  Icons.warning_amber_rounded,
+              // AI summary
+              Text(
+                report.summary,
+                style: AppTextStyles.bodyMedium(
+                  color: Colors.white.withOpacity(0.9),
                 ),
-                _buildHeroStat(
-                  report.criticalAlerts.toString(),
-                  'Critical',
-                  Icons.gpp_bad_rounded,
-                ),
-                _buildHeroStat(
-                  '${report.peakActivityHour}:00',
-                  'Peak Hour',
-                  Icons.schedule_rounded,
-                ),
-              ],
-            ),
+              ),
 
-            const SizedBox(height: 14),
+              const SizedBox(height: 20),
 
-            // Tap hint
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Tap to view full report',
-                  style: AppTextStyles.caption(color: Colors.white60),
-                ),
-                const SizedBox(width: 4),
-                const Icon(Icons.arrow_forward_rounded, color: Colors.white60, size: 14),
-              ],
-            ),
-          ],
+              // Stats row
+              Row(
+                children: [
+                  _buildHeroStat(
+                    report.totalIncidents.toString(),
+                    'Incidents',
+                    Icons.warning_amber_rounded,
+                  ),
+                  _buildHeroStat(
+                    report.criticalAlerts.toString(),
+                    'Critical',
+                    Icons.gpp_bad_rounded,
+                  ),
+                  _buildHeroStat(
+                    '${report.peakActivityHour}:00',
+                    'Peak Hour',
+                    Icons.schedule_rounded,
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 14),
+
+              // Tap hint
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Tap to view full report',
+                    style: AppTextStyles.caption(color: Colors.white60),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Colors.white60,
+                    size: 14,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 

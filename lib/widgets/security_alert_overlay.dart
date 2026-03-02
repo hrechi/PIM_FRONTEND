@@ -280,8 +280,8 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
                     _isIntruder
                         ? 'CRITICAL ALERT'
                         : _isAcoustic
-                            ? 'ACOUSTIC ALERT'
-                            : 'SECURITY ALERT',
+                        ? 'ACOUSTIC ALERT'
+                        : 'SECURITY ALERT',
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,
@@ -298,7 +298,11 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
                       color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.close, color: Colors.white, size: 18),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 18,
+                    ),
                   ),
                 ),
               ],
@@ -449,8 +453,7 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
                               borderRadius: BorderRadius.circular(14),
                             ),
                             elevation: 4,
-                            shadowColor:
-                                _accentColor.withValues(alpha: 0.4),
+                            shadowColor: _accentColor.withValues(alpha: 0.4),
                           ),
                           child: Text(
                             'VIEW INCIDENT',
