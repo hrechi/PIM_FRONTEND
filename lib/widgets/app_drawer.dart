@@ -19,6 +19,7 @@ import '../screens/irrigation_scheduler_screen.dart';
 import '../screens/live_feed_screen.dart';
 import '../screens/soil/soil_measurements_list_screen.dart';
 import '../screens/soil/soil_analytics_screen.dart';
+import '../screens/security/incident_history_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -97,7 +98,9 @@ class AppDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ParcelListScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const ParcelListScreen(),
+                        ),
                       );
                     },
                   ),
@@ -122,7 +125,9 @@ class AppDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const PlantDoctorScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const PlantDoctorScreen(),
+                        ),
                       );
                     },
                   ),
@@ -181,13 +186,28 @@ class AppDrawer extends StatelessWidget {
                     subtitle: 'Dashboard & Records',
                     children: [
                       _buildDrawerSubItem(
+                        icon: Icons.dashboard_rounded,
+                        title: 'Livestock Dashboard',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AnimalDashboardScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _buildDrawerSubItem(
                         icon: Icons.list_alt_rounded,
                         title: 'Livestock List',
                         onTap: () {
                           Navigator.pop(context);
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const AnimalListScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => const AnimalListScreen(),
+                            ),
                           );
                         },
                       ),
@@ -198,7 +218,9 @@ class AppDrawer extends StatelessWidget {
                           Navigator.pop(context);
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => AddAnimalScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => AddAnimalScreen(),
+                            ),
                           );
                         },
                       ),
@@ -209,7 +231,9 @@ class AppDrawer extends StatelessWidget {
                           Navigator.pop(context);
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const MilkAnalyticsScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => const MilkAnalyticsScreen(),
+                            ),
                           );
                         },
                       ),
@@ -220,7 +244,9 @@ class AppDrawer extends StatelessWidget {
                           Navigator.pop(context);
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const MilkProductionScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => const MilkProductionScreen(),
+                            ),
                           );
                         },
                       ),
@@ -251,7 +277,9 @@ class AppDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const StaffListScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const StaffListScreen(),
+                        ),
                       );
                     },
                   ),
@@ -263,7 +291,9 @@ class AppDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const AddStaffScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const AddStaffScreen(),
+                        ),
                       );
                     },
                   ),
@@ -275,7 +305,9 @@ class AppDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const IncidentHistoryScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const IncidentHistoryScreen(),
+                        ),
                       );
                     },
                   ),
@@ -305,7 +337,9 @@ class AppDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const ProfileScreen(),
+                        ),
                       );
                     },
                   ),
@@ -320,7 +354,9 @@ class AppDrawer extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     child: Text(
                       'Version 1.0.0',
-                      style: AppTextStyles.caption(color: AppColorPalette.softSlate),
+                      style: AppTextStyles.caption(
+                        color: AppColorPalette.softSlate,
+                      ),
                     ),
                   ),
                 ],
@@ -337,10 +373,9 @@ class AppDrawer extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Text(
         title.toUpperCase(),
-        style: AppTextStyles.caption(color: AppColorPalette.softSlate).copyWith(
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
-        ),
+        style: AppTextStyles.caption(
+          color: AppColorPalette.softSlate,
+        ).copyWith(fontWeight: FontWeight.bold, letterSpacing: 1.2),
       ),
     );
   }

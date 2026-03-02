@@ -11,10 +11,9 @@ import 'providers/irrigation_provider.dart';
 import 'providers/vaccine_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
-import 'screens/incident_detail_screen.dart';
+import 'screens/security/incident_detail_screen.dart';
 import 'screens/soil/soil_measurements_list_screen.dart';
 import 'package:intl/date_symbol_data_local.dart';
-
 
 /// Global navigator key — used for navigating from notification callbacks
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
