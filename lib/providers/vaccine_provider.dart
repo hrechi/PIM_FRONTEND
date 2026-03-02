@@ -9,6 +9,7 @@ class VaccineProvider extends ChangeNotifier {
   List<VaccineSchedule> _schedules = [];
   List<VaccineRecord> _records = [];
   List<VaccineSchedule> _upcoming = [];
+  List<Vaccine> _vaccines = [];
   bool _isLoading = false;
   String? _error;
   String? _lastAnimalId;
@@ -18,6 +19,8 @@ class VaccineProvider extends ChangeNotifier {
   List<VaccineSchedule> get schedules => _schedules;
   List<VaccineRecord> get records => _records;
   List<VaccineSchedule> get upcoming => _upcoming;
+  List<VaccineSchedule> get allSchedules => _upcoming; // For global calendar
+  List<Vaccine> get vaccines => _vaccines;
   bool get isLoading => _isLoading;
   String? get error => _error;
   int get generatedCount => _generatedCount;
@@ -62,6 +65,35 @@ class VaccineProvider extends ChangeNotifier {
     } catch (_) {}
   }
 
+  Future<void> loadGlobalSchedules() async {
+    _setLoading(true);
+    try {
+      _upcoming = await _service.getGlobalSchedules();
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<List<dynamic>> loadVaccines() async {
+    _setLoading(true);
+    try {
+      final res = await _service.getVaccines();
+      _vaccines = res;
+      _error = null;
+      notifyListeners();
+      return res.map((v) => {'code': v.code, 'nameFr': v.nameFr}).toList();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return [];
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   Future<bool> generatePlan(String animalId) async {
     _setLoading(true);
     try {
@@ -80,6 +112,19 @@ class VaccineProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> updateScheduleDate(String scheduleId, DateTime newDate, String animalId) async {
+    try {
+      await _service.updateSchedule(scheduleId, newDate);
+      _lastAnimalId = null;
+      await loadForAnimal(animalId);
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<bool> markDone(String scheduleId, String animalId, {
     required String administeredBy,
     required double doseGiven,
@@ -95,6 +140,36 @@ class VaccineProvider extends ChangeNotifier {
       _error = e.toString();
       notifyListeners();
       return false;
+    }
+  }
+
+  Future<bool> bulkMarkDone({
+    required List<String> animalIds,
+    required String vaccineCode,
+    required String administeredBy,
+    required DateTime administeredAt,
+    required double doseGiven,
+    String? lotNumber,
+  }) async {
+    _setLoading(true);
+    try {
+      final ok = await _service.bulkMarkDone(
+        animalIds: animalIds,
+        vaccineCode: vaccineCode,
+        administeredBy: administeredBy,
+        administeredAt: administeredAt,
+        doseGiven: doseGiven,
+        lotNumber: lotNumber,
+      );
+      if (ok) {
+        _lastAnimalId = null; // Reset cache
+      }
+      return ok;
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    } finally {
+      _setLoading(false);
     }
   }
 

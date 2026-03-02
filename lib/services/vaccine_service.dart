@@ -71,9 +71,21 @@ class VaccineService {
     return (data as List).map((j) => VaccineSchedule.fromJson(j)).toList();
   }
 
+  Future<List<VaccineSchedule>> getGlobalSchedules() async {
+    final data = await ApiService.get('/vaccine-schedules/all', withAuth: true);
+    return (data as List).map((j) => VaccineSchedule.fromJson(j)).toList();
+  }
+
   Future<Map<String, dynamic>> generateSmartPlan(String animalId) async {
     final data = await ApiService.post('/vaccine-schedules/generate/$animalId', {}, withAuth: true);
     return Map<String, dynamic>.from(data);
+  }
+
+  Future<VaccineSchedule> updateSchedule(String id, DateTime date) async {
+    final data = await ApiService.patch('/vaccine-schedules/$id', {
+      'scheduledDate': date.toIso8601String(),
+    }, withAuth: true);
+    return VaccineSchedule.fromJson(data);
   }
 
   Future<VaccineRecord> markDone(String scheduleId, {
@@ -87,5 +99,28 @@ class VaccineService {
       if (lotNumber != null) 'lotNumber': lotNumber,
     }, withAuth: true);
     return VaccineRecord.fromJson(data);
+  }
+
+  Future<bool> bulkMarkDone({
+    required List<String> animalIds,
+    required String vaccineCode,
+    required String administeredBy,
+    required DateTime administeredAt,
+    required double doseGiven,
+    String? lotNumber,
+  }) async {
+    try {
+      await ApiService.post('/vaccine-schedules/bulk-done', {
+        'animalIds': animalIds,
+        'vaccineCode': vaccineCode,
+        'administeredBy': administeredBy,
+        'administeredAt': administeredAt.toIso8601String(),
+        'doseGiven': doseGiven,
+        if (lotNumber != null) 'lotNumber': lotNumber,
+      }, withAuth: true);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 }

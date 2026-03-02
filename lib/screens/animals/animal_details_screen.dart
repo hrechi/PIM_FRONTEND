@@ -30,24 +30,24 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
 
   String _calculateFormattedAge() {
     final months = _animal.age;
-    if (months < 12) return '$months Mois';
+    if (months < 12) return '$months months';
     final years = months ~/ 12;
     final remainingMonths = months % 12;
-    if (remainingMonths == 0) return '$years ${years == 1 ? 'An' : 'Ans'}';
-    return '$years ${years == 1 ? 'An' : 'Ans'}, $remainingMonths Mois';
+    if (remainingMonths == 0) return '$years ${years == 1 ? 'year' : 'years'}';
+    return '$years ${years == 1 ? 'year' : 'years'}, $remainingMonths months';
   }
 
   Future<void> _deleteAnimal() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer ${_animal.name} ?'),
+        title: const Text('Confirm deletion'),
+        content: Text('Are you sure you want to delete ${_animal.name}?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -60,13 +60,13 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
       await _animalService.deleteAnimal(_animal.nodeId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Animal supprimé'), backgroundColor: Color(0xFFEF4444)),
+          const SnackBar(content: Text('Animal deleted'), backgroundColor: Color(0xFFEF4444)),
         );
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
       }
     } finally {
       if (mounted) setState(() => _isDeleting = false);
@@ -126,7 +126,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
             ],
           ),
           Text(
-            'Profil: ${_animal.name}',
+            'Profile: ${_animal.name}',
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF1E293B)),
           ),
           _buildCircleIconButton(Symbols.more_horiz, onPressed: () {}),
@@ -209,8 +209,8 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
           Wrap(
             spacing: 8,
             children: [
-              _buildChip(_animal.breed ?? 'Race inconnue', Symbols.pets),
-              _buildChip(_animal.sex == 'female' ? 'Femelle' : 'Mâle', _animal.sex == 'female' ? Symbols.female : Symbols.male),
+              _buildChip(_animal.breed ?? 'Unknown breed', Symbols.pets),
+              _buildChip(_animal.sex == 'female' ? 'Female' : 'Male', _animal.sex == 'female' ? Symbols.female : Symbols.male),
               if (_animal.tagNumber != null) _buildChip(_animal.tagNumber!, Symbols.sell),
             ],
           ),
@@ -237,9 +237,9 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
   Widget _buildHealthRiskBanner() {
     final score = _animal.healthRiskScore ?? 0.0;
     Color color = Colors.green;
-    String label = 'Risque Faible';
-    if (score > 0.6) { color = Colors.red; label = 'Risque Élevé'; }
-    else if (score > 0.3) { color = Colors.orange; label = 'Risque Modéré'; }
+    String label = 'Low Risk';
+    if (score > 0.6) { color = Colors.red; label = 'High Risk'; }
+    else if (score > 0.3) { color = Colors.orange; label = 'Moderate Risk'; }
 
     return Container(
       margin: const EdgeInsets.all(24),
@@ -257,7 +257,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('SCORE DE RISQUE SANTÉ (IA)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                const Text('AI HEALTH RISK SCORE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
                 Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: color)),
               ],
             ),
@@ -273,9 +273,9 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
-          _buildInfoTile('Âge', _calculateFormattedAge(), Symbols.calendar_today, Colors.blue),
+          _buildInfoTile('Age', _calculateFormattedAge(), Symbols.calendar_today, Colors.blue),
           const SizedBox(width: 16),
-          _buildInfoTile('Poids', _animal.weight != null ? '${_animal.weight} kg' : 'N/A', Symbols.weight, Colors.orange),
+          _buildInfoTile('Weight', _animal.weight != null ? '${_animal.weight} kg' : 'N/A', Symbols.weight, Colors.orange),
         ],
       ),
     );
@@ -306,24 +306,24 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
     List<Widget> children = [];
 
     if (type == 'cow' && isFemale) {
-      children.add(_buildSectionTitle('Reproduction & Lait 🐄'));
-      children.add(_buildDetailRow('Gestante', _animal.isPregnant == true ? 'OUI' : (_animal.isPregnant == false ? 'NON' : 'INCONNU')));
-      if (_animal.expectedBirthDate != null) children.add(_buildDetailRow('Date mise-bas prévue', _df.format(_animal.expectedBirthDate!)));
-      children.add(_buildDetailRow('Portées', '${_animal.birthCount}'));
-      children.add(_buildDetailRow('Production moyenne', _animal.dailyMilkAvgL != null ? '${_animal.dailyMilkAvgL} L/j' : 'N/A'));
-      children.add(_buildDetailRow('N° Lactation', _animal.lactationNumber?.toString() ?? 'N/A'));
+      children.add(_buildSectionTitle('Reproduction & Milk 🐄'));
+      children.add(_buildDetailRow('Pregnant', _animal.isPregnant == true ? 'YES' : (_animal.isPregnant == false ? 'NO' : 'UNKNOWN')));
+      if (_animal.expectedBirthDate != null) children.add(_buildDetailRow('Expected birth date', _df.format(_animal.expectedBirthDate!)));
+      children.add(_buildDetailRow('Litters', '${_animal.birthCount}'));
+      children.add(_buildDetailRow('Avg production', _animal.dailyMilkAvgL != null ? '${_animal.dailyMilkAvgL} L/day' : 'N/A'));
+      children.add(_buildDetailRow('Lactation #', _animal.lactationNumber?.toString() ?? 'N/A'));
     } else if (type == 'horse') {
       children.add(_buildSectionTitle('Performance 🐎'));
-      children.add(_buildDetailRow('Catégorie', _animal.raceCategory?.toUpperCase() ?? 'N/A'));
-      children.add(_buildDetailRow('Meilleur temps', _animal.bestRaceTime != null ? '${_animal.bestRaceTime}s' : 'N/A'));
-      children.add(_buildDetailRow('Entraînement', _animal.trainingLevel?.toUpperCase() ?? 'N/A'));
+      children.add(_buildDetailRow('Category', _animal.raceCategory?.toUpperCase() ?? 'N/A'));
+      children.add(_buildDetailRow('Best time', _animal.bestRaceTime != null ? '${_animal.bestRaceTime}s' : 'N/A'));
+      children.add(_buildDetailRow('Training', _animal.trainingLevel?.toUpperCase() ?? 'N/A'));
     } else if (type == 'sheep') {
-      children.add(_buildSectionTitle('Production & Qualité 🐑'));
-      children.add(_buildDetailRow('Dernière tonte', _animal.woolLastShearDate != null ? _df.format(_animal.woolLastShearDate!) : 'N/A'));
-      children.add(_buildDetailRow('Grade viande', _animal.meatGrade ?? 'N/A'));
+      children.add(_buildSectionTitle('Production & Quality 🐑'));
+      children.add(_buildDetailRow('Last shear', _animal.woolLastShearDate != null ? _df.format(_animal.woolLastShearDate!) : 'N/A'));
+      children.add(_buildDetailRow('Meat grade', _animal.meatGrade ?? 'N/A'));
     } else if (type == 'dog') {
-      children.add(_buildSectionTitle('Utilisation 🐕'));
-      children.add(_buildDetailRow('Rôle', _animal.dogRole?.toUpperCase() ?? 'N/A'));
+      children.add(_buildSectionTitle('Usage 🐕'));
+      children.add(_buildDetailRow('Role', _animal.dogRole?.toUpperCase() ?? 'N/A'));
     }
 
     if (children.isEmpty) return const SizedBox.shrink();
@@ -344,13 +344,13 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle('Finance & Valeur 💰'),
-          _buildDetailRow('Prix d\'achat', _animal.purchasePrice != null ? _nf.format(_animal.purchasePrice) : 'N/A'),
-          _buildDetailRow('Date d\'achat', _animal.purchaseDate != null ? _df.format(_animal.purchaseDate!) : 'N/A'),
-          _buildDetailRow('Valeur estimée', _animal.estimatedValue != null ? _nf.format(_animal.estimatedValue) : 'N/A'),
+          _buildSectionTitle('Finance & Value 💰'),
+          _buildDetailRow('Purchase price', _animal.purchasePrice != null ? _nf.format(_animal.purchasePrice) : 'N/A'),
+          _buildDetailRow('Purchase date', _animal.purchaseDate != null ? _df.format(_animal.purchaseDate!) : 'N/A'),
+          _buildDetailRow('Estimated value', _animal.estimatedValue != null ? _nf.format(_animal.estimatedValue) : 'N/A'),
           if (_animal.status == 'sold') ...[
-            _buildDetailRow('Prix de vente', _animal.salePrice != null ? _nf.format(_animal.salePrice) : 'N/A'),
-            _buildDetailRow('Date de vente', _animal.saleDate != null ? _df.format(_animal.saleDate!) : 'N/A'),
+            _buildDetailRow('Sale price', _animal.salePrice != null ? _nf.format(_animal.salePrice) : 'N/A'),
+            _buildDetailRow('Sale date', _animal.saleDate != null ? _df.format(_animal.saleDate!) : 'N/A'),
           ],
         ],
       ),
@@ -368,20 +368,20 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildSectionTitle('Historique Médical 🩺'),
+              _buildSectionTitle('Medical History 🩺'),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                child: Text('${_animal.diseaseHistoryCount} Événements', style: const TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold)),
+                child: Text('${_animal.diseaseHistoryCount} Events', style: const TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
           const SizedBox(height: 16),
           if (_animal.vaccineRecords == null || _animal.vaccineRecords!.isEmpty)
-            const Text('Aucun vaccin enregistré.', style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)))
+            const Text('No vaccines recorded.', style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)))
           else
             ..._animal.vaccineRecords!.map((v) => _buildMedicalItem(
-              (v.vaccine?.code == 'OTHER' ? v.notes : v.vaccine?.nameFr) ?? v.notes ?? 'Vaccin', 
+              (v.vaccine?.code == 'OTHER' ? v.notes : v.vaccine?.nameFr) ?? v.notes ?? 'Vaccine', 
               _df.format(v.administeredAt), 
               Symbols.vaccines, 
               Colors.amber
@@ -480,7 +480,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
                 child: Container(
                   height: 56,
                   decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFE2E8F0), width: 2)),
-                  child: const Center(child: Text('Supprimer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF64748B)))),
+                  child: const Center(child: Text('Delete', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF64748B)))),
                 ),
               ),
             ),
@@ -504,7 +504,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
                     children: [
                       Icon(Symbols.edit, color: Colors.white, size: 20),
                       SizedBox(width: 8),
-                      Text('Modifier le profil', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
+                      Text('Edit profile', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
                     ],
                   ),
                 ),

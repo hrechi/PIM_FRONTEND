@@ -248,7 +248,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur : ${e.toString()}')),
+          SnackBar(content: Text('Error: ${e.toString()}')),
         );
       }
     } finally {
@@ -833,17 +833,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Health & Vaccines',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Enregistrer le statut vaccinal passé pour générer un planning précis.',
-          style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-        ),
-        const SizedBox(height: 28),
-
         if (_isLoadingRegulations)
           const Center(child: Padding(
             padding: EdgeInsets.all(40.0),
@@ -855,30 +844,58 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
             icon: Symbols.info,
             iconColor: Colors.blue,
             children: [
-              const Text('Aucun vaccin obligatoire détecté pour cette zone. Ajoutez-en manuellement.'),
+              const Text('No mandatory vaccines detected for this region. Add them manually.'),
               const SizedBox(height: 16),
               _buildAddOtherButton(),
             ],
           )
-        else
-          _buildSectionCard(
-            title: 'Recommended Vaccinations',
-            icon: Symbols.medical_services,
-            iconColor: AppColors.mistyBlue,
-            children: [
-              ..._regulations.map((reg) => _buildDynamicVaccineItem(reg)).toList(),
-              const Divider(height: 32),
-              _buildAddOtherButton(),
-            ],
+        else ...[
+          // --- Banner Section ---
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2F7F34).withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF2F7F34).withValues(alpha: 0.1)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_regulations.length} vaccins chargés pour ${_selectedType.toUpperCase()} 🤖',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.2, color: Color(0xFF1F2937)),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Basé sur le protocole sanitaire local et les alertes sanitaires en cours.',
+                  style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                ),
+              ],
+            ),
           ),
+          const SizedBox(height: 24),
+
+          // --- Checklist Section ---
+          const Padding(
+            padding: EdgeInsets.only(left: 4, bottom: 12),
+            child: Text(
+              'CHECKLIST SANITAIRE',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Color(0xFF64748B)),
+            ),
+          ),
+          
+          ..._regulations.map((reg) => _buildDynamicVaccineItem(reg)),
+          
+          const SizedBox(height: 16),
+          Center(child: _buildAddOtherButton()),
+        ],
 
         const SizedBox(height: 24),
         
         // Show selected "Other" vaccines
         ..._vaccineSelections.entries
             .where((e) => e.value['isOther'] == true)
-            .map((e) => _buildOtherVaccineItem(e.key))
-            .toList(),
+            .map((e) => _buildOtherVaccineItem(e.key)),
 
         const SizedBox(height: 24),
         _buildLabel('Observations & Notes'),
@@ -893,25 +910,34 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   }
 
   Widget _buildAddOtherButton() {
-    return TextButton.icon(
-      onPressed: () {
-        final id = 'OTHER_${DateTime.now().millisecondsSinceEpoch}';
-        setState(() {
-          _vaccineSelections[id] = {
-            'checked': true,
-            'date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
-            'dose': 1.0,
-            'lot': '',
-            'isOther': true,
-            'name': '',
-          };
-        });
-      },
-      icon: const Icon(Symbols.add_circle, size: 20),
-      label: const Text('Ajouter un autre vaccin'),
-      style: TextButton.styleFrom(
-        foregroundColor: AppColors.mistyBlue,
-        textStyle: const TextStyle(fontWeight: FontWeight.bold),
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: TextButton.icon(
+        onPressed: () {
+          final id = 'OTHER_${DateTime.now().millisecondsSinceEpoch}';
+          setState(() {
+            _vaccineSelections[id] = {
+              'checked': true,
+              'date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
+              'dose': 1.0,
+              'lot': '',
+              'isOther': true,
+              'name': '',
+            };
+          });
+        },
+        icon: const Icon(Symbols.add_circle, size: 20),
+        label: const Text('Ajouter un autre vaccin'),
+        style: TextButton.styleFrom(
+          foregroundColor: const Color(0xFF2F7F34),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          textStyle: const TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
@@ -921,60 +947,134 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     final sel = _vaccineSelections[vCode]!;
     final isChecked = sel['checked'] as bool;
     final isMandatory = reg.isMandatory;
+    const greenColor = Color(0xFF2F7F34);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isChecked ? AppColors.mistyBlue.withValues(alpha: 0.05) : Colors.transparent,
+        color: isChecked ? Colors.white : Colors.white.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isChecked ? AppColors.mistyBlue.withValues(alpha: 0.3) : Colors.transparent),
+        border: Border.all(
+          color: isChecked ? greenColor : const Color(0xFFF1F5F9),
+          width: isChecked ? 2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          CheckboxListTile(
-            value: isChecked,
-            onChanged: (val) => setState(() => sel['checked'] = val),
-            title: Text(
-              reg.vaccine?.nameFr ?? reg.vaccineId,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isChecked ? AppColors.mistyBlue : Colors.black87,
-              ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isChecked ? greenColor.withValues(alpha: 0.05) : Colors.transparent,
+              borderRadius: isChecked 
+                ? const BorderRadius.vertical(top: Radius.circular(14)) 
+                : BorderRadius.circular(14),
             ),
-            subtitle: Text(
-              isMandatory ? 'Obligatoire • ${reg.status}' : 'Recommandé',
-              style: TextStyle(
-                fontSize: 12,
-                color: isMandatory ? Colors.red.withValues(alpha: 0.7) : Colors.grey,
-              ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  children: [
+                    SizedBox(
+                      width: 24, height: 24,
+                      child: Checkbox(
+                        value: isChecked,
+                        activeColor: greenColor,
+                        side: BorderSide(color: greenColor.withValues(alpha: 0.3), width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        onChanged: (val) => setState(() => sel['checked'] = val),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isChecked ? 'FAIT' : 'PLANIFIER',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: isChecked ? greenColor : const Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Symbols.vaccines, color: isChecked || isMandatory ? greenColor : const Color(0xFF94A3B8), size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              reg.vaccine?.nameFr ?? reg.vaccineId,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B)),
+                            ),
+                          ),
+                          if (isMandatory)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text('OBLIGATOIRE', style: TextStyle(color: Colors.red.shade700, fontSize: 10, fontWeight: FontWeight.bold)),
+                            )
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        isMandatory 
+                          ? 'Majeur pour le contrôle sanitaire collectif.' 
+                          : 'Optionnel mais fortement recommandé.',
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            secondary: Icon(
-              isMandatory ? Symbols.verified_user : Symbols.vaccines,
-              color: isMandatory ? Colors.red.withValues(alpha: 0.5) : AppColors.mistyBlue,
-            ),
-            activeColor: AppColors.mistyBlue,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
           if (isChecked)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(64, 0, 16, 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildInlineDateField(sel),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildTextField(
-                      null,
-                      'Dose (ml)',
-                      initialValue: sel['dose'].toString(),
-                      keyboardType: TextInputType.number,
-                      onChanged: (v) => sel['dose'] = double.tryParse(v) ?? 1.0,
+            Container(
+              color: greenColor.withValues(alpha: 0.02),
+              padding: const EdgeInsets.fromLTRB(56, 0, 16, 16),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: greenColor.withValues(alpha: 0.2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "DATE D'ADMINISTRATION ET DOSE", 
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: greenColor, letterSpacing: 0.5)
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(child: _buildInlineDateField(sel)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildSmallNumberField(
+                            'Dose (ml)',
+                            initialValue: sel['dose'].toString(),
+                            onChanged: (v) => sel['dose'] = double.tryParse(v) ?? 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
         ],
@@ -982,53 +1082,159 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     );
   }
 
-  Widget _buildOtherVaccineItem(String id) {
-    final sel = _vaccineSelections[id]!;
+  Widget _buildSmallNumberField(String hint, {String? initialValue, Function(String)? onChanged}) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.mistyBlue.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: TextFormField(
+        initialValue: initialValue,
+        onChanged: onChanged,
+        keyboardType: TextInputType.number,
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+          border: InputBorder.none,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOtherVaccineItem(String id) {
+    final sel = _vaccineSelections[id]!;
+    const greenColor = Color(0xFF2F7F34);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: greenColor, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              const Icon(Symbols.edit_note, color: AppColors.mistyBlue),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  initialValue: sel['name'],
-                  onChanged: (v) => sel['name'] = v,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                  decoration: const InputDecoration(
-                    hintText: 'Nom du vaccin (ex: Grippe)',
-                    border: InputBorder.none,
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: greenColor.withValues(alpha: 0.05),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  children: [
+                    SizedBox(
+                      width: 24, height: 24,
+                      child: Checkbox(
+                        value: true,
+                        activeColor: greenColor,
+                        side: BorderSide(color: greenColor.withValues(alpha: 0.3), width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        onChanged: (_) {}, // Currently forced true for "other"
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'FAIT',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: greenColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Symbols.vaccines, color: greenColor, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextFormField(
+                              initialValue: sel['name'],
+                              onChanged: (v) => sel['name'] = v,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B)),
+                              decoration: const InputDecoration(
+                                hintText: 'Nom du vaccin (ex: Grippe)',
+                                hintStyle: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.normal),
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Symbols.delete, color: Colors.red, size: 20),
+                            onPressed: () => setState(() => _vaccineSelections.remove(id)),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Vaccin manuel ajouté au profil.',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Symbols.delete, color: Colors.red, size: 20),
-                onPressed: () => setState(() => _vaccineSelections.remove(id)),
-              )
-            ],
+              ],
+            ),
           ),
-          const Divider(),
-          Row(
-            children: [
-              Expanded(child: _buildInlineDateField(sel)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildTextField(
-                  null,
-                  'Dose',
-                  initialValue: sel['dose'].toString(),
-                  onChanged: (v) => sel['dose'] = double.tryParse(v) ?? 1.0,
-                ),
+          
+          Container(
+            color: greenColor.withValues(alpha: 0.02),
+            padding: const EdgeInsets.fromLTRB(56, 0, 16, 16),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: greenColor.withValues(alpha: 0.2)),
               ),
-            ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "DATE D'ADMINISTRATION ET DOSE", 
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: greenColor, letterSpacing: 0.5)
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: _buildInlineDateField(sel)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildSmallNumberField(
+                          'Dose (ml)',
+                          initialValue: sel['dose'].toString(),
+                          onChanged: (v) => sel['dose'] = double.tryParse(v) ?? 1.0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -1051,19 +1257,28 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: const Color(0xFFE2E8F0)),
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Icon(Symbols.calendar_today, size: 16, color: Color(0xFF64748B)),
-            const SizedBox(width: 8),
-            Text(
-              sel['date'],
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            Row(
+              children: [
+                const Icon(Symbols.calendar_today, size: 16, color: Color(0xFF64748B)),
+                const SizedBox(width: 8),
+                Text(
+                  sel['date'],
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                ),
+              ],
+            ),
+            const Text(
+              'Modifier',
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF2F7F34)),
             ),
           ],
         ),
@@ -1258,81 +1473,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         icon: const Icon(Symbols.expand_more, color: Color(0xFF94A3B8)),
         dropdownColor: Colors.white,
         borderRadius: BorderRadius.circular(16),
-      ),
-    );
-  }
-
-  Future<void> _selectDate(TextEditingController controller) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppColors.mistyBlue,
-              onPrimary: Colors.white,
-              onSurface: const Color(0xFF1E293B),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) {
-      setState(() {
-        controller.text = picked.toIso8601String().split('T')[0];
-      });
-    }
-  }
-
-  Widget _buildVaccineItem(int index) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: _buildTextField(
-              null,
-              'Nom du vaccin',
-              initialValue: _vaccines[index]['name'],
-              onChanged: (val) => _vaccines[index]['name'] = val,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 2,
-            child: GestureDetector(
-              onTap: () async {
-                final DateTime? picked = await showDatePicker(
-                  context: context,
-                  initialDate: DateTime.now(),
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime(2101),
-                );
-                if (picked != null) {
-                  setState(() {
-                    _vaccines[index]['date'] = picked.toIso8601String().split('T')[0];
-                  });
-                }
-              },
-              child: AbsorbPointer(
-                child: _buildTextField(
-                  null,
-                  'AAAA-MM-JJ',
-                  initialValue: _vaccines[index]['date'],
-                ),
-              ),
-            ),
-          ),
-          IconButton(
-            onPressed: () => setState(() => _vaccines.removeAt(index)),
-            icon: const Icon(Symbols.delete, color: Color(0xFFEF4444), size: 20),
-          ),
-        ],
       ),
     );
   }

@@ -34,12 +34,12 @@ class VaccineStatusChip extends StatelessWidget {
   }
 
   static const _config = {
-    'PENDING':   _Cfg(Color(0xFFF59E0B), Color(0xFFFEF3C7), Color(0xFFFDE68A), Icons.schedule_rounded, 'En attente'),
-    'NOTIFIED':  _Cfg(Color(0xFF3B82F6), Color(0xFFEFF6FF), Color(0xFFBFDBFE), Icons.notifications_rounded, 'Notifié'),
-    'DONE':      _Cfg(Color(0xFF22C55E), Color(0xFFF0FDF4), Color(0xFFBBF7D0), Icons.check_circle_rounded, 'Effectué'),
-    'OVERDUE':   _Cfg(Color(0xFFEF4444), Color(0xFFFEF2F2), Color(0xFFFECACA), Icons.warning_rounded, 'En retard'),
-    'CANCELLED': _Cfg(Color(0xFF94A3B8), Color(0xFFF8FAFC), Color(0xFFE2E8F0), Icons.cancel_rounded, 'Annulé'),
-    'DEFAULT':   _Cfg(Color(0xFF64748B), Color(0xFFF8FAFC), Color(0xFFE2E8F0), Icons.help_outline_rounded, 'Inconnu'),
+    'PENDING':   _Cfg(Color(0xFF1B3C35), Color(0xFFF8FAF7), Color(0xFFD1FAE5), Icons.schedule_rounded, 'Pending'),
+    'NOTIFIED':  _Cfg(Color(0xFF3B82F6), Color(0xFFEFF6FF), Color(0xFFBFDBFE), Icons.notifications_rounded, 'Notified'),
+    'DONE':      _Cfg(Color(0xFF22C55E), Color(0xFFF0FDF4), Color(0xFFBBF7D0), Icons.check_circle_rounded, 'Done'),
+    'OVERDUE':   _Cfg(Color(0xFFEF4444), Color(0xFFFEF2F2), Color(0xFFFECACA), Icons.warning_rounded, 'Overdue'),
+    'CANCELLED': _Cfg(Color(0xFF94A3B8), Color(0xFFF8FAFC), Color(0xFFE2E8F0), Icons.cancel_rounded, 'Cancelled'),
+    'DEFAULT':   _Cfg(Color(0xFF1B3C35), Color(0xFFF8FAF7), Color(0xFFE2E8F0), Icons.help_outline_rounded, 'Unknown'),
   };
 }
 
@@ -64,12 +64,12 @@ class VaccinePriorityBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        isMandatory ? 'OBLIGATOIRE' : 'RECOMMANDÉ',
+        isMandatory ? 'MANDATORY' : 'RECOMMENDED',
         style: TextStyle(
-          color: isMandatory ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+          color: isMandatory ? const Color(0xFFEF4444) : const Color(0xFF1B3C35),
           fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.5,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.8,
         ),
       ),
     );

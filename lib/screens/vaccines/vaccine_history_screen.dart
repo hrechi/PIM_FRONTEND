@@ -27,7 +27,7 @@ class _VaccineHistoryScreenState extends State<VaccineHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final fmt = DateFormat('dd MMM yyyy', 'fr_FR');
+    final fmt = DateFormat('dd MMM yyyy', 'en_US');
 
     return Scaffold(
       backgroundColor: AppColors.sageTint,
@@ -41,7 +41,7 @@ class _VaccineHistoryScreenState extends State<VaccineHistoryScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Carnet de santé', style: TextStyle(color: Color(0xFF1E293B), fontSize: 16, fontWeight: FontWeight.w800)),
+            const Text('Health Record', style: TextStyle(color: Color(0xFF1E293B), fontSize: 16, fontWeight: FontWeight.w800)),
             Text(widget.animalName, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
           ],
         ),
@@ -58,7 +58,7 @@ class _VaccineHistoryScreenState extends State<VaccineHistoryScreen> {
                 children: [
                   const Icon(Icons.history_edu_outlined, size: 64, color: Color(0xFFCBD5E1)),
                   const SizedBox(height: 16),
-                  const Text('Aucune vaccination enregistrée', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                  const Text('No vaccinations recorded', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
                 ],
               ),
             );
@@ -90,14 +90,14 @@ class _VaccineHistoryScreenState extends State<VaccineHistoryScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            (record.vaccine?.code == 'OTHER' ? record.notes : record.vaccine?.nameFr) ?? record.notes ?? 'Vaccin',
+                            (record.vaccine?.code == 'OTHER' ? record.notes : record.vaccine?.nameFr) ?? record.notes ?? 'Vaccine',
                             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: Color(0xFF1E293B)),
                           ),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(12)),
-                          child: const Text('EFFECTUÉ', style: TextStyle(color: Color(0xFF16A34A), fontSize: 10, fontWeight: FontWeight.w700)),
+                          child: const Text('DONE', style: TextStyle(color: Color(0xFF16A34A), fontSize: 10, fontWeight: FontWeight.w700)),
                         ),
                       ]),
                       const SizedBox(height: 12),
@@ -110,7 +110,7 @@ class _VaccineHistoryScreenState extends State<VaccineHistoryScreen> {
                         Row(children: [
                           const Icon(Icons.update_rounded, size: 14, color: Color(0xFF64748B)),
                           const SizedBox(width: 6),
-                          Text('Prochain rappel: ${fmt.format(record.nextDueDate!)}',
+                          Text('Next booster: ${fmt.format(record.nextDueDate!)}',
                               style: const TextStyle(color: Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.w500)),
                         ]),
                       ],

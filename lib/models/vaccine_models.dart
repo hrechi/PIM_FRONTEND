@@ -39,6 +39,7 @@ class VaccineSchedule {
   final String animalId;
   final String vaccineId;
   final Vaccine? vaccine;
+  final dynamic animal;
   final DateTime scheduledDate;
   final String status; // PENDING, NOTIFIED, DONE, OVERDUE, CANCELLED
   final bool isMandatory;
@@ -52,6 +53,7 @@ class VaccineSchedule {
     required this.animalId,
     required this.vaccineId,
     this.vaccine,
+    this.animal,
     required this.scheduledDate,
     required this.status,
     required this.isMandatory,
@@ -66,6 +68,7 @@ class VaccineSchedule {
         animalId: json['animalId'] ?? '',
         vaccineId: json['vaccineId'] ?? '',
         vaccine: json['vaccine'] != null ? Vaccine.fromJson(json['vaccine']) : null,
+        animal: json['animal'],
         scheduledDate: DateTime.parse(json['scheduledDate']),
         status: json['status'] ?? 'PENDING',
         isMandatory: json['isMandatory'] ?? false,
