@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
+import '../widgets/app_drawer.dart';
 
 class PlantDoctorScreen extends StatefulWidget {
   const PlantDoctorScreen({super.key});
@@ -80,6 +81,7 @@ class _PlantDoctorScreenState extends State<PlantDoctorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColorPalette.wheatWarmClay,
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('AI Plant Doctor 🌿', style: TextStyle(color: Colors.white)),
         backgroundColor: AppColorPalette.emeraldGreen,

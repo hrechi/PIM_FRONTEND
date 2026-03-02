@@ -9,6 +9,7 @@ import '../../widgets/upcoming_vaccine_banner.dart';
 import '../../services/animal_service.dart';
 import '../../models/animal.dart';
 import 'vaccine_planning_screen.dart';
+import '../../widgets/app_drawer.dart';
 
 class VaccineDashboardScreen extends StatefulWidget {
   const VaccineDashboardScreen({super.key});
@@ -41,6 +42,7 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.sageTint,
+      drawer: const AppDrawer(),
       body: Container(
         decoration: BoxDecoration(
           gradient: RadialGradient(
@@ -57,13 +59,15 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
                 child: Row(children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1E293B)),
-                    onPressed: () => Navigator.pop(context),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      shape: const CircleBorder(),
-                      padding: const EdgeInsets.all(10),
+                  Builder(
+                    builder: (context) => IconButton(
+                      icon: const Icon(Icons.menu_rounded, color: Color(0xFF1E293B)),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        shape: const CircleBorder(),
+                        padding: const EdgeInsets.all(10),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
