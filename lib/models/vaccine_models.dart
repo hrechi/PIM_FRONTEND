@@ -138,8 +138,10 @@ class VaccineRecord {
 class VaccineRegulation {
   final String id;
   final String countryId;
+  final String? regionId;
   final String vaccineId;
   final Vaccine? vaccine;
+  final Map<String, dynamic>? region;
   final String species;
   final String status;
   final String? frequency;
@@ -152,8 +154,10 @@ class VaccineRegulation {
   const VaccineRegulation({
     required this.id,
     required this.countryId,
+    this.regionId,
     required this.vaccineId,
     this.vaccine,
+    this.region,
     required this.species,
     required this.status,
     this.frequency,
@@ -167,8 +171,10 @@ class VaccineRegulation {
   factory VaccineRegulation.fromJson(Map<String, dynamic> json) => VaccineRegulation(
         id: json['id'] ?? '',
         countryId: json['countryId'] ?? '',
+        regionId: json['regionId'],
         vaccineId: json['vaccineId'] ?? '',
         vaccine: json['vaccine'] != null ? Vaccine.fromJson(json['vaccine']) : null,
+        region: json['region'] != null ? Map<String, dynamic>.from(json['region']) : null,
         species: json['species'] ?? '',
         status: json['status'] ?? '',
         frequency: json['frequency'],
@@ -178,6 +184,9 @@ class VaccineRegulation {
         seasonalMonthEnd: json['seasonalMonthEnd'],
         notes: json['notes'],
       );
+
+  bool get isRegional => regionId != null;
+  String? get regionName => region?['name'];
 
   bool get isForbidden => status == 'FORBIDDEN' || status == 'FORBIDDEN_ZONES';
   bool get isMandatory => status.startsWith('MANDATORY');
