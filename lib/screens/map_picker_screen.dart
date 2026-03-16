@@ -6,8 +6,7 @@ import '../utils/constants.dart';
 class MapPickerScreen extends StatefulWidget {
   final List<List<double>>? initialCoordinates;
 
-  const MapPickerScreen({Key? key, this.initialCoordinates})
-      : super(key: key);
+  const MapPickerScreen({super.key, this.initialCoordinates});
 
   @override
   State<MapPickerScreen> createState() => _MapPickerScreenState();

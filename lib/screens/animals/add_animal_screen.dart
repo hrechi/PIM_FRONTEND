@@ -1457,7 +1457,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         ],
       ),
       child: DropdownButtonFormField<T>(
-        value: value,
+        initialValue: value,
         hint: Text(hint, style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 14)),
         items: items,
         onChanged: onChanged,

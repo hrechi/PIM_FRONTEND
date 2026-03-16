@@ -41,9 +41,9 @@ class AppTextStyles {
       );
 
   /// Small heading - used for card titles
-  static TextStyle h3({Color? color, String? fontFamily}) => TextStyle(
+  static TextStyle h3({Color? color, String? fontFamily, FontWeight? fontWeight}) => TextStyle(
         fontSize: 20,
-        fontWeight: FontWeight.w600,
+        fontWeight: fontWeight ?? FontWeight.w600,
         color: color ?? AppColorPalette.charcoalGreen,
         fontFamily: fontFamily ?? defaultFontFamily,
         letterSpacing: -0.2,
@@ -62,18 +62,18 @@ class AppTextStyles {
   // ============================================
   
   /// Large body text
-  static TextStyle bodyLarge({Color? color, String? fontFamily}) => TextStyle(
+  static TextStyle bodyLarge({Color? color, String? fontFamily, FontWeight? fontWeight}) => TextStyle(
         fontSize: 16,
-        fontWeight: FontWeight.normal,
+        fontWeight: fontWeight ?? FontWeight.normal,
         color: color ?? AppColorPalette.charcoalGreen,
         fontFamily: fontFamily ?? defaultFontFamily,
         height: 1.5,
       );
 
   /// Regular body text
-  static TextStyle bodyMedium({Color? color, String? fontFamily}) => TextStyle(
+  static TextStyle bodyMedium({Color? color, String? fontFamily, FontWeight? fontWeight}) => TextStyle(
         fontSize: 14,
-        fontWeight: FontWeight.normal,
+        fontWeight: fontWeight ?? FontWeight.normal,
         color: color ?? AppColorPalette.charcoalGreen,
         fontFamily: fontFamily ?? defaultFontFamily,
         height: 1.5,
@@ -132,9 +132,9 @@ class AppTextStyles {
       );
 
   /// Caption text for descriptions
-  static TextStyle caption({Color? color, String? fontFamily}) => TextStyle(
+  static TextStyle caption({Color? color, String? fontFamily, FontWeight? fontWeight}) => TextStyle(
         fontSize: 12,
-        fontWeight: FontWeight.normal,
+        fontWeight: fontWeight ?? FontWeight.normal,
         color: color ?? AppColorPalette.softSlate,
         fontFamily: fontFamily ?? defaultFontFamily,
       );

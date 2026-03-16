@@ -278,7 +278,7 @@ class _StaffListScreenState extends State<StaffListScreen> {
                   alpha: 0.1,
                 ),
                 backgroundImage: NetworkImage(imageUrl),
-                onBackgroundImageError: (_, __) {},
+                onBackgroundImageError: (_, _) {},
                 child: const Icon(
                   Icons.person_rounded,
                   color: AppColorPalette.fieldFreshStart,

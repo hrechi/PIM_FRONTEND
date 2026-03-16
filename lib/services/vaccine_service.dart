@@ -48,10 +48,10 @@ class VaccineService {
       'administeredAt': administeredAt.toIso8601String(),
       'doseGiven': doseGiven,
       'doseUnit': doseUnit,
-      if (lotNumber != null) 'lotNumber': lotNumber,
-      if (bodyWeight != null) 'bodyWeight': bodyWeight,
-      if (scheduleId != null) 'scheduleId': scheduleId,
-      if (notes != null) 'notes': notes,
+      'lotNumber': ?lotNumber,
+      'bodyWeight': ?bodyWeight,
+      'scheduleId': ?scheduleId,
+      'notes': ?notes,
     }, withAuth: true);
     return VaccineRecord.fromJson(data);
   }
@@ -96,7 +96,7 @@ class VaccineService {
     final data = await ApiService.patch('/vaccine-schedules/$scheduleId/done', {
       'administeredBy': administeredBy,
       'doseGiven': doseGiven,
-      if (lotNumber != null) 'lotNumber': lotNumber,
+      'lotNumber': ?lotNumber,
     }, withAuth: true);
     return VaccineRecord.fromJson(data);
   }
@@ -116,7 +116,7 @@ class VaccineService {
         'administeredBy': administeredBy,
         'administeredAt': administeredAt.toIso8601String(),
         'doseGiven': doseGiven,
-        if (lotNumber != null) 'lotNumber': lotNumber,
+        'lotNumber': ?lotNumber,
       }, withAuth: true);
       return true;
     } catch (_) {

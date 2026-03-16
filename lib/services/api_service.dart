@@ -40,8 +40,9 @@ class ApiService {
       final isEmulator = host == 'localhost' || host == '127.0.0.1';
       return isEmulator ? 'http://10.0.2.2:$port' : 'http://$host:$port';
     }
-    if (host == 'localhost' || host == '127.0.0.1')
+    if (host == 'localhost' || host == '127.0.0.1') {
       return 'http://localhost:$port';
+    }
     return 'http://$host:$port';
   }
 

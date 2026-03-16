@@ -274,7 +274,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
               return AlertDialog(
                 title: const Text('Confirm Delete'),
                 content: Text(
-                  'Are you sure you want to delete measurement at ${_displayName}?',
+                  'Are you sure you want to delete measurement at $_displayName?',
                 ),
                 actions: [
                   TextButton(

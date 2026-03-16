@@ -6,8 +6,7 @@ import '../utils/constants.dart';
 class MissionDetailScreen extends StatefulWidget {
   final MissionModel mission;
 
-  const MissionDetailScreen({Key? key, required this.mission})
-      : super(key: key);
+  const MissionDetailScreen({super.key, required this.mission});
 
   @override
   State<MissionDetailScreen> createState() => _MissionDetailScreenState();
@@ -141,7 +140,7 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedType,
+                  initialValue: selectedType,
                   decoration: const InputDecoration(
                     labelText: 'Mission Type *',
                     border: OutlineInputBorder(),
@@ -153,7 +152,7 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedPriority,
+                  initialValue: selectedPriority,
                   decoration: const InputDecoration(
                     labelText: 'Priority *',
                     border: OutlineInputBorder(),

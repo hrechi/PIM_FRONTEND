@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:intl/intl.dart';
 import '../../providers/vaccine_provider.dart';
 import '../../models/vaccine_models.dart';
-import '../../utils/constants.dart';
 import '../../widgets/vaccine_status_chip.dart';
 
 class VaccineCalendarScreen extends StatefulWidget {

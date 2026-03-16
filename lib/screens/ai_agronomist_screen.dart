@@ -5,7 +5,7 @@ import 'dart:convert';
 class AiAgronomistScreen extends StatefulWidget {
   final String parcelId;
 
-  const AiAgronomistScreen({Key? key, required this.parcelId}) : super(key: key);
+  const AiAgronomistScreen({super.key, required this.parcelId});
 
   @override
   _AiAgronomistScreenState createState() => _AiAgronomistScreenState();

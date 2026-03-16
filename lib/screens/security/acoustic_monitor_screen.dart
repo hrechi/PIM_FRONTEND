@@ -175,7 +175,7 @@ class _AcousticMonitorScreenState extends State<AcousticMonitorScreen>
           children: [
             AnimatedBuilder(
               animation: _pulseController,
-              builder: (_, __) => Icon(
+              builder: (_, _) => Icon(
                 Icons.hearing,
                 color: _statusColor.withValues(
                   alpha: 0.5 + _pulseController.value * 0.5,
@@ -362,7 +362,7 @@ class _AcousticMonitorScreenState extends State<AcousticMonitorScreen>
         children: [
           AnimatedBuilder(
             animation: _pulseController,
-            builder: (_, __) => Container(
+            builder: (_, _) => Container(
               width: 12,
               height: 12,
               decoration: BoxDecoration(

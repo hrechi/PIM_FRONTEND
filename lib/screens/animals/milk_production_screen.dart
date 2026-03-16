@@ -670,8 +670,8 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
 
   Widget _buildHistoryList() {
     final filteredRecords = _records.where((record) {
-      final name = record.animal?.name?.toLowerCase() ?? '';
-      final tag = record.animal?.nodeId?.toLowerCase() ?? '';
+      final name = record.animal?.name.toLowerCase() ?? '';
+      final tag = record.animal?.nodeId.toLowerCase() ?? '';
       return name.contains(_searchQuery) || tag.contains(_searchQuery);
     }).toList();
 

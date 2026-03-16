@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/vaccine_provider.dart';
-import '../../models/vaccine_models.dart';
 import '../../utils/constants.dart';
-import '../../widgets/vaccine_status_chip.dart';
-import '../../widgets/upcoming_vaccine_banner.dart';
 import '../../services/animal_service.dart';
 import '../../models/animal.dart';
 import 'vaccine_planning_screen.dart';

@@ -106,7 +106,7 @@ class _VaccinePlanningScreenState extends State<VaccinePlanningScreen>
         label: Text(_generating ? 'Generating...' : 'Generate schedule', style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 15)),
       ),
       body: Consumer<VaccineProvider>(
-        builder: (_, prov, __) {
+        builder: (_, prov, _) {
           if (prov.isLoading) {
             return const Center(child: CircularProgressIndicator(color: Color(0xFF1B3C35)));
           }
@@ -179,7 +179,7 @@ class _ScheduleCard extends StatelessWidget {
 
     Color leftBorder;
     if (schedule.isMandatory) {
-      if (schedule.isOverdue || (daysLeft != null && daysLeft <= 7)) {
+      if (schedule.isOverdue || (daysLeft <= 7)) {
         leftBorder = const Color(0xFFEF4444); // Urgent/Overdue Mandatory
       } else {
         leftBorder = const Color(0xFFF59E0B); // Future Mandatory
@@ -266,7 +266,7 @@ class _ScheduleCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (!schedule.isDone && daysLeft != null) ...[
+                if (!schedule.isDone) ...[
                   const SizedBox(height: 10),
                   Container(
                     width: double.infinity,

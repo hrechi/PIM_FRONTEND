@@ -63,14 +63,14 @@ class SoilApiService {
       final queryParams = <String, dynamic>{
         'page': page,
         'limit': limit,
-        if (minPh != null) 'minPh': minPh,
-        if (maxPh != null) 'maxPh': maxPh,
-        if (minMoisture != null) 'minMoisture': minMoisture,
-        if (maxMoisture != null) 'maxMoisture': maxMoisture,
-        if (minTemperature != null) 'minTemperature': minTemperature,
-        if (maxTemperature != null) 'maxTemperature': maxTemperature,
-        if (sortBy != null) 'sortBy': sortBy,
-        if (order != null) 'order': order,
+        'minPh': ?minPh,
+        'maxPh': ?maxPh,
+        'minMoisture': ?minMoisture,
+        'maxMoisture': ?maxMoisture,
+        'minTemperature': ?minTemperature,
+        'maxTemperature': ?maxTemperature,
+        'sortBy': ?sortBy,
+        'order': ?order,
       };
 
       final response = await _dio.get(

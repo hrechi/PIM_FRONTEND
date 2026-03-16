@@ -32,6 +32,18 @@ class Vaccine {
         isCoreVaccine: json['isCoreVaccine'] ?? false,
         notes: json['notes'],
       );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'code': code,
+        'nameFr': nameFr,
+        'nameEn': nameEn,
+        'nameAr': nameAr,
+        'targetSpecies': targetSpecies,
+        'defaultIntervalDays': defaultIntervalDays,
+        'isCoreVaccine': isCoreVaccine,
+        'notes': notes,
+      };
 }
 
 class VaccineSchedule {
@@ -77,6 +89,19 @@ class VaccineSchedule {
         priority: json['priority'] ?? 'MEDIUM',
         notes: json['notes'],
       );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'animalId': animalId,
+        'vaccineId': vaccineId,
+        'scheduledDate': scheduledDate.toIso8601String(),
+        'status': status,
+        'isMandatory': isMandatory,
+        'isRecurring': isRecurring,
+        'recurrenceDays': recurrenceDays,
+        'priority': priority,
+        'notes': notes,
+      };
 
   bool get isOverdue => status == 'OVERDUE';
   bool get isDone => status == 'DONE';
@@ -133,6 +158,20 @@ class VaccineRecord {
         nextDueDate: json['nextDueDate'] != null ? DateTime.tryParse(json['nextDueDate']) : null,
         notes: json['notes'],
       );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'animalId': animalId,
+        'vaccineId': vaccineId,
+        'administeredBy': administeredBy,
+        'administeredAt': administeredAt.toIso8601String(),
+        'doseGiven': doseGiven,
+        'doseUnit': doseUnit,
+        'lotNumber': lotNumber,
+        'bodyWeight': bodyWeight,
+        'nextDueDate': nextDueDate?.toIso8601String(),
+        'notes': notes,
+      };
 }
 
 class VaccineRegulation {

@@ -394,7 +394,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No ${status} livestock found',
+                  'No $status livestock found',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,

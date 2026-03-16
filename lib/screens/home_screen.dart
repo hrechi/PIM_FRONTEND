@@ -12,6 +12,7 @@ import '../models/animal.dart';
 import '../models/alert_item.dart';
 import '../models/weather_info.dart';
 import '../providers/weather_provider.dart';
+import '../providers/notification_provider.dart';
 import '../services/animal_service.dart';
 import '../services/milk_production_service.dart';
 import '../widgets/dashboard_card.dart';
@@ -34,6 +35,7 @@ import 'chat_assistant_screen.dart';
 import 'add_staff_screen.dart';
 import 'staff_list_screen.dart';
 import 'security/incident_history_screen.dart';
+import 'notification_center_screen.dart';
 import 'security/live_feed_screen.dart';
 import 'security/daily_report_screen.dart';
 import 'security/acoustic_monitor_screen.dart';
@@ -623,7 +625,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const IncidentHistoryScreen(),
+                    builder: (_) => const NotificationCenterScreen(),
                   ),
                 );
               },
@@ -638,10 +640,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: AppColorPalette.alertError,
                     shape: BoxShape.circle,
                   ),
-                  child: Text(
-                    '${alerts.where((a) => !a.isRead).length}',
-                    style: AppTextStyles.caption(color: AppColorPalette.white)
-                        .copyWith(fontSize: 10),
+                  child: Consumer<NotificationProvider>(
+                    builder: (context, notificationProvider, _) => Text(
+                      '${notificationProvider.unreadCount}',
+                      style: AppTextStyles.caption(color: AppColorPalette.white)
+                          .copyWith(fontSize: 10),
+                    ),
                   ),
                 ),
               ),
@@ -1044,7 +1048,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 textBaseline: TextBaseline.alphabetic,
                 children: [
                   Text(
-                    '${today.toStringAsFixed(1)}',
+                    today.toStringAsFixed(1),
                     style: const TextStyle(
                         color: Colors.white, fontSize: 40,
                         fontWeight: FontWeight.w900),
@@ -1267,7 +1271,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         top: 80.0 + (index % 2 == 0 ? 20.0 : 0.0),
                         child: _buildAnimalPin(animal),
                       );
-                    }).toList(),
+                    }),
                   ],
                 ),
               ),

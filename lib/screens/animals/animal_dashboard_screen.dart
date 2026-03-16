@@ -5,7 +5,6 @@ import '../../services/animal_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/app_drawer.dart';
 import 'animal_list_screen.dart';
-import 'animal_details_screen.dart';
 import 'milk_production_screen.dart';
 import 'milk_analytics_screen.dart';
 

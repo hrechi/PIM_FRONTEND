@@ -10,7 +10,7 @@ import 'mission_detail_screen.dart';
 class MissionListScreen extends StatefulWidget {
   final String? fieldId;
 
-  const MissionListScreen({Key? key, this.fieldId}) : super(key: key);
+  const MissionListScreen({super.key, this.fieldId});
 
   @override
   State<MissionListScreen> createState() => _MissionListScreenState();

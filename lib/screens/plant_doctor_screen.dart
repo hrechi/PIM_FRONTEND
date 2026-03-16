@@ -217,7 +217,7 @@ class _PlantDoctorScreenState extends State<PlantDoctorScreen> {
                             ],
                           ),
                         ),
-                      ).toList()
+                      )
                     else
                       const Text("No specific steps provided. Consult an expert."),
                   ],

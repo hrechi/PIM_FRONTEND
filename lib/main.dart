@@ -9,9 +9,12 @@ import 'providers/parcel_provider.dart';
 import 'providers/weather_provider.dart';
 import 'providers/irrigation_provider.dart';
 import 'providers/vaccine_provider.dart';
+import 'providers/notification_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'screens/security/incident_detail_screen.dart';
+import 'screens/notification_center_screen.dart';
+import 'screens/vaccines/vaccine_dashboard_screen.dart';
 import 'screens/soil/soil_measurements_list_screen.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -93,6 +96,7 @@ class _FieldlyAppState extends State<FieldlyApp> {
         ChangeNotifierProvider(create: (_) => WeatherProvider()),
         ChangeNotifierProvider(create: (_) => IrrigationProvider()),
         ChangeNotifierProvider(create: (_) => VaccineProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
@@ -106,6 +110,8 @@ class _FieldlyAppState extends State<FieldlyApp> {
                 ModalRoute.of(context)!.settings.arguments as String;
             return IncidentDetailScreen(incidentId: incidentId);
           },
+          '/notifications': (context) => const NotificationCenterScreen(),
+          '/vaccine-dashboard': (context) => const VaccineDashboardScreen(), // assuming this exists or maps to the correct screen
         },
       ),
     );

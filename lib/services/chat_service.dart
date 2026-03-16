@@ -9,7 +9,7 @@ class ChatService {
   }) async {
     final body = {
       'message': message,
-      if (conversationId != null) 'conversationId': conversationId,
+      'conversationId': ?conversationId,
     };
 
     final response = await http.post(

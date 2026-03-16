@@ -1,5 +1,6 @@
 /// AI Prediction Model
 /// Represents the wilting risk prediction from the AI service
+library;
 
 /// Risk level enum
 enum RiskLevel {

@@ -59,7 +59,7 @@ class FieldService {
       final body = jsonEncode({
         'name': name,
         'areaCoordinates': areaCoordinates,
-        if (areaSize != null) 'areaSize': areaSize,
+        'areaSize': ?areaSize,
       });
 
       final response = await http.post(

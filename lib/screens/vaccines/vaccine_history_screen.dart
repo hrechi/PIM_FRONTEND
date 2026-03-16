@@ -47,7 +47,7 @@ class _VaccineHistoryScreenState extends State<VaccineHistoryScreen> {
         ),
       ),
       body: Consumer<VaccineProvider>(
-        builder: (_, prov, __) {
+        builder: (_, prov, _) {
           if (prov.isLoading) return const Center(child: CircularProgressIndicator(color: AppColors.mistBlue));
 
           final records = prov.records;

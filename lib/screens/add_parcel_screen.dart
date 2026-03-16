@@ -377,7 +377,7 @@ class _AddParcelScreenState extends State<AddParcelScreen> {
     required ValueChanged<String?> onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       items: items.map((i) => DropdownMenuItem(value: i, child: Text(i))).toList(),
       onChanged: onChanged,
       icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey.shade400),

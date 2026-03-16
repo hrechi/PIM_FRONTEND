@@ -10,7 +10,7 @@ import 'map_picker_screen.dart';
 import 'soil/soil_map_screen.dart';
 
 class FieldsManagementScreen extends StatefulWidget {
-  const FieldsManagementScreen({Key? key}) : super(key: key);
+  const FieldsManagementScreen({super.key});
 
   @override
   State<FieldsManagementScreen> createState() => _FieldsManagementScreenState();
