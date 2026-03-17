@@ -16,13 +16,22 @@ class VaccineService {
     return List<Map<String, dynamic>>.from(data as List);
   }
 
-  Future<List<VaccineRegulation>> getCountryRegulations(String countryCode, {String? species}) async {
-    String endpoint = '/countries/$countryCode/regulations';
+  Future<List<VaccineRegulation>> getCountryRegulations(String countryCode, {String? species, String? regionCode}) async {
+    final params = <String, String>{};
+    if (species != null) params['species'] = species;
+    if (regionCode != null) params['region'] = regionCode;
+    final query = params.isNotEmpty ? '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}' : '';
+    final endpoint = '/countries/$countryCode/regulations$query';
+    final data = await ApiService.get(endpoint, withAuth: true);
+    return (data as List).map((j) => VaccineRegulation.fromJson(j)).toList();
+  }
+  /// Get regulations for a field — auto-resolves country from GPS on backend
+  Future<List<VaccineRegulation>> getFieldRegulations(String fieldId, {String? species}) async {
+    String endpoint = '/fields/$fieldId/regulations';
     if (species != null) endpoint += '?species=$species';
     final data = await ApiService.get(endpoint, withAuth: true);
     return (data as List).map((j) => VaccineRegulation.fromJson(j)).toList();
   }
-
   // ── Records ─────────────────────────────────────────────────
 
   Future<List<VaccineRecord>> getRecords(String animalId) async {

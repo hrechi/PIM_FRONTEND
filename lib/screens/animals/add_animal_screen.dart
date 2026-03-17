@@ -124,28 +124,24 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     
     setState(() => _isLoadingRegulations = true);
     try {
-      final field = _fields.firstWhere((f) => f.id == _selectedFieldId);
-      final countryCode = field.countryCode;
-      
-      if (countryCode != null) {
-        final regs = await _vaccineService.getCountryRegulations(countryCode, species: _selectedType);
-        setState(() {
-          _regulations = regs;
-          for (var reg in _regulations) {
-            final vCode = reg.vaccine?.code ?? reg.vaccineId;
-            if (!_vaccineSelections.containsKey(vCode)) {
-              _vaccineSelections[vCode] = {
-                'checked': false,
-                'date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
-                'dose': 1.0,
-                'lot': '',
-                'isOther': false,
-                'name': reg.vaccine?.nameFr ?? reg.vaccine?.nameEn ?? reg.vaccineId,
-              };
-            }
+      // Use the field-based endpoint which auto-resolves country from GPS
+      final regs = await _vaccineService.getFieldRegulations(_selectedFieldId!, species: _selectedType);
+      setState(() {
+        _regulations = regs;
+        for (var reg in _regulations) {
+          final vCode = reg.vaccine?.code ?? reg.vaccineId;
+          if (!_vaccineSelections.containsKey(vCode)) {
+            _vaccineSelections[vCode] = {
+              'checked': false,
+              'date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
+              'dose': 1.0,
+              'lot': '',
+              'isOther': false,
+              'name': reg.vaccine?.nameFr ?? reg.vaccine?.nameEn ?? reg.vaccineId,
+            };
           }
-        });
-      }
+        }
+      });
     } catch (e) {
       debugPrint('Error fetching regulations: $e');
     } finally {
@@ -866,10 +862,16 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.2, color: Color(0xFF1F2937)),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Basé sur le protocole sanitaire local et les alertes sanitaires en cours.',
-                  style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
-                ),
+                Builder(builder: (_) {
+                  final field = _fields.where((f) => f.id == _selectedFieldId).firstOrNull;
+                  final regionLabel = field?.regionCode ?? '';
+                  return Text(
+                    regionLabel.isNotEmpty 
+                      ? 'Basé sur le protocole sanitaire de la région $regionLabel et les alertes en cours.'
+                      : 'Basé sur le protocole sanitaire national et les alertes sanitaires en cours.',
+                    style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                  );
+                }),
               ],
             ),
           ),
@@ -1029,11 +1031,30 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        isMandatory 
-                          ? 'Majeur pour le contrôle sanitaire collectif.' 
-                          : 'Optionnel mais fortement recommandé.',
-                        style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              isMandatory 
+                                ? 'Majeur pour le contrôle sanitaire collectif.' 
+                                : 'Optionnel mais fortement recommandé.',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                            ),
+                          ),
+                          if (reg.isRegional && reg.regionName != null)
+                            Container(
+                              margin: const EdgeInsets.only(left: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                reg.regionName!,
+                                style: TextStyle(color: Colors.blue.shade700, fontSize: 10, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                        ],
                       ),
                     ],
                   ),

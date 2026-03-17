@@ -19,6 +19,7 @@ import '../screens/irrigation_scheduler_screen.dart';
 import '../screens/live_feed_screen.dart';
 import '../screens/soil/soil_measurements_list_screen.dart';
 import '../screens/security/incident_history_screen.dart';
+import '../screens/shorts_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -174,6 +175,19 @@ class AppDrawer extends StatelessWidget {
                         MaterialPageRoute(
                           builder: (_) => const IrrigationSchedulerScreen(),
                         ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.play_circle_filled,
+                    iconColor: const Color(0xFFFF6B6B),
+                    title: 'Farm Reels',
+                    subtitle: 'Agriculture video feed',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ShortsScreen()),
                       );
                     },
                   ),

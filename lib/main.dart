@@ -10,6 +10,7 @@ import 'providers/weather_provider.dart';
 import 'providers/irrigation_provider.dart';
 import 'providers/vaccine_provider.dart';
 import 'providers/notification_provider.dart';
+import 'providers/shorts_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'screens/security/incident_detail_screen.dart';
@@ -18,7 +19,7 @@ import 'screens/vaccines/vaccine_dashboard_screen.dart';
 import 'screens/soil/soil_measurements_list_screen.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-/// Global navigator key — used for navigating from notification callbacks
+/// Global navigator key — used for navigating from notification callbacks 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 /// Background message handler — must be a top-level function
@@ -97,6 +98,7 @@ class _FieldlyAppState extends State<FieldlyApp> {
         ChangeNotifierProvider(create: (_) => IrrigationProvider()),
         ChangeNotifierProvider(create: (_) => VaccineProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => ShortsProvider()),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
