@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/vaccine_provider.dart';
-import '../../models/vaccine_models.dart';
 import '../../utils/constants.dart';
-import '../../widgets/vaccine_status_chip.dart';
 
 class VaccineHistoryScreen extends StatefulWidget {
   final String animalId;
@@ -90,7 +88,7 @@ class _VaccineHistoryScreenState extends State<VaccineHistoryScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            (record.vaccine?.code == 'OTHER' ? record.notes : record.vaccine?.nameFr) ?? record.notes ?? 'Vaccine',
+                            (record.vaccine?.code == 'OTHER' ? record.notes : record.vaccine?.nameEn) ?? record.notes ?? 'Vaccine',
                             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: Color(0xFF1E293B)),
                           ),
                         ),
