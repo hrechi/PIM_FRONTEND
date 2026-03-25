@@ -5,6 +5,7 @@ import '../models/weather_info.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../utils/responsive.dart';
+import '../widgets/app_drawer.dart';
 
 /// Full-screen weather forecast + AI recommendations screen.
 /// Mimics a clean Google-Weather-style layout with a sky-blue gradient,
@@ -34,19 +35,15 @@ class _WeatherScreenState extends State<WeatherScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColorPalette.wheatWarmClay,
+      drawer: const AppDrawer(),
       body: Consumer<WeatherProvider>(
         builder: (context, wp, _) {
           return CustomScrollView(
             slivers: [
               // Sky-blue gradient header with back button
               SliverAppBar(
-                expandedHeight: 0,
                 floating: true,
                 backgroundColor: const Color(0xFF57A0D3),
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
                 title: Text(
                   'Weather & Advice',
                   style: AppTextStyles.h3().copyWith(color: Colors.white),

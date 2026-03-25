@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../theme/text_styles.dart';
 import '../utils/constants.dart';
+import '../widgets/app_drawer.dart';
 
 /// Displays the live camera feed from the Python AI engine.
 ///
@@ -99,6 +100,7 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: Row(
           children: [

@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:frontend_pim/screens/animals/animal_dashboard_screen.dart';
+import '../screens/agricultural_news_screen.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
+import '../screens/home_screen.dart';
 import '../screens/animals/animal_list_screen.dart';
-import '../screens/animals/animal_dashboard_screen.dart';
 import '../screens/animals/add_animal_screen.dart';
 import '../screens/animals/milk_production_screen.dart';
 import '../screens/animals/milk_analytics_screen.dart';
+import '../screens/vaccines/vaccine_dashboard_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/parcel_list_screen.dart';
 import '../screens/plant_doctor_screen.dart';
 import '../screens/staff_list_screen.dart';
 import '../screens/add_staff_screen.dart';
-import '../screens/incident_history_screen.dart';
+import '../screens/weather_screen.dart';
+import '../screens/irrigation_scheduler_screen.dart';
+import '../screens/live_feed_screen.dart';
+import '../screens/soil/soil_measurements_list_screen.dart';
+import '../screens/security/incident_history_screen.dart';
+import '../screens/shorts_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -62,7 +70,23 @@ class AppDrawer extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 8),
+                  // Home
+                  _buildDrawerItem(
+                    icon: Icons.home_rounded,
+                    title: 'Home',
+                    subtitle: 'Main Dashboard',
+                    onTap: () {
+                      Navigator.pop(context);
+                      // Navigate to HomeScreen (usually already the root, but for safety)
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => const HomeScreen()),
+                        (route) => false,
+                      );
+                    },
+                  ),
+
+                  const Divider(height: 1),
 
                   // Farm
                   _buildDrawerSection('Farm'),
@@ -74,7 +98,23 @@ class AppDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ParcelListScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const ParcelListScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.science_rounded,
+                    title: 'Soil Health',
+                    subtitle: 'Measurements & Analytics',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SoilMeasurementsListScreen(),
+                        ),
                       );
                     },
                   ),
@@ -87,7 +127,67 @@ class AppDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const PlantDoctorScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const PlantDoctorScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.newspaper,
+                    iconColor: Colors.orange,
+                    title: 'Agricultural News',
+                    subtitle: 'Latest farming updates',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AgriculturalNewsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.cloud,
+                    iconColor: const Color(0xFF57A0D3),
+                    title: 'Weather & Advice',
+                    subtitle: 'Forecast & recommendations',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const WeatherScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.water_drop,
+                    iconColor: const Color(0xFF2196F3),
+                    title: 'Irrigation Scheduler',
+                    subtitle: 'Smart 7-day irrigation plan',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const IrrigationSchedulerScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.play_circle_filled,
+                    iconColor: const Color(0xFFFF6B6B),
+                    title: 'Farm Reels',
+                    subtitle: 'Agriculture video feed',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ShortsScreen()),
                       );
                     },
                   ),
@@ -109,7 +209,9 @@ class AppDrawer extends StatelessWidget {
                           Navigator.pop(context);
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const AnimalDashboardScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => const AnimalDashboardScreen(),
+                            ),
                           );
                         },
                       ),
@@ -120,7 +222,9 @@ class AppDrawer extends StatelessWidget {
                           Navigator.pop(context);
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const AnimalListScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => const AnimalListScreen(),
+                            ),
                           );
                         },
                       ),
@@ -131,7 +235,9 @@ class AppDrawer extends StatelessWidget {
                           Navigator.pop(context);
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => AddAnimalScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => AddAnimalScreen(),
+                            ),
                           );
                         },
                       ),
@@ -142,7 +248,9 @@ class AppDrawer extends StatelessWidget {
                           Navigator.pop(context);
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const MilkAnalyticsScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => const MilkAnalyticsScreen(),
+                            ),
                           );
                         },
                       ),
@@ -153,11 +261,27 @@ class AppDrawer extends StatelessWidget {
                           Navigator.pop(context);
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const MilkProductionScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => const MilkProductionScreen(),
+                            ),
                           );
                         },
                       ),
                     ],
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.vaccines_rounded,
+                    title: 'Vaccination',
+                    subtitle: 'Herd Health & Planning',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const VaccineDashboardScreen(),
+                        ),
+                      );
+                    },
                   ),
 
                   const Divider(height: 1),
@@ -172,7 +296,9 @@ class AppDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const StaffListScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const StaffListScreen(),
+                        ),
                       );
                     },
                   ),
@@ -184,7 +310,9 @@ class AppDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const AddStaffScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const AddStaffScreen(),
+                        ),
                       );
                     },
                   ),
@@ -196,7 +324,24 @@ class AppDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const IncidentHistoryScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const IncidentHistoryScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.videocam_rounded,
+                    iconColor: const Color(0xFF10B981),
+                    title: 'Live Feed',
+                    subtitle: 'View live camera',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const LiveFeedScreen(),
+                        ),
                       );
                     },
                   ),
@@ -213,7 +358,9 @@ class AppDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const ProfileScreen(),
+                        ),
                       );
                     },
                   ),
@@ -228,7 +375,9 @@ class AppDrawer extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     child: Text(
                       'Version 1.0.0',
-                      style: AppTextStyles.caption(color: AppColorPalette.softSlate),
+                      style: AppTextStyles.caption(
+                        color: AppColorPalette.softSlate,
+                      ),
                     ),
                   ),
                 ],
@@ -245,10 +394,9 @@ class AppDrawer extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Text(
         title.toUpperCase(),
-        style: AppTextStyles.caption(color: AppColorPalette.softSlate).copyWith(
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
-        ),
+        style: AppTextStyles.caption(
+          color: AppColorPalette.softSlate,
+        ).copyWith(fontWeight: FontWeight.bold, letterSpacing: 1.2),
       ),
     );
   }

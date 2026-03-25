@@ -4,6 +4,7 @@ import '../models/parcel.dart';
 import '../providers/parcel_provider.dart';
 import 'add_parcel_screen.dart';
 import 'parcel_detail_screen.dart';
+import '../widgets/app_drawer.dart';
 
 class ParcelListScreen extends StatefulWidget {
   const ParcelListScreen({super.key});
@@ -42,6 +43,7 @@ class _ParcelListScreenState extends State<ParcelListScreen>
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6F0),
+      drawer: const AppDrawer(),
       body: CustomScrollView(
         slivers: [
           _buildHeroAppBar(prov.parcels),
@@ -87,10 +89,6 @@ class _ParcelListScreenState extends State<ParcelListScreen>
       pinned: true,
       stretch: true,
       backgroundColor: const Color(0xFF1A4731),
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-        onPressed: () => Navigator.pop(context),
-      ),
       flexibleSpace: FlexibleSpaceBar(
         stretchModes: const [StretchMode.zoomBackground],
         background: Stack(

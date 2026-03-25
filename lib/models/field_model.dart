@@ -5,6 +5,8 @@ class FieldModel {
   final String? cropType;
   final List<List<double>> areaCoordinates;
   final double? areaSize;
+  final String? countryCode;
+  final String? regionCode;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -15,6 +17,8 @@ class FieldModel {
     this.cropType,
     required this.areaCoordinates,
     this.areaSize,
+    this.countryCode,
+    this.regionCode,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -30,7 +34,9 @@ class FieldModel {
               .map((val) => (val as num).toDouble())
               .toList())
           .toList(),
-      areaSize: json['areaSize'] as double?,
+      areaSize: json['areaSize'] != null ? (json['areaSize'] as num).toDouble() : null,
+      countryCode: json['countryCode'] as String?,
+      regionCode: json['regionCode'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
@@ -44,6 +50,8 @@ class FieldModel {
       'cropType': cropType,
       'areaCoordinates': areaCoordinates,
       'areaSize': areaSize,
+      'countryCode': countryCode,
+      'regionCode': regionCode,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -56,6 +64,8 @@ class FieldModel {
     String? cropType,
     List<List<double>>? areaCoordinates,
     double? areaSize,
+    String? countryCode,
+    String? regionCode,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -66,6 +76,8 @@ class FieldModel {
       cropType: cropType ?? this.cropType,
       areaCoordinates: areaCoordinates ?? this.areaCoordinates,
       areaSize: areaSize ?? this.areaSize,
+      countryCode: countryCode ?? this.countryCode,
+      regionCode: regionCode ?? this.regionCode,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
