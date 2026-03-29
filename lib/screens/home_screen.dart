@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:material_symbols_icons/symbols.dart';
-import 'package:intl/intl.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../utils/responsive.dart';
@@ -11,13 +10,14 @@ import '../utils/constants.dart';
 import '../models/animal.dart';
 import '../models/alert_item.dart';
 import '../models/weather_info.dart';
-import '../providers/weather_provider.dart';
+import '../models/parcel.dart';
+
+import '../providers/parcel_provider.dart';
+import '../services/parcel_crud_service.dart';
 import '../services/animal_service.dart';
-import '../services/milk_production_service.dart';
-import '../widgets/dashboard_card.dart';
-import '../widgets/status_chip.dart';
+import '../services/weather_service.dart';
+import '../services/soil_repository.dart';
 import '../widgets/metric_card.dart';
-import '../widgets/alert_tile.dart';
 import '../widgets/gradient_container.dart';
 import '../widgets/security_alert_overlay.dart';
 import 'soil/soil_measurements_list_screen.dart';
@@ -53,16 +53,42 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late WeatherInfo weatherInfo;
+  late WeatherInfo? weatherInfo;
   late List<AlertItem> alerts;
   late List<Animal> animals;
 
   final AnimalService _animalService = AnimalService();
-  final MilkProductionService _milkService = MilkProductionService();
+  final WeatherService _weatherService = WeatherService();
+  final ParcelCrudService _parcelService = ParcelCrudService();
+  final SoilRepository _soilRepository = SoilRepository();
 
   Map<String, dynamic>? _animalStats;
-  Map<String, dynamic>? _milkStats;
   bool _isLoadingStats = true;
+  
+  // Soil and crop data
+  double? _soilPh;
+  int _totalCrops = 0;
+  bool _isLoadingSoilCrop = true;
+  
+  // Parcel management
+  Parcel? _selectedParcel;
+  
+  // Background images from assets
+  late int _selectedBackgroundIndex;
+  final List<BackgroundSlide> _backgroundSlides = [
+    BackgroundSlide(
+      imageAsset: 'assets/images/welcome_1.jpg',
+      fallbackColor: const Color(0xFF2D5016),
+    ),
+    BackgroundSlide(
+      imageAsset: 'assets/images/welcome_2.jpg',
+      fallbackColor: const Color(0xFF3A6B35),
+    ),
+    BackgroundSlide(
+      imageAsset: 'assets/images/welcome_3.jpg',
+      fallbackColor: const Color(0xFF4A7C45),
+    ),
+  ];
 
   // Socket.io client for siren
   late IO.Socket _socket;
@@ -70,23 +96,156 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadMockData();
-    _fetchDashboardStats();
-    _initFcmListener();
+    _selectedBackgroundIndex = 0; // Default to first background
+    weatherInfo = null;
+    alerts = [];
+    animals = [];
+    
     _initSocket();
+    _initFcmListener();
+    
+    // Listen to parcel provider changes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final parcelProvider = context.read<ParcelProvider>();
+      parcelProvider.addListener(_onParcelProviderChanged);
+      
+      // Load initial data
+      _loadParcels();
+      _fetchDashboardStats();
+      _fetchAnimals();
+      _fetchSoilAndCropData();
+    });
+  }
+  
+  void _onParcelProviderChanged() {
+    final parcelProvider = context.read<ParcelProvider>();
+    final parcels = parcelProvider.parcels;
+    
+    debugPrint('🔄 Parcel provider changed: ${parcels.length} parcels available');
+    
+    // If selected parcel was deleted, clear it or select the first one
+    if (_selectedParcel != null && !parcels.any((p) => p.id == _selectedParcel!.id)) {
+      debugPrint('⚠️ Selected parcel was deleted: ${_selectedParcel!.id}');
+      if (mounted) {
+        setState(() {
+          _selectedParcel = parcels.isNotEmpty ? parcels.first : null;
+        });
+      }
+      // Reload data for the new selected parcel
+      if (_selectedParcel != null) {
+        debugPrint('📍 Auto-selected new parcel: ${_selectedParcel!.id}');
+        _fetchWeatherForParcel(_selectedParcel!.id);
+        _fetchAnimalsForField(_selectedParcel!.id);
+        _fetchSoilAndCropData();
+      } else {
+        // All parcels deleted, clear data
+        debugPrint('🗑️ All parcels deleted, clearing data');
+        if (mounted) {
+          setState(() {
+            _soilPh = null;
+            _totalCrops = 0;
+            weatherInfo = null;
+            animals = [];
+          });
+        }
+      }
+    } else if (_selectedParcel == null && parcels.isNotEmpty) {
+      // If no parcel was selected but parcels are now available, select the first one
+      debugPrint('📍 No parcel selected, auto-selecting first parcel');
+      if (mounted) {
+        setState(() {
+          _selectedParcel = parcels.first;
+        });
+      }
+      _fetchWeatherForParcel(_selectedParcel!.id);
+      _fetchAnimalsForField(_selectedParcel!.id);
+      _fetchSoilAndCropData();
+    }
+    
+    debugPrint('Parcel provider changed, selected: ${_selectedParcel?.location}');
+  }
+
+  @override
+  void dispose() {
+    _socket.disconnect();
+    _socket.dispose();
+    
+    // Remove listener when disposing
+    try {
+      final parcelProvider = context.read<ParcelProvider>();
+      parcelProvider.removeListener(_onParcelProviderChanged);
+    } catch (e) {
+      debugPrint('Error removing parcel listener: $e');
+    }
+    
+    super.dispose();
+  }
+
+  Future<void> _loadParcels() async {
+    try {
+      final parcelProvider = context.read<ParcelProvider>();
+      await parcelProvider.fetchParcels();
+      if (mounted && parcelProvider.parcels.isNotEmpty) {
+        setState(() {
+          _selectedParcel = parcelProvider.parcels.first;
+        });
+        // Fetch weather, animals, and soil/crop data for the selected parcel
+        await _fetchWeatherForParcel(_selectedParcel!.id);
+        await _fetchAnimalsForField(_selectedParcel!.id);
+        await _fetchSoilAndCropData();
+      }
+    } catch (e) {
+      debugPrint('Error loading parcels: $e');
+    }
+  }
+  
+  Future<void> _fetchWeatherForParcel(String fieldId) async {
+    if (!mounted) return;
+    try {
+      final forecastResponse = await _weatherService.getWeatherForField(fieldId);
+      if (mounted) {
+        setState(() {
+          weatherInfo = forecastResponse.current;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching weather: $e');
+    }
+  }
+  
+  Future<void> _fetchAnimals() async {
+    try {
+      final animalList = await _animalService.getAnimals();
+      if (mounted) {
+        setState(() {
+          animals = animalList;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching animals: $e');
+    }
+  }
+  
+  Future<void> _fetchAnimalsForField(String fieldId) async {
+    try {
+      final animalList = await _animalService.getAnimals(fieldId: fieldId);
+      if (mounted) {
+        setState(() {
+          animals = animalList;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching animals for field: $e');
+    }
   }
 
   Future<void> _fetchDashboardStats() async {
     setState(() => _isLoadingStats = true);
     try {
-      final results = await Future.wait([
-        _animalService.getStatistics(),
-        _milkService.getStatistics(),
-      ]);
+      final animalStats = await _animalService.getStatistics();
       if (mounted) {
         setState(() {
-          _animalStats = results[0];
-          _milkStats = results[1];
+          _animalStats = animalStats;
           _isLoadingStats = false;
         });
       }
@@ -96,11 +255,43 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _socket.disconnect();
-    _socket.dispose();
-    super.dispose();
+  Future<void> _fetchSoilAndCropData() async {
+    if (_selectedParcel == null) {
+      if (mounted) {
+        setState(() {
+          _soilPh = null;
+          _totalCrops = 0;
+          _isLoadingSoilCrop = false;
+        });
+      }
+      debugPrint('⚠️ No parcel selected, clearing soil/crop data');
+      return;
+    }
+    
+    debugPrint('🔄 Fetching soil and crop data for parcel: ${_selectedParcel!.id}');
+    setState(() => _isLoadingSoilCrop = true);
+    try {
+      // Fetch crop data from parcel
+      final parcel = await _parcelService.getParcelById(_selectedParcel!.id);
+      
+      // Fetch latest soil measurement
+      final soilMeasurement = await _soilRepository.getLatestMeasurement();
+
+      debugPrint('✅ Data fetched: soilPh=${soilMeasurement?.ph}, crops count=${parcel.crops.length}');
+      
+      if (mounted) {
+        setState(() {
+          _soilPh = soilMeasurement?.ph;
+          _totalCrops = parcel.crops.length;
+          _isLoadingSoilCrop = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching soil and crop data: $e');
+      if (mounted) {
+        setState(() => _isLoadingSoilCrop = false);
+      }
+    }
   }
 
   void _initSocket() {
@@ -116,26 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _socket.onDisconnect((_) => debugPrint('[SOCKET] Disconnected'));
   }
 
-  void _triggerSiren() {
-    _socket.emit('trigger_siren', {
-      'timestamp': DateTime.now().toIso8601String(),
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.volume_up, color: Colors.white),
-            SizedBox(width: 10),
-            Text('🚨 Siren triggered!'),
-          ],
-        ),
-        backgroundColor: Colors.red.shade700,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
+
 
   void _initFcmListener() {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -154,18 +326,10 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _loadMockData() {
-    weatherInfo = WeatherInfo.getMockData();
-    alerts = AlertItem.getMockData();
-    animals = Animal.getMockData();
-  }
+
 
   @override
   Widget build(BuildContext context) {
-    final attentionRequired = AlertItem.getAttentionRequired(alerts);
-    final animalAlerts =
-        _animalStats?['needingAttention'] as List<dynamic>? ?? [];
-
     return Scaffold(
       backgroundColor: AppColors.sageTint,
       drawer: _buildDrawer(),
@@ -173,35 +337,27 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _buildHeaderBackground(),
           SafeArea(
-            child: Responsive.constrainedContent(
-              context: context,
-              child: CustomScrollView(
-                slivers: [
-                  _buildHeader(),
-                  SliverToBoxAdapter(child: _buildQuickAccessButtons()),
-                  SliverToBoxAdapter(child: _buildWeatherSoilCard()),
-                  SliverToBoxAdapter(child: _buildFarmReelsCard()),
-                  if (_isLoadingStats)
-                    const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
-                    )
-                  else ...[
-                    SliverToBoxAdapter(child: _buildAnimalStatsGrid()),
-                    SliverToBoxAdapter(child: _buildMilkProductionBanner()),
-                  ],
-                  if (attentionRequired.isNotEmpty || animalAlerts.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildAttentionRequiredSection(
-                          attentionRequired, animalAlerts),
+            child: CustomScrollView(
+              slivers: [
+                _buildHeader(),
+                SliverToBoxAdapter(child: _buildParcelSelectorButton()),
+                SliverToBoxAdapter(child: _buildQuickAccessButtons()),
+                SliverToBoxAdapter(child: _buildWeatherSoilCard()),
+                SliverToBoxAdapter(child: _buildFarmReelsCard()),
+                if (_isLoadingStats)
+                  const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: CircularProgressIndicator()),
                     ),
-                  SliverToBoxAdapter(child: _buildLivestockLocationSection()),
+                  )
+                else ...[
+                  SliverToBoxAdapter(child: _buildAnimalStatsGrid()),
+                  SliverToBoxAdapter(child: _buildMilkProductionBanner()),
                   SliverToBoxAdapter(child: _buildLiveHealthMetrics()),
-                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
                 ],
-              ),
+                const SliverToBoxAdapter(child: SizedBox(height: 100)),
+              ],
             ),
           ),
         ],
@@ -330,6 +486,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.pop(context);
                       Navigator.push(context,
                           MaterialPageRoute(builder: (_) => const IrrigationSchedulerScreen()));
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.science,
+                    iconColor: AppColorPalette.fieldFreshStart,
+                    title: 'Soil Measurements',
+                    subtitle: 'Track soil health data',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const SoilMeasurementsListScreen()));
                     },
                   ),
 
@@ -535,49 +702,28 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ─────────────────────────────────────────────
-  // HEADER BACKGROUND DECORATION
+  // HEADER BACKGROUND DECORATION with Asset Images
   // ─────────────────────────────────────────────
   Widget _buildHeaderBackground() {
-    return Positioned(
-      top: -100,
-      left: -100,
-      right: -100,
-      height: 400,
-      child: Opacity(
-        opacity: 0.6,
+    return Positioned.fill(
+      child: Container(
+        color: AppColorPalette.fieldFreshStart,
         child: Stack(
           children: [
-            Positioned(
-              top: 0,
-              left: 0,
-              child: Container(
-                width: 400,
-                height: 400,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.fieldFreshStart.withValues(alpha: 0.2),
-                      AppColors.fieldFreshStart.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: -50,
-              right: -50,
-              child: Container(
-                width: 350,
-                height: 350,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.mistyBlue.withValues(alpha: 0.2),
-                      AppColors.mistyBlue.withValues(alpha: 0.0),
-                    ],
-                  ),
+            // Background image from assets
+            _buildAssetBackgroundImage(_backgroundSlides[_selectedBackgroundIndex]),
+            
+            // Dark gradient overlay for readability
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.3),
+                    Colors.black.withValues(alpha: 0.5),
+                    Colors.black.withValues(alpha: 0.6),
+                  ],
                 ),
               ),
             ),
@@ -586,6 +732,24 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  /// Build background image from asset with fallback color
+  Widget _buildAssetBackgroundImage(BackgroundSlide slide) {
+    return Image.asset(
+      slide.imageAsset,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      errorBuilder: (context, error, stackTrace) =>
+          Container(
+            color: slide.fallbackColor,
+            width: double.infinity,
+            height: double.infinity,
+          ),
+    );
+  }
+
+
 
   // ─────────────────────────────────────────────
   // HEADER
@@ -601,7 +765,7 @@ class _HomeScreenState extends State<HomeScreen> {
       leading: Builder(
         builder: (context) => IconButton(
           icon: const Icon(Icons.menu_rounded,
-              color: AppColorPalette.charcoalGreen),
+              color: AppColorPalette.white),
           onPressed: () => Scaffold.of(context).openDrawer(),
         ),
       ),
@@ -621,12 +785,13 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Fieldly',
+                Text('Hi, Good Morning',
                     style: AppTextStyles.h3()
-                        .copyWith(color: AppColorPalette.charcoalGreen)),
-                Text('Farm Overview',
-                    style: AppTextStyles.bodySmall(
-                        color: AppColorPalette.softSlate)),
+                        .copyWith(color: AppColorPalette.white)),
+                if (_selectedParcel != null)
+                  Text(_selectedParcel!.location,
+                      style: AppTextStyles.bodySmall(
+                          color: AppColorPalette.white.withValues(alpha: 0.9))),
               ],
             ),
           ),
@@ -636,7 +801,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Stack(
           children: [
             IconButton(
-              icon: const Icon(Icons.notifications_outlined),
+              icon: const Icon(Icons.notifications_outlined, color: AppColorPalette.white),
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -671,7 +836,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: () => Navigator.of(context)
                 .push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
             child: CircleAvatar(
-              backgroundColor: AppColorPalette.mistyBlue,
+              backgroundColor: AppColorPalette.white.withValues(alpha: 0.3),
               child: const Icon(Icons.person, color: AppColorPalette.white),
             ),
           ),
@@ -680,53 +845,527 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Parcel selector button and bottom sheet
+  Widget _buildParcelSelectorButton() {
+    final responsivePadding = Responsive.horizontalPadding(context);
+    final responsiveVertical = Responsive.verticalPadding(context);
+    final isSmall = Responsive.isMobile(context);
+    
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: responsivePadding,
+        vertical: responsiveVertical * 0.5,
+      ),
+      child: GestureDetector(
+        onTap: _showParcelSelector,
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmall ? 12 : 16,
+            vertical: isSmall ? 8 : 10,
+          ),
+          decoration: BoxDecoration(
+            color: AppColorPalette.white.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.location_on_rounded,
+                color: AppColorPalette.fieldFreshStart,
+                size: isSmall ? 16 : 18,
+              ),
+              SizedBox(width: isSmall ? 6 : 8),
+              if (_selectedParcel != null)
+                Flexible(
+                  child: Text(
+                    _selectedParcel!.location,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodyMedium(
+                      color: AppColorPalette.charcoalGreen,
+                    ).copyWith(
+                      fontSize: isSmall ? 12 : 14,
+                    ),
+                  ),
+                ),
+              SizedBox(width: isSmall ? 6 : 8),
+              Icon(
+                Icons.swap_horiz_rounded,
+                color: AppColorPalette.fieldFreshStart,
+                size: isSmall ? 16 : 18,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showParcelSelector() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => Consumer<ParcelProvider>(
+        builder: (context, parcelProvider, _) {
+          final parcels = parcelProvider.parcels;
+          
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'Select Parcel',
+                    style: AppTextStyles.h3(color: AppColorPalette.charcoalGreen),
+                  ),
+                ),
+                if (parcels.isEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Text(
+                        'No parcels available',
+                        style: AppTextStyles.bodyMedium(color: Colors.grey),
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: parcels.length,
+                      itemBuilder: (context, index) {
+                        final parcel = parcels[index];
+                        final isSelected = _selectedParcel?.id == parcel.id;
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() => _selectedParcel = parcel);
+                            Navigator.pop(context);
+                            // Fetch weather, animals, and soil/crop data for the newly selected parcel
+                            _fetchWeatherForParcel(parcel.id);
+                            _fetchAnimalsForField(parcel.id);
+                            _fetchSoilAndCropData();
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isSelected ? AppColorPalette.fieldFreshStart.withValues(alpha: 0.1) : Colors.grey.shade100,
+                              border: isSelected
+                                  ? Border.all(color: AppColorPalette.fieldFreshStart, width: 2)
+                                  : null,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.grass, color: AppColorPalette.fieldFreshStart),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        parcel.location,
+                                        style: AppTextStyles.bodyLarge(color: AppColorPalette.charcoalGreen),
+                                      ),
+                                      Text(
+                                        '${parcel.areaSize} ha',
+                                        style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (isSelected)
+                                  const Icon(Icons.check_circle, color: AppColorPalette.fieldFreshStart),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // QUICK ACCESS BUTTONS
   // ─────────────────────────────────────────────
   // QUICK ACCESS BUTTONS
   // ─────────────────────────────────────────────
   Widget _buildQuickAccessButtons() {
+    final responsivePadding = Responsive.horizontalPadding(context);
+    final responsiveVertical = Responsive.verticalPadding(context);
+    final isSmall = Responsive.isMobile(context);
+    final buttonPadding = isSmall ? 8.0 : 12.0;
+    final fontSize = isSmall ? 12.0 : 14.0;
+    final iconSize = isSmall ? 18.0 : 20.0;
+    
     return Padding(
       padding: EdgeInsets.symmetric(
-        horizontal: Responsive.horizontalPadding(context),
-        vertical: 12,
+        horizontal: responsivePadding,
+        vertical: responsiveVertical * 0.75,
+      ),
+      child: Column(
+        children: [
+          // Quick Action Buttons - Responsive layout (always horizontal with equal width)
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => const FieldsManagementScreen())),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColorPalette.mistyBlue,
+                    padding: EdgeInsets.symmetric(vertical: buttonPadding, horizontal: 4),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: Icon(Icons.landscape, size: iconSize),
+                  label: Text('Fields', style: TextStyle(fontSize: fontSize)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => const MissionListScreen())),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColorPalette.mistyBlue,
+                    padding: EdgeInsets.symmetric(vertical: buttonPadding, horizontal: 4),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: Icon(Icons.task, size: iconSize),
+                  label: Text('Missions', style: TextStyle(fontSize: fontSize)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => const ChatAssistantScreen())),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColorPalette.mistyBlue,
+                    padding: EdgeInsets.symmetric(vertical: buttonPadding, horizontal: 4),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: Icon(Icons.chat_bubble_outline, size: iconSize),
+                  label: Text('Assistant', style: TextStyle(fontSize: fontSize)),
+                ),
+              ),
+            ],
+          ),
+          
+          // Weather Strip
+          if (weatherInfo != null)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildWeatherChip(
+                    icon: Icons.air,
+                    label: 'Wind',
+                    value: '${(weatherInfo!.windSpeed).toStringAsFixed(1)} km/h',
+                    color: const Color(0xFF2196F3),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildWeatherChip(
+                    icon: Icons.thermostat,
+                    label: 'Temp Δ',
+                    value: '+${(weatherInfo!.temperature - 15).toStringAsFixed(1)}°',
+                    color: const Color(0xFFFF6B35),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildWeatherChip(
+                    icon: Icons.opacity,
+                    label: 'Humidity',
+                    value: '${weatherInfo!.humidity.toStringAsFixed(0)}%',
+                    color: const Color(0xFF4ECDC4),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 12),
+          
+          // Soil & Crop Health Cards Row
+          Row(
+            children: [
+              Expanded(child: _buildSoilHealthCard()),
+              const SizedBox(width: 12),
+              Expanded(child: _buildCropHealthCard()),
+            ],
+          ),
+          const SizedBox(height: 12),
+          
+          // See Map Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const FieldsManagementScreen()));
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColorPalette.fieldFreshStart,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.map, color: Colors.white),
+              label: const Text(
+                'See Map',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeatherChip({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color, width: 1),
       ),
       child: Row(
         children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => const FieldsManagementScreen())),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColorPalette.mistyBlue,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 6),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: AppTextStyles.caption(color: color).copyWith(fontSize: 11),
               ),
-              icon: const Icon(Icons.landscape),
-              label: const Text('Fields'),
+              Text(
+                value,
+                style: AppTextStyles.bodySmall(color: color)
+                    .copyWith(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSoilHealthCard() {
+    if (_isLoadingSoilCrop) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8),
+          ],
+        ),
+        child: Center(
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                AppColorPalette.fieldFreshStart.withOpacity(0.6),
+              ),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => const MissionListScreen())),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColorPalette.mistyBlue,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+      );
+    }
+
+    // If soilPh is null, show "No data" message
+    if (_soilPh == null) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.grass, color: AppColorPalette.fieldFreshStart, size: 20),
+                const SizedBox(width: 6),
+                Text(
+                  'Soil Health',
+                  style: AppTextStyles.bodyMedium(color: AppColorPalette.charcoalGreen),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'pH: No data',
+              style: AppTextStyles.bodyLarge(color: Colors.grey.shade600)
+                  .copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(8),
               ),
-              icon: const Icon(Icons.task),
-              label: const Text('Missions'),
+              child: Text(
+                'Not recorded',
+                style: AppTextStyles.caption(color: Colors.grey.shade600)
+                    .copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final phValue = _soilPh!;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.grass, color: AppColorPalette.fieldFreshStart, size: 20),
+              const SizedBox(width: 6),
+              Text(
+                'Soil Health',
+                style: AppTextStyles.bodyMedium(color: AppColorPalette.charcoalGreen),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'pH: ${phValue.toStringAsFixed(1)}',
+            style: AppTextStyles.bodyLarge(color: AppColorPalette.charcoalGreen)
+                .copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF4ECDC4).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              phValue >= 6.0 && phValue <= 7.5 ? 'Optimal' : 'Adjust',
+              style: AppTextStyles.caption(color: const Color(0xFF4ECDC4))
+                  .copyWith(fontWeight: FontWeight.bold),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => const ChatAssistantScreen())),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColorPalette.mistyBlue,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCropHealthCard() {
+    if (_isLoadingSoilCrop) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8),
+          ],
+        ),
+        child: Center(
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Colors.green.withOpacity(0.6),
               ),
-              icon: const Icon(Icons.chat_bubble_outline),
-              label: const Text('Assistant'),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.local_florist, color: Colors.green.shade700, size: 20),
+              const SizedBox(width: 6),
+              Text(
+                'Crops Count',
+                style: AppTextStyles.bodyMedium(color: AppColorPalette.charcoalGreen),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$_totalCrops',
+            style: AppTextStyles.h2(color: Colors.green.shade700)
+                .copyWith(fontWeight: FontWeight.bold, fontSize: 32),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              _totalCrops > 0 ? 'Active' : 'No crops',
+              style: AppTextStyles.caption(color: Colors.green.shade700)
+                  .copyWith(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -740,6 +1379,31 @@ class _HomeScreenState extends State<HomeScreen> {
   // Inner InkWell → SoilMeasurementsListScreen
   // ─────────────────────────────────────────────
   Widget _buildWeatherSoilCard() {
+    // Show loading state if weather data is not available yet
+    if (weatherInfo == null) {
+      return GradientContainer.fieldFresh(
+        margin: EdgeInsets.symmetric(
+          horizontal: Responsive.horizontalPadding(context),
+          vertical: Responsive.verticalPadding(context),
+        ),
+        padding: EdgeInsets.all(Responsive.cardPadding(context)),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(color: AppColorPalette.white),
+              const SizedBox(height: 12),
+              Text(
+                'Loading weather data...',
+                style: AppTextStyles.bodyMedium(
+                    color: AppColorPalette.white.withOpacity(0.9)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return GestureDetector(
       onTap: () => Navigator.push(
           context, MaterialPageRoute(builder: (_) => const WeatherScreen())),
@@ -767,13 +1431,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        weatherInfo.formattedTemperature,
+                        weatherInfo!.formattedTemperature,
                         style: AppTextStyles.displayLarge(
                                 color: AppColorPalette.white)
                             .copyWith(fontSize: 56),
                       ),
                       Text(
-                        weatherInfo.condition,
+                        weatherInfo!.condition,
                         style: AppTextStyles.bodyLarge(
                                 color: AppColorPalette.white)
                             .copyWith(fontWeight: FontWeight.w500),
@@ -787,7 +1451,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: AppColorPalette.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Text(weatherInfo.weatherIcon,
+                  child: Text(weatherInfo!.weatherIcon,
                       style: const TextStyle(fontSize: 48)),
                 ),
               ],
@@ -827,7 +1491,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           Row(
                             children: [
                               Text(
-                                weatherInfo.formattedSoilMoisture,
+                                weatherInfo!.formattedSoilMoisture,
                                 style: AppTextStyles.h2(
                                         color: AppColorPalette.white)
                                     .copyWith(fontSize: 28),
@@ -837,13 +1501,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: weatherInfo.isSoilMoistureHealthy
+                                  color: weatherInfo!.isSoilMoistureHealthy
                                       ? AppColorPalette.success
                                       : AppColorPalette.warning,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  weatherInfo.soilMoistureStatus,
+                                  weatherInfo!.soilMoistureStatus,
                                   style: AppTextStyles.caption(
                                           color: AppColorPalette.white)
                                       .copyWith(fontWeight: FontWeight.bold),
@@ -962,16 +1626,48 @@ class _HomeScreenState extends State<HomeScreen> {
     final totalAnimals = _animalStats!['totalAnimals'] ?? 0;
     final healthAlerts = _animalStats!['healthAlerts'] ?? 0;
     final vaccinesDue = _animalStats!['vaccinesDue'] ?? 0;
+    final responsivePadding = Responsive.horizontalPadding(context);
+    final responsiveVertical = Responsive.verticalPadding(context);
+    final cardSpacing = 10.0;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(
+        horizontal: responsivePadding,
+        vertical: responsiveVertical * 0.5,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 12),
-            child: Text('Livestock Overview', style: AppTextStyles.h3()),
+            padding: const EdgeInsets.only(left: 4, bottom: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Live Health Metrics',
+                  style: AppTextStyles.h3().copyWith(
+                    color: Colors.white,
+                    fontSize: 20,
+                  ),
+                ),
+                Tooltip(
+                  message: 'View Animal Dashboard',
+                  child: IconButton(
+                    icon: Icon(Icons.dashboard_outlined,
+                      color: Colors.white),
+                    iconSize: 28,
+                    padding: const EdgeInsets.all(4),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const AnimalDashboardScreen()),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
+          // 2x2 grid of stat cards
           Row(
             children: [
               Expanded(
@@ -982,7 +1678,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       MaterialPageRoute(builder: (_) => const AnimalListScreen())),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: cardSpacing),
               Expanded(
                 child: _buildDashboardStatCard(
                   'Health Alerts', '$healthAlerts', 'Needing attention',
@@ -992,7 +1688,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: cardSpacing),
           Row(
             children: [
               Expanded(
@@ -1003,7 +1699,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       MaterialPageRoute(builder: (_) => const VaccineDashboardScreen())),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: cardSpacing),
               Expanded(
                 child: _buildDashboardStatCard(
                   'Monthly Spend', '${_animalStats!['monthlySpend'] ?? 0} DT',
@@ -1022,10 +1718,13 @@ class _HomeScreenState extends State<HomeScreen> {
     String title, String value, String subtitle,
     IconData icon, Color color, {VoidCallback? onTap}
   ) {
+    final isSmall = Responsive.isMobile(context);
+    final cardPadding = Responsive.cardPadding(context);
+    
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(cardPadding),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
@@ -1041,31 +1740,45 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(isSmall ? 6 : 8),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: color, size: 20),
+              child: Icon(icon, color: color, size: isSmall ? 16 : 20),
             ),
-            const SizedBox(height: 12),
-            Text(value,
-                style: const TextStyle(
-                    fontSize: 22, fontWeight: FontWeight.w900,
-                    color: Color(0xFF1E293B))),
-            const SizedBox(height: 2),
-            Text(title,
-                style: const TextStyle(
-                    color: Color(0xFF64748B), fontWeight: FontWeight.bold,
-                    fontSize: 11)),
-            const SizedBox(height: 2),
-            Text(subtitle,
-                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10)),
+            SizedBox(height: isSmall ? 8 : 12),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: isSmall ? 18 : 22,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF1E293B),
+              ),
+            ),
+            SizedBox(height: isSmall ? 1 : 2),
+            Text(
+              title,
+              style: TextStyle(
+                color: const Color(0xFF64748B),
+                fontWeight: FontWeight.bold,
+                fontSize: isSmall ? 10 : 11,
+              ),
+            ),
+            SizedBox(height: isSmall ? 1 : 2),
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: const Color(0xFF94A3B8),
+                fontSize: isSmall ? 9 : 10,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+
 
   // ─────────────────────────────────────────────
   // MILK PRODUCTION BANNER
@@ -1173,308 +1886,27 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // ATTENTION REQUIRED
-  // Combined field alerts + animal alerts
-  // ─────────────────────────────────────────────
-  Widget _buildAttentionRequiredSection(
-      List<AlertItem> attentionAlerts, List<dynamic> animalAlerts) {
-    final totalCount = attentionAlerts.length + animalAlerts.length;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColorPalette.alertError.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.warning_amber_rounded,
-                    color: AppColorPalette.alertError, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Text('Attention Required', style: AppTextStyles.h3()),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColorPalette.alertError,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '$totalCount',
-                  style: AppTextStyles.caption(color: AppColorPalette.white)
-                      .copyWith(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        DashboardCard(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Field Alerts
-              ...attentionAlerts.take(2).map(
-                    (alert) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: AlertTile.compact(alert: alert, onTap: () {}),
-                    ),
-                  ),
-              // Animal Alerts
-              ...animalAlerts.take(2).map((aRaw) {
-                final animal = Animal.fromJson(aRaw);
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildAnimalAlertTile(animal),
-                );
-              }),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildAnimalAlertTile(Animal animal) {
-    return InkWell(
-      onTap: () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const AnimalListScreen())),
-      borderRadius: BorderRadius.circular(12.0),
-      child: Container(
-        padding: const EdgeInsets.all(12.0),
-        decoration: BoxDecoration(
-          color: AppColorPalette.warning.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(12.0),
-          border: Border.all(
-              color: AppColorPalette.warning.withOpacity(0.2), width: 1),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8.0),
-              decoration: BoxDecoration(
-                color: AppColorPalette.warning.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: const Icon(Symbols.pets,
-                  size: 18.0, color: AppColorPalette.warning),
-            ),
-            const SizedBox(width: 12.0),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${animal.name} needs attention',
-                    style: AppTextStyles.bodySmall(
-                            color: AppColorPalette.charcoalGreen)
-                        .copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    'Status: ${animal.healthStatus} • Score: ${animal.vitalityScore}%',
-                    style: AppTextStyles.bodySmall(
-                        color: AppColorPalette.softSlate),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right,
-                size: 20, color: AppColorPalette.softSlate),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ─────────────────────────────────────────────
-  // LIVESTOCK LOCATION
-  // ─────────────────────────────────────────────
-  Widget _buildLivestockLocationSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColorPalette.info.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.location_on,
-                        color: AppColorPalette.info, size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  Text('Livestock Location', style: AppTextStyles.h3()),
-                ],
-              ),
-              StatusChip.info(
-                  label: '${animals.length} animals', icon: Icons.pets),
-            ],
-          ),
-        ),
-        DashboardCard(
-          padding: const EdgeInsets.all(0),
-          child: Column(
-            children: [
-              Container(
-                height: 200,
-                decoration: BoxDecoration(
-                  color: AppColorPalette.lightGrey,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                  ),
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColorPalette.emeraldGreen.withOpacity(0.1),
-                      AppColorPalette.mistyBlue.withOpacity(0.1),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.map,
-                              size: 48,
-                              color:
-                                  AppColorPalette.softSlate.withOpacity(0.5)),
-                          const SizedBox(height: 8),
-                          Text('Interactive Map View',
-                              style: AppTextStyles.bodyMedium(
-                                  color: AppColorPalette.softSlate)),
-                        ],
-                      ),
-                    ),
-                    ...animals.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final animal = entry.value;
-                      return Positioned(
-                        left: 50.0 + (index * 40.0),
-                        top: 80.0 + (index % 2 == 0 ? 20.0 : 0.0),
-                        child: _buildAnimalPin(animal),
-                      );
-                    }).toList(),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(16),
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColorPalette.mistyBlue,
-                    minimumSize: const Size(double.infinity, 50),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.fullscreen),
-                      const SizedBox(width: 8),
-                      Text('VIEW FULL MAP',
-                          style: AppTextStyles.buttonMedium()),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAnimalPin(Animal animal) {
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: animal.isHealthy
-            ? AppColorPalette.success
-            : AppColorPalette.alertError,
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColorPalette.white, width: 3),
-        boxShadow: [
-          BoxShadow(
-            color: AppColorPalette.charcoalGreen.withOpacity(0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: const Icon(Icons.pets, size: 16, color: AppColorPalette.white),
-    );
-  }
-
-  // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
   // LIVE HEALTH METRICS
   // DASHBOARD button → AnimalDashboardScreen
   // ─────────────────────────────────────────────
   Widget _buildLiveHealthMetrics() {
+    final responsivePadding = Responsive.horizontalPadding(context);
+    final responsiveVertical = Responsive.verticalPadding(context);
+    final isMobile = Responsive.isMobile(context);
+    final cardHeight = isMobile ? 340.0 : 360.0;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: Responsive.horizontalPadding(context),
-            vertical: Responsive.verticalPadding(context),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColorPalette.healthGlow.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(Icons.favorite,
-                        color: AppColorPalette.warning, size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  Text('Live Health Metrics', style: AppTextStyles.h3()),
-                ],
-              ),
-              TextButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const AnimalDashboardScreen()),
-                ),
-                child: Text(
-                  'DASHBOARD',
-                  style: AppTextStyles.buttonSmall(
-                      color: AppColorPalette.mistyBlue),
-                ),
-              ),
-            ],
-          ),
-        ),
+        // Display animals in horizontal scroll
         SizedBox(
-          height: Responsive.value(
-              context, mobile: 310.0, tablet: 330.0, desktop: 350.0),
+          height: cardHeight,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.symmetric(
-                horizontal: Responsive.horizontalPadding(context)),
+            padding: EdgeInsets.symmetric(horizontal: responsivePadding),
             itemCount: animals.length,
             itemBuilder: (context, index) {
               return MetricCard(
@@ -1486,6 +1918,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
         ),
+        SizedBox(height: responsiveVertical),
       ],
     );
   }
@@ -1532,4 +1965,15 @@ class _HomeScreenState extends State<HomeScreen> {
     if (value is String) return double.tryParse(value) ?? 0.0;
     return 0.0;
   }
+}
+
+/// Data class for background slides
+class BackgroundSlide {
+  final String imageAsset;
+  final Color fallbackColor;
+
+  BackgroundSlide({
+    required this.imageAsset,
+    required this.fallbackColor,
+  });
 }
