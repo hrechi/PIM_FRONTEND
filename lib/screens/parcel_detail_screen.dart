@@ -10,6 +10,7 @@ import '../theme/text_styles.dart';
 import 'add_parcel_screen.dart';
 import 'crop_calendar_screen.dart';
 import '../widgets/gradient_container.dart';
+import '../services/crop_rotation_api_service.dart';
 
 // ─────────────────────────────────────────────────────────────
 // COLOR CONSTANTS (local)
@@ -33,12 +34,14 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
   bool _isLoadingAi = false;
   late TabController _tabCtrl;
   late Future<ParcelHealthScore> _healthScoreFuture;
+  late Future<Map<String, dynamic>> _cropRotationFuture;
 
   @override
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 4, vsync: this);
     _healthScoreFuture = ParcelCrudService().getParcelHealthScore(widget.parcel.id);
+    _cropRotationFuture = CropRotationApiService.getCropRotationPlan(widget.parcel.id);
   }
 
   @override
@@ -338,6 +341,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
         slivers: [
           _buildHeroAppBar(p),
           SliverToBoxAdapter(child: _buildHealthScoreCard()),
+          SliverToBoxAdapter(child: _buildCropRotationCard()),
           SliverToBoxAdapter(child: _buildAiBanner(p)),
           SliverToBoxAdapter(child: _buildInfoCard(p)),
           SliverToBoxAdapter(
@@ -759,6 +763,153 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
           ),
         );
       },
+    );
+  }
+
+  // ─── CROP ROTATION CARD ───────────────────────────
+  Widget _buildCropRotationCard() {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _cropRotationFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: CircularProgressIndicator(color: _kGreen2),
+            )
+          );
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return const SizedBox.shrink(); 
+        }
+
+        final data = snapshot.data!;
+        final recommended = data['recommendedCrops'] as List? ?? [];
+        final avoid = data['cropsToAvoid'] as List? ?? [];
+        final score = data['sustainabilityScore'] ?? 0;
+        final explanation = data['explanation'] ?? '';
+
+        final color = score >= 71 ? Colors.green : score >= 41 ? Colors.orange : Colors.red;
+
+        return Container(
+          margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _sectionHeader('🌾 Next Crop Suggestion'),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 60,
+                        height: 60,
+                        child: CircularProgressIndicator(
+                          value: score / 100,
+                          strokeWidth: 6,
+                          backgroundColor: color.withValues(alpha: 0.2),
+                          valueColor: AlwaysStoppedAnimation(color),
+                        ),
+                      ),
+                      Text(
+                        '$score',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      'Sustainability Score based on soil nutrients and crop history.',
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              if (recommended.isNotEmpty) ...[
+                const Text('Recommend:', style: TextStyle(fontWeight: FontWeight.bold, color: _kGreen1, fontSize: 16)),
+                const SizedBox(height: 8),
+                ...recommended.map((c) => _cropListTile(c['name'], c['reason'], true)),
+              ],
+              if (avoid.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                const Text('Avoid:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.redAccent, fontSize: 16)),
+                const SizedBox(height: 8),
+                ...avoid.map((c) => _cropListTile(c['name'], c['reason'], false)),
+              ],
+              if (explanation.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _kGreen3,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('💡', style: TextStyle(fontSize: 18)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          explanation,
+                          style: TextStyle(fontSize: 13, color: _kGreen1.withValues(alpha: 0.9)),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              ]
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _cropListTile(String name, String reason, bool isRecommended) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            isRecommended ? Icons.check_circle_rounded : Icons.cancel_rounded,
+            color: isRecommended ? _kGreen2 : Colors.redAccent,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                Text(reason, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
