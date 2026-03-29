@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../models/soil_measurement.dart';
 import 'soil_api_service.dart';
 
@@ -34,6 +35,25 @@ class SoilRepository {
       sortBy: sortBy,
       order: order,
     );
+  }
+
+  /// Get the latest soil measurement (most recent across all fields)
+  Future<SoilMeasurement?> getLatestMeasurement() async {
+    try {
+      final response = await getMeasurements(
+        limit: 1,
+        page: 1,
+        sortBy: 'createdAt',
+        order: 'DESC',
+      );
+      if (response.data.isNotEmpty) {
+        return response.data.first;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching latest measurement: $e');
+      return null;
+    }
   }
 
   /// Get a single measurement by ID
