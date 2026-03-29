@@ -5,6 +5,7 @@ import '../models/irrigation_schedule.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../utils/responsive.dart';
+import '../widgets/app_drawer.dart';
 
 /// Full-screen Smart Irrigation Scheduler.
 /// Lets the user pick a field, then generates a 7-day AI-powered
@@ -37,19 +38,15 @@ class _IrrigationSchedulerScreenState extends State<IrrigationSchedulerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColorPalette.wheatWarmClay,
+      drawer: const AppDrawer(),
       body: Consumer<IrrigationProvider>(
         builder: (context, ip, _) {
           return CustomScrollView(
             slivers: [
               // ── App bar ──────────────────────────────────
               SliverAppBar(
-                expandedHeight: 0,
                 floating: true,
                 backgroundColor: _headerStart,
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
                 title: Text(
                   'Irrigation Scheduler',
                   style: AppTextStyles.h3().copyWith(color: Colors.white),

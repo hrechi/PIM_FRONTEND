@@ -7,6 +7,7 @@ import '../models/security_incident.dart';
 import '../services/api_service.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
+import '../widgets/app_drawer.dart';
 
 class IncidentHistoryScreen extends StatefulWidget {
   const IncidentHistoryScreen({super.key});
@@ -211,6 +212,7 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Incident History'),
         backgroundColor: AppColorPalette.emeraldGreen,

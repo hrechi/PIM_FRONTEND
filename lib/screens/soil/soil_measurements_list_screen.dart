@@ -12,6 +12,7 @@ import 'soil_measurement_form_screen.dart';
 import 'soil_measurement_details_screen.dart';
 import 'soil_analytics_screen.dart';
 import 'soil_map_screen.dart';
+import '../../widgets/app_drawer.dart';
 
 /// Provider for managing Soil Measurements state
 class SoilMeasurementsProvider extends ChangeNotifier {
@@ -108,6 +109,41 @@ class SoilMeasurementsProvider extends ChangeNotifier {
   }) async {
     try {
       await _repository.createMeasurement(
+        ph: ph,
+        soilMoisture: soilMoisture,
+        sunlight: sunlight,
+        nutrients: nutrients,
+        temperature: temperature,
+        latitude: latitude,
+        longitude: longitude,
+        fieldId: fieldId,
+      );
+      
+      // Refresh the list
+      await loadMeasurements(refresh: true);
+      return true;
+    } catch (e) {
+      _error = e is SoilApiException ? e.userMessage : e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+  
+  /// Create a new measurement with soil photo
+  Future<bool> createMeasurementWithImage({
+    required String imagePath,
+    required double ph,
+    required double soilMoisture,
+    required double sunlight,
+    required Map<String, dynamic> nutrients,
+    required double temperature,
+    required double latitude,
+    required double longitude,
+    String? fieldId,
+  }) async {
+    try {
+      await _repository.createMeasurementWithImage(
+        imagePath: imagePath,
         ph: ph,
         soilMoisture: soilMoisture,
         sunlight: sunlight,
@@ -344,7 +380,14 @@ class _SoilMeasurementsListScreenState
 
           return Scaffold(
             backgroundColor: AppColorPalette.wheatWarmClay,
+            drawer: const AppDrawer(),
             appBar: AppBar(
+              leading: Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu_rounded),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
