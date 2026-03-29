@@ -20,6 +20,7 @@ import '../screens/live_feed_screen.dart';
 import '../screens/soil/soil_measurements_list_screen.dart';
 import '../screens/security/incident_history_screen.dart';
 import '../screens/shorts_screen.dart';
+import '../screens/community_feed_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -188,6 +189,21 @@ class AppDrawer extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const ShortsScreen()),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.forum_rounded,
+                    iconColor: const Color(0xFF0E7A43),
+                    title: 'Community Feed',
+                    subtitle: 'Posts, votes, and discussions',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CommunityFeedScreen(),
+                        ),
                       );
                     },
                   ),

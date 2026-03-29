@@ -43,6 +43,7 @@ import 'agricultural_news_screen.dart';
 import 'package:frontend_pim/screens/parcel_list_screen.dart';
 import 'plant_doctor_screen.dart';
 import 'shorts_screen.dart';
+import 'community_feed_screen.dart';
 
 /// Main home screen displaying the farm dashboard
 class HomeScreen extends StatefulWidget {
@@ -317,6 +318,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (_) => const ShortsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.forum_rounded,
+                    iconColor: const Color(0xFF0E7A43),
+                    title: 'Community Feed',
+                    subtitle: 'Posts, votes, and discussions',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CommunityFeedScreen(),
                         ),
                       );
                     },
