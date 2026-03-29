@@ -7,6 +7,8 @@ import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../utils/responsive.dart';
 import '../utils/constants.dart';
+import '../utils/farm_mood_calculator.dart';
+import '../utils/plant_message_generator.dart';
 import '../models/animal.dart';
 import '../models/alert_item.dart';
 import '../models/weather_info.dart';
@@ -20,6 +22,7 @@ import '../services/soil_repository.dart';
 import '../widgets/metric_card.dart';
 import '../widgets/gradient_container.dart';
 import '../widgets/security_alert_overlay.dart';
+import '../widgets/unified_farm_status_card.dart';
 import 'soil/soil_measurements_list_screen.dart';
 import 'animals/animal_list_screen.dart';
 import 'animals/animal_dashboard_screen.dart';
@@ -69,6 +72,10 @@ class _HomeScreenState extends State<HomeScreen> {
   double? _soilPh;
   int _totalCrops = 0;
   bool _isLoadingSoilCrop = true;
+  
+  // Farm mood data
+  FarmMoodData? _farmMoodData;
+  String? _plantMessage;
   
   // Parcel management
   Parcel? _selectedParcel;
@@ -123,24 +130,25 @@ class _HomeScreenState extends State<HomeScreen> {
     
     debugPrint('🔄 Parcel provider changed: ${parcels.length} parcels available');
     
-    // If selected parcel was deleted, clear it or select the first one
-    if (_selectedParcel != null && !parcels.any((p) => p.id == _selectedParcel!.id)) {
-      debugPrint('⚠️ Selected parcel was deleted: ${_selectedParcel!.id}');
-      if (mounted) {
+    // Defer state updates to after the build phase
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      
+      // If selected parcel was deleted, clear it or select the first one
+      if (_selectedParcel != null && !parcels.any((p) => p.id == _selectedParcel!.id)) {
+        debugPrint('⚠️ Selected parcel was deleted: ${_selectedParcel!.id}');
         setState(() {
           _selectedParcel = parcels.isNotEmpty ? parcels.first : null;
         });
-      }
-      // Reload data for the new selected parcel
-      if (_selectedParcel != null) {
-        debugPrint('📍 Auto-selected new parcel: ${_selectedParcel!.id}');
-        _fetchWeatherForParcel(_selectedParcel!.id);
-        _fetchAnimalsForField(_selectedParcel!.id);
-        _fetchSoilAndCropData();
-      } else {
-        // All parcels deleted, clear data
-        debugPrint('🗑️ All parcels deleted, clearing data');
-        if (mounted) {
+        // Reload data for the new selected parcel
+        if (_selectedParcel != null) {
+          debugPrint('📍 Auto-selected new parcel: ${_selectedParcel!.id}');
+          _fetchWeatherForParcel(_selectedParcel!.id);
+          _fetchAnimalsForField(_selectedParcel!.id);
+          _fetchSoilAndCropData();
+        } else {
+          // All parcels deleted, clear data
+          debugPrint('🗑️ All parcels deleted, clearing data');
           setState(() {
             _soilPh = null;
             _totalCrops = 0;
@@ -148,21 +156,19 @@ class _HomeScreenState extends State<HomeScreen> {
             animals = [];
           });
         }
-      }
-    } else if (_selectedParcel == null && parcels.isNotEmpty) {
-      // If no parcel was selected but parcels are now available, select the first one
-      debugPrint('📍 No parcel selected, auto-selecting first parcel');
-      if (mounted) {
+      } else if (_selectedParcel == null && parcels.isNotEmpty) {
+        // If no parcel was selected but parcels are now available, select the first one
+        debugPrint('📍 No parcel selected, auto-selecting first parcel');
         setState(() {
           _selectedParcel = parcels.first;
         });
+        _fetchWeatherForParcel(_selectedParcel!.id);
+        _fetchAnimalsForField(_selectedParcel!.id);
+        _fetchSoilAndCropData();
       }
-      _fetchWeatherForParcel(_selectedParcel!.id);
-      _fetchAnimalsForField(_selectedParcel!.id);
-      _fetchSoilAndCropData();
-    }
-    
-    debugPrint('Parcel provider changed, selected: ${_selectedParcel?.location}');
+      
+      debugPrint('Parcel provider changed, selected: ${_selectedParcel?.location}');
+    });
   }
 
   @override
@@ -280,9 +286,24 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint('✅ Data fetched: soilPh=${soilMeasurement?.ph}, crops count=${parcel.crops.length}');
       
       if (mounted) {
+        // Calculate soil health score and wilting risk from measurement
+        final calculatedData = _calculateSoilMetrics(soilMeasurement);
+        
+        // Calculate farm mood
+        final farmScore = calculateFarmScore(
+          soilHealthScore: calculatedData['healthScore'] as int,
+          wiltingRisk: calculatedData['wiltingRisk'] as String,
+        );
+        final moodData = getMoodData(farmScore);
+        
+        // Generate plant message based on mood
+        final plantMessage = generatePlantMessage(moodData.mood);
+        
         setState(() {
           _soilPh = soilMeasurement?.ph;
           _totalCrops = parcel.crops.length;
+          _farmMoodData = moodData;
+          _plantMessage = plantMessage;
           _isLoadingSoilCrop = false;
         });
       }
@@ -292,6 +313,92 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() => _isLoadingSoilCrop = false);
       }
     }
+  }
+  
+  /// Calculate soil health score (0-100) and wilting risk from soil measurement
+  /// Score is based on pH, moisture, and nutrient levels
+  Map<String, dynamic> _calculateSoilMetrics(dynamic soilMeasurement) {
+    if (soilMeasurement == null) {
+      return {'healthScore': 50, 'wiltingRisk': 'moderate'};
+    }
+
+    // Extract values
+    final ph = (soilMeasurement.ph as num?)?.toDouble() ?? 6.5;
+    final moisture = (soilMeasurement.soilMoisture as num?)?.toDouble() ?? 50.0;
+    final temp = (soilMeasurement.temperature as num?)?.toDouble() ?? 20.0;
+    
+    // Extract nutrients (handles both Map and JSON)
+    int nitrogen = 0;
+    int phosphorus = 0;
+    int potassium = 0;
+    
+    final nutrients = soilMeasurement.nutrients;
+    if (nutrients is Map) {
+      nitrogen = (nutrients['nitrogen'] as num?)?.toInt() ?? 0;
+      phosphorus = (nutrients['phosphorus'] as num?)?.toInt() ?? 0;
+      potassium = (nutrients['potassium'] as num?)?.toInt() ?? 0;
+    }
+    
+    // Calculate pH score (ideal range 6.0-7.5)
+    int phScore = 50;
+    if (ph >= 6.0 && ph <= 7.5) {
+      phScore = 100;
+    } else if (ph >= 5.5 && ph <= 8.0) {
+      phScore = 75;
+    } else if (ph >= 5.0 && ph <= 8.5) {
+      phScore = 50;
+    } else {
+      phScore = 25;
+    }
+    
+    // Calculate moisture score (ideal range 30-80%)
+    int moistureScore = 50;
+    if (moisture >= 30 && moisture <= 80) {
+      moistureScore = 100;
+    } else if (moisture >= 20 && moisture <= 90) {
+      moistureScore = 75;
+    } else if (moisture >= 10 && moisture <= 95) {
+      moistureScore = 50;
+    } else {
+      moistureScore = 25;
+    }
+    
+    // Determine wilting risk based on moisture
+    String wiltingRisk = 'moderate';
+    if (moisture < 20) {
+      wiltingRisk = 'high'; // Dry soil, high wilting risk
+    } else if (moisture >= 20 && moisture <= 70) {
+      wiltingRisk = 'low'; // Good moisture, low risk
+    } else {
+      wiltingRisk = 'moderate'; // Too wet may cause root problems
+    }
+    
+    // Calculate nutrient score (ideally N>=20, P>=15, K>=20)
+    int nutrientScore = 50;
+    final avgNutrient = (nitrogen + phosphorus + potassium) / 3;
+    if (avgNutrient >= 20) {
+      nutrientScore = 100;
+    } else if (avgNutrient >= 15) {
+      nutrientScore = 75;
+    } else if (avgNutrient >= 10) {
+      nutrientScore = 50;
+    } else {
+      nutrientScore = 25;
+    }
+    
+    // Calculate overall health score (weighted average)
+    final healthScore = ((phScore * 0.25) +
+            (moistureScore * 0.35) +
+            (nutrientScore * 0.25) +
+            ((temp >= 15 && temp <= 30 ? 100 : 50) * 0.15))
+        .toInt();
+    
+    debugPrint('📊 Soil Metrics: pH=$ph (score=$phScore), Moisture=$moisture% (score=$moistureScore), Nutrients=$avgNutrient (score=$nutrientScore), Health=$healthScore, Wilting=$wiltingRisk');
+    
+    return {
+      'healthScore': healthScore.clamp(0, 100),
+      'wiltingRisk': wiltingRisk,
+    };
   }
 
   void _initSocket() {
@@ -341,6 +448,7 @@ class _HomeScreenState extends State<HomeScreen> {
               slivers: [
                 _buildHeader(),
                 SliverToBoxAdapter(child: _buildParcelSelectorButton()),
+                SliverToBoxAdapter(child: _buildUnifiedFarmStatus()),
                 SliverToBoxAdapter(child: _buildQuickAccessButtons()),
                 SliverToBoxAdapter(child: _buildWeatherSoilCard()),
                 SliverToBoxAdapter(child: _buildFarmReelsCard()),
@@ -1012,7 +1120,111 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ─────────────────────────────────────────────
-  // QUICK ACCESS BUTTONS
+  // FARM MOOD CARD
+  // ─────────────────────────────────────────────
+  // ─────────────────────────────────────────────
+  // UNIFIED FARM STATUS CARD
+  // Displays real-time data from database:
+  // - Soil health score (from soil measurements)
+  // - Wilting risk (from soil moisture readings)
+  // - Farm mood emoji & label
+  // - Plant message (dynamic based on farm conditions)
+  // ─────────────────────────────────────────────
+  Widget _buildUnifiedFarmStatus() {
+    // Show loading skeleton while fetching from database
+    if (_isLoadingSoilCrop) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Skeleton loader
+              Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 12,
+                          width: 100,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          height: 24,
+                          width: 150,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                height: 8,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Hide card if no data from database
+    if (_farmMoodData == null || _plantMessage == null) {
+      return const SizedBox.shrink();
+    }
+
+    // Display card with data fetched from database
+    return UnifiedFarmStatusCard(
+      farmScore: _farmMoodData!.score,
+      mood: _farmMoodData!.mood,
+      emoji: _farmMoodData!.emoji,
+      message: _plantMessage!,
+    );
+  }
+
   // ─────────────────────────────────────────────
   // QUICK ACCESS BUTTONS
   // ─────────────────────────────────────────────
