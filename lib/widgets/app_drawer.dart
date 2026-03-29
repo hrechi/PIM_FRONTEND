@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../screens/agricultural_news_screen.dart';
+import '../screens/harvest_analytics_screen.dart';
+import '../screens/crop_calendar_screen.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../screens/animals/animal_list_screen.dart';
@@ -13,6 +15,9 @@ import '../screens/plant_doctor_screen.dart';
 import '../screens/staff_list_screen.dart';
 import '../screens/add_staff_screen.dart';
 import '../screens/incident_history_screen.dart';
+import '../screens/weather_screen.dart';
+import '../screens/irrigation_scheduler_screen.dart';
+import '../screens/live_feed_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -89,6 +94,66 @@ class AppDrawer extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const PlantDoctorScreen()),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.bar_chart_rounded,
+                    iconColor: const Color(0xFF2E7D32),
+                    title: 'Harvest Analytics',
+                    subtitle: 'Yield trends & insights',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const HarvestAnalyticsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.calendar_month_rounded,
+                    iconColor: AppColorPalette.mistyBlue,
+                    title: 'Crop Calendar',
+                    subtitle: 'Planting & Harvest timeline',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CropCalendarScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.cloud,
+                    iconColor: const Color(0xFF57A0D3),
+                    title: 'Weather & Advice',
+                    subtitle: 'Forecast & recommendations',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const WeatherScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.water_drop,
+                    iconColor: const Color(0xFF2196F3),
+                    title: 'Irrigation Scheduler',
+                    subtitle: 'Smart 7-day irrigation plan',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const IrrigationSchedulerScreen(),
+                        ),
                       );
                     },
                   ),
@@ -213,6 +278,19 @@ class AppDrawer extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const IncidentHistoryScreen()),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.videocam_rounded,
+                    iconColor: AppColorPalette.emeraldGreen,
+                    title: 'Live Feed',
+                    subtitle: 'View live camera',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LiveFeedScreen()),
                       );
                     },
                   ),

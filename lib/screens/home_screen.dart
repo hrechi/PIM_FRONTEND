@@ -32,7 +32,9 @@ import 'weather_screen.dart';
 import 'irrigation_scheduler_screen.dart';
 import 'package:frontend_pim/screens/parcel_list_screen.dart';
 import 'plant_doctor_screen.dart';
+import 'harvest_analytics_screen.dart';
 import 'agricultural_news_screen.dart';
+import 'crop_calendar_screen.dart';
 
 /// Main home screen displaying the farm dashboard
 class HomeScreen extends StatefulWidget {
@@ -231,6 +233,36 @@ class _HomeScreenState extends State<HomeScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (_) => const PlantDoctorScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.bar_chart_rounded,
+                    iconColor: const Color(0xFF2E7D32),
+                    title: 'Harvest Analytics',
+                    subtitle: 'Yield trends & insights',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const HarvestAnalyticsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.calendar_month_rounded,
+                    iconColor: AppColorPalette.mistyBlue,
+                    title: 'Crop Calendar',
+                    subtitle: 'Planting & Harvest timeline',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CropCalendarScreen(),
                         ),
                       );
                     },
