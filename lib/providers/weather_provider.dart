@@ -47,10 +47,19 @@ class WeatherProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _fields = await _fieldService.getFields();
-      // Auto-select the first field if none selected
-      if (_selectedFieldId == null && _fields.isNotEmpty) {
-        _selectedFieldId = _fields.first.id;
+      final fetchedFields = await _fieldService.getFields();
+
+      // Keep DropdownButton values unique by ID.
+      final uniqueById = <String, FieldModel>{
+        for (final field in fetchedFields) field.id: field,
+      };
+      _fields = uniqueById.values.toList();
+
+      // Auto-select first valid field, or preserve current selection if still valid.
+      final hasValidSelection = _selectedFieldId != null &&
+          _fields.any((f) => f.id == _selectedFieldId);
+      if (!hasValidSelection) {
+        _selectedFieldId = _fields.isNotEmpty ? _fields.first.id : null;
       }
     } catch (e) {
       debugPrint('Error loading fields: $e');

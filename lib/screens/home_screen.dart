@@ -15,12 +15,11 @@ import '../models/weather_info.dart';
 import '../models/parcel.dart';
 
 import '../providers/parcel_provider.dart';
+import '../providers/weather_provider.dart';
 import '../services/parcel_crud_service.dart';
 import '../services/animal_service.dart';
-import '../services/weather_service.dart';
 import '../services/soil_repository.dart';
 import '../widgets/metric_card.dart';
-import '../widgets/gradient_container.dart';
 import '../widgets/security_alert_overlay.dart';
 import '../widgets/unified_farm_status_card.dart';
 import 'soil/soil_measurements_list_screen.dart';
@@ -62,7 +61,6 @@ class _HomeScreenState extends State<HomeScreen> {
   late List<Animal> animals;
 
   final AnimalService _animalService = AnimalService();
-  final WeatherService _weatherService = WeatherService();
   final ParcelCrudService _parcelService = ParcelCrudService();
   final SoilRepository _soilRepository = SoilRepository();
 
@@ -118,6 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
       parcelProvider.addListener(_onParcelProviderChanged);
       
       // Load initial data
+      _syncWeatherWithAdviceField();
       _loadParcels();
       _fetchDashboardStats();
       _fetchAnimals();
@@ -144,7 +143,6 @@ class _HomeScreenState extends State<HomeScreen> {
         // Reload data for the new selected parcel
         if (_selectedParcel != null) {
           debugPrint('📍 Auto-selected new parcel: ${_selectedParcel!.id}');
-          _fetchWeatherForParcel(_selectedParcel!.id);
           _fetchAnimalsForField(_selectedParcel!.id);
           _fetchSoilAndCropData();
         } else {
@@ -163,7 +161,6 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _selectedParcel = parcels.first;
         });
-        _fetchWeatherForParcel(_selectedParcel!.id);
         _fetchAnimalsForField(_selectedParcel!.id);
         _fetchSoilAndCropData();
       }
@@ -196,8 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _selectedParcel = parcelProvider.parcels.first;
         });
-        // Fetch weather, animals, and soil/crop data for the selected parcel
-        await _fetchWeatherForParcel(_selectedParcel!.id);
+        // Fetch animals and soil/crop data for the selected parcel
         await _fetchAnimalsForField(_selectedParcel!.id);
         await _fetchSoilAndCropData();
       }
@@ -206,17 +202,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
   
-  Future<void> _fetchWeatherForParcel(String fieldId) async {
+  Future<void> _syncWeatherWithAdviceField() async {
     if (!mounted) return;
+
     try {
-      final forecastResponse = await _weatherService.getWeatherForField(fieldId);
+      final weatherProvider = context.read<WeatherProvider>();
+
+      if (weatherProvider.fields.isEmpty) {
+        await weatherProvider.loadFields();
+      }
+
+      final selectedFieldId = weatherProvider.selectedFieldId;
+      if (selectedFieldId != null) {
+        await weatherProvider.fetchWeather(selectedFieldId);
+      }
+
       if (mounted) {
         setState(() {
-          weatherInfo = forecastResponse.current;
+          weatherInfo = weatherProvider.forecast?.current;
         });
       }
     } catch (e) {
-      debugPrint('Error fetching weather: $e');
+      debugPrint('Error syncing weather with advice field: $e');
     }
   }
   
@@ -1076,8 +1083,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           onTap: () {
                             setState(() => _selectedParcel = parcel);
                             Navigator.pop(context);
-                            // Fetch weather, animals, and soil/crop data for the newly selected parcel
-                            _fetchWeatherForParcel(parcel.id);
+                            // Fetch animals and soil/crop data for the newly selected parcel
                             _fetchAnimalsForField(parcel.id);
                             _fetchSoilAndCropData();
                           },
@@ -1248,6 +1254,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final responsivePadding = Responsive.horizontalPadding(context);
     final responsiveVertical = Responsive.verticalPadding(context);
     final isSmall = Responsive.isMobile(context);
+    final weatherProvider = context.watch<WeatherProvider>();
+    final displayedWeather = weatherProvider.forecast?.current ?? weatherInfo;
     final buttonPadding = isSmall ? 8.0 : 12.0;
     final fontSize = isSmall ? 12.0 : 14.0;
     final iconSize = isSmall ? 18.0 : 20.0;
@@ -1307,7 +1315,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           
           // Weather Strip
-          if (weatherInfo != null)
+          if (displayedWeather != null)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -1315,21 +1323,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildWeatherChip(
                     icon: Icons.air,
                     label: 'Wind',
-                    value: '${(weatherInfo!.windSpeed).toStringAsFixed(1)} km/h',
+                    value: '${(displayedWeather.windSpeed).toStringAsFixed(1)} km/h',
                     color: const Color(0xFF2196F3),
                   ),
                   const SizedBox(width: 8),
                   _buildWeatherChip(
                     icon: Icons.thermostat,
                     label: 'Temp Δ',
-                    value: '+${(weatherInfo!.temperature - 15).toStringAsFixed(1)}°',
+                    value: '+${(displayedWeather.temperature - 15).toStringAsFixed(1)}°',
                     color: const Color(0xFFFF6B35),
                   ),
                   const SizedBox(width: 8),
                   _buildWeatherChip(
                     icon: Icons.opacity,
                     label: 'Humidity',
-                    value: '${weatherInfo!.humidity.toStringAsFixed(0)}%',
+                    value: '${displayedWeather.humidity.toStringAsFixed(0)}%',
                     color: const Color(0xFF4ECDC4),
                   ),
                 ],
@@ -1607,155 +1615,258 @@ class _HomeScreenState extends State<HomeScreen> {
   // Inner InkWell → SoilMeasurementsListScreen
   // ─────────────────────────────────────────────
   Widget _buildWeatherSoilCard() {
-    // Show loading state if weather data is not available yet
-    if (weatherInfo == null) {
-      return GradientContainer.fieldFresh(
-        margin: EdgeInsets.symmetric(
-          horizontal: Responsive.horizontalPadding(context),
-          vertical: Responsive.verticalPadding(context),
-        ),
-        padding: EdgeInsets.all(Responsive.cardPadding(context)),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(color: AppColorPalette.white),
-              const SizedBox(height: 12),
-              Text(
-                'Loading weather data...',
-                style: AppTextStyles.bodyMedium(
-                    color: AppColorPalette.white.withOpacity(0.9)),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+    return Consumer<WeatherProvider>(
+      builder: (context, weatherProvider, _) {
+        final forecast = weatherProvider.forecast;
+        final current = forecast?.current ?? weatherInfo;
+        final fieldName = weatherProvider.selectedField?.name ??
+            forecast?.fieldName ??
+            'Selected field';
 
-    return GestureDetector(
-      onTap: () => Navigator.push(
-          context, MaterialPageRoute(builder: (_) => const WeatherScreen())),
-      child: GradientContainer.fieldFresh(
-        margin: EdgeInsets.symmetric(
-          horizontal: Responsive.horizontalPadding(context),
-          vertical: Responsive.verticalPadding(context),
-        ),
-        padding: EdgeInsets.all(Responsive.cardPadding(context)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Current Conditions',
-                        style: AppTextStyles.bodyMedium(
-                            color: AppColorPalette.white.withOpacity(0.9)),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        weatherInfo!.formattedTemperature,
-                        style: AppTextStyles.displayLarge(
-                                color: AppColorPalette.white)
-                            .copyWith(fontSize: 56),
-                      ),
-                      Text(
-                        weatherInfo!.condition,
-                        style: AppTextStyles.bodyLarge(
-                                color: AppColorPalette.white)
-                            .copyWith(fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColorPalette.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(weatherInfo!.weatherIcon,
-                      style: const TextStyle(fontSize: 48)),
+        if (weatherProvider.isLoadingFields ||
+            (weatherProvider.isLoading && current == null)) {
+          return Container(
+            margin: EdgeInsets.symmetric(
+              horizontal: Responsive.horizontalPadding(context),
+              vertical: Responsive.verticalPadding(context),
+            ),
+            padding: EdgeInsets.all(Responsive.cardPadding(context)),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF57A0D3), Color(0xFF87CEEB)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF57A0D3).withValues(alpha: 0.28),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),
+            child: const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
+          );
+        }
 
-            const SizedBox(height: 24),
-
-            InkWell(
-              onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const SoilMeasurementsListScreen())),
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColorPalette.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: AppColorPalette.white.withOpacity(0.3), width: 1),
+        if (weatherProvider.error != null && current == null) {
+          return Container(
+            margin: EdgeInsets.symmetric(
+              horizontal: Responsive.horizontalPadding(context),
+              vertical: Responsive.verticalPadding(context),
+            ),
+            padding: EdgeInsets.all(Responsive.cardPadding(context)),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF7D9FB6), Color(0xFF9EB7C8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Weather unavailable',
+                  style: AppTextStyles.h3(color: Colors.white),
                 ),
-                child: Row(
+                const SizedBox(height: 8),
+                Text(
+                  weatherProvider.error!,
+                  style: AppTextStyles.bodySmall(
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: _syncWeatherWithAdviceField,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (current == null) {
+          return GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const WeatherScreen()),
+            ),
+            child: Container(
+              margin: EdgeInsets.symmetric(
+                horizontal: Responsive.horizontalPadding(context),
+                vertical: Responsive.verticalPadding(context),
+              ),
+              padding: EdgeInsets.all(Responsive.cardPadding(context)),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF57A0D3), Color(0xFF87CEEB)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Open Weather & Advice to choose a field',
+                style: AppTextStyles.bodyMedium(color: Colors.white),
+              ),
+            ),
+          );
+        }
+
+        final skyGradient = _skyGradientForCondition(current.condition);
+
+        return GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const WeatherScreen()),
+          ),
+          child: Container(
+            margin: EdgeInsets.symmetric(
+              horizontal: Responsive.horizontalPadding(context),
+              vertical: Responsive.verticalPadding(context),
+            ),
+            padding: EdgeInsets.all(Responsive.cardPadding(context)),
+            decoration: BoxDecoration(
+              gradient: skyGradient,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: _skyShadowColorForCondition(current.condition)
+                      .withValues(alpha: 0.30),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  fieldName.toUpperCase(),
+                  style: AppTextStyles.caption(color: Colors.white70)
+                      .copyWith(letterSpacing: 1.4, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.water_drop,
-                        color: AppColorPalette.white, size: 32),
-                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Soil Moisture',
-                            style: AppTextStyles.bodySmall(
-                                color: AppColorPalette.white.withOpacity(0.9)),
+                            '${current.temperature.toStringAsFixed(0)}°',
+                            style: AppTextStyles.displayLarge(color: Colors.white)
+                                .copyWith(fontSize: 58, height: 1),
                           ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Text(
-                                weatherInfo!.formattedSoilMoisture,
-                                style: AppTextStyles.h2(
-                                        color: AppColorPalette.white)
-                                    .copyWith(fontSize: 28),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: weatherInfo!.isSoilMoistureHealthy
-                                      ? AppColorPalette.success
-                                      : AppColorPalette.warning,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  weatherInfo!.soilMoistureStatus,
-                                  style: AppTextStyles.caption(
-                                          color: AppColorPalette.white)
-                                      .copyWith(fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ],
+                          const SizedBox(height: 6),
+                          Text(
+                            current.condition,
+                            style: AppTextStyles.bodyLarge(color: Colors.white)
+                                .copyWith(fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
                     ),
-                    Icon(Icons.arrow_forward_ios,
-                        color: AppColorPalette.white, size: 20),
+                    Text(current.weatherIcon, style: const TextStyle(fontSize: 50)),
                   ],
                 ),
-              ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.26)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildWeatherStat('Humidity', '${current.humidity}%'),
+                      _buildWeatherStat('Wind', '${current.windSpeed.toStringAsFixed(1)} km/h'),
+                      _buildWeatherStat('Rain', '${current.precipitation.toStringAsFixed(1)} mm'),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
+  }
+
+  Widget _buildWeatherStat(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.caption(color: Colors.white70),
+        ),
+        Text(
+          value,
+          style: AppTextStyles.bodyMedium(color: Colors.white)
+              .copyWith(fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
+  }
+
+  LinearGradient _skyGradientForCondition(String condition) {
+    final normalized = condition.toLowerCase();
+
+    if (normalized.contains('thunder') || normalized.contains('storm')) {
+      return const LinearGradient(
+        colors: [Color(0xFF4B5B7E), Color(0xFF283248)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+    }
+
+    if (normalized.contains('rain') || normalized.contains('drizzle')) {
+      return const LinearGradient(
+        colors: [Color(0xFF5F86A5), Color(0xFF3A5F7D)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+    }
+
+    if (normalized.contains('cloud') || normalized.contains('overcast') || normalized.contains('fog')) {
+      return const LinearGradient(
+        colors: [Color(0xFF86A4BA), Color(0xFF64839A)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+    }
+
+    return const LinearGradient(
+      colors: [Color(0xFF57A0D3), Color(0xFF87CEEB)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+  }
+
+  Color _skyShadowColorForCondition(String condition) {
+    final normalized = condition.toLowerCase();
+    if (normalized.contains('thunder') || normalized.contains('storm')) {
+      return const Color(0xFF283248);
+    }
+    if (normalized.contains('rain') || normalized.contains('drizzle')) {
+      return const Color(0xFF3A5F7D);
+    }
+    if (normalized.contains('cloud') || normalized.contains('overcast') || normalized.contains('fog')) {
+      return const Color(0xFF64839A);
+    }
+    return const Color(0xFF57A0D3);
   }
 
   // ─────────────────────────────────────────────
