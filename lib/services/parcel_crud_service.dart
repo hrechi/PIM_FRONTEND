@@ -1,5 +1,7 @@
 import '../models/parcel.dart';
 import '../models/crop_suitability.dart';
+import '../models/crop_calendar_model.dart';
+import '../models/parcel_health_score_model.dart';
 import 'api_service.dart';
 
 class ParcelCrudService {
@@ -65,5 +67,22 @@ class ParcelCrudService {
   Future<String> getAiAdvice(String parcelId) async {
     final response = await ApiService.get('$_endpoint/$parcelId/ai-advice', withAuth: true);
     return response['advice'] as String? ?? 'No advice available.';
+  }
+
+  Future<List<CropCalendarItem>> getParcelCalendar(String parcelId) async {
+    final response = await ApiService.get('/calendar/parcel/$parcelId', withAuth: true);
+    final List<dynamic> data = response;
+    return data.map((json) => CropCalendarItem.fromJson(json)).toList();
+  }
+
+  Future<List<CropCalendarItem>> getGlobalCalendar() async {
+    final response = await ApiService.get('/calendar/all', withAuth: true);
+    final List<dynamic> data = response;
+    return data.map((json) => CropCalendarItem.fromJson(json)).toList();
+  }
+
+  Future<ParcelHealthScore> getParcelHealthScore(String parcelId) async {
+    final response = await ApiService.get('/parcels/$parcelId/health-score', withAuth: true);
+    return ParcelHealthScore.fromJson(response);
   }
 }
