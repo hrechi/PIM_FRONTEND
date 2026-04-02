@@ -48,7 +48,7 @@ import 'package:frontend_pim/screens/parcel_list_screen.dart';
 import 'plant_doctor_screen.dart';
 import 'shorts_screen.dart';
 import 'community_feed_screen.dart';
-
+ 
 /// Main home screen displaying the farm dashboard
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
