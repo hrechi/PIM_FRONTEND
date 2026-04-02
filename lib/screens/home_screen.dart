@@ -42,6 +42,8 @@ import 'security/acoustic_monitor_screen.dart';
 import 'weather_screen.dart';
 import 'irrigation_scheduler_screen.dart';
 import 'agricultural_news_screen.dart';
+import 'harvest_analytics_screen.dart';
+import 'crop_calendar_screen.dart';
 import 'package:frontend_pim/screens/parcel_list_screen.dart';
 import 'plant_doctor_screen.dart';
 import 'shorts_screen.dart';
@@ -647,21 +649,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const ShortsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.forum_rounded,
-                    iconColor: const Color(0xFF0E7A43),
-                    title: 'Community Feed',
-                    subtitle: 'Posts, votes, and discussions',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
                           builder: (_) => const CommunityFeedScreen(),
                         ),
                       );
@@ -680,17 +667,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           builder: (_) => const IrrigationSchedulerScreen(),
                         ),
                       );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.science,
-                    iconColor: AppColorPalette.fieldFreshStart,
-                    title: 'Soil Measurements',
-                    subtitle: 'Track soil health data',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(context,
-                          MaterialPageRoute(builder: (_) => const IrrigationSchedulerScreen()));
                     },
                   ),
                   _buildDrawerItem(

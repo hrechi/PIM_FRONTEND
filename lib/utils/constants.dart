@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 class AppConfig {
   static const String serverHost = '192.168.1.124'; // your PC's WiFi IP
   static const int serverPort = 3000;
+  static const int plantDoctorPort = 8012;
 }
 
 class AppColors {
