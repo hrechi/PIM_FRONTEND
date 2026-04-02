@@ -4,6 +4,8 @@ import '../../models/animal.dart';
 import '../../services/animal_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/app_drawer.dart';
+import '../../services/field_service.dart';
+import '../../models/field_model.dart';
 import 'add_animal_screen.dart';
 import 'animal_details_screen.dart';
 
@@ -16,10 +18,13 @@ class AnimalListScreen extends StatefulWidget {
 
 class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerProviderStateMixin {
   final AnimalService _animalService = AnimalService();
+  final FieldService _fieldService = FieldService();
   late Future<List<Animal>> _animalsFuture;
   late Future<Map<String, dynamic>> _statsFuture;
   late TabController _tabController;
   String? _selectedType;
+  String? _selectedFieldId;
+  List<FieldModel> _fields = [];
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
@@ -27,7 +32,19 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _fetchFields();
     _refreshData();
+  }
+
+  Future<void> _fetchFields() async {
+    try {
+      final fields = await _fieldService.getFields();
+      setState(() {
+        _fields = fields;
+      });
+    } catch (e) {
+      debugPrint('Error fetching fields: $e');
+    }
   }
 
   @override
@@ -39,8 +56,11 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
 
   void _refreshData() {
     setState(() {
-      _animalsFuture = _animalService.getAnimals(animalType: _selectedType);
-      _statsFuture = _animalService.getStatistics();
+      _animalsFuture = _animalService.getAnimals(
+        animalType: _selectedType,
+        fieldId: _selectedFieldId,
+      );
+      _statsFuture = _animalService.getStatistics(fieldId: _selectedFieldId);
     });
   }
 
@@ -55,6 +75,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
           child: Column(
             children: [
               _buildAppBar(),
+              _buildFieldFilter(),
               _buildSearchSection(),
               _buildCategoryFilters(),
               _buildStatusTabs(),
@@ -148,39 +169,15 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
                   ),
                 ),
               ),
-              if (Navigator.canPop(context))
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    margin: const EdgeInsets.only(right: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      color: Color(0xFF141E15),
-                      size: 20,
-                    ),
-                  ),
-                ),
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                  color: AppColors.mistBlue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Symbols.pets,
-                  color: AppColors.primaryGreen,
+                  color: AppColors.mistBlue,
                   size: 24,
                 ),
               ),
@@ -283,7 +280,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
                 });
               },
               backgroundColor: Colors.white,
-              selectedColor: AppColors.primaryGreen,
+              selectedColor: AppColors.mistBlue,
               labelStyle: TextStyle(
                 color: isSelected ? Colors.white : const Color(0xFF64748B),
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
@@ -292,7 +289,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(
-                  color: isSelected ? AppColors.primaryGreen : const Color(0xFFE2E8F0),
+                  color: isSelected ? AppColors.mistBlue : const Color(0xFFE2E8F0),
                   width: 1,
                 ),
               ),
@@ -320,11 +317,11 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
           Tab(text: 'Sold'),
           Tab(text: 'Deceased'),
         ],
-        labelColor: AppColors.primaryGreen,
+        labelColor: AppColors.mistBlue,
         unselectedLabelColor: Color(0xFF64748B),
         labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-        indicatorColor: AppColors.primaryGreen,
+        indicatorColor: AppColors.mistBlue,
         indicatorWeight: 3,
         indicatorSize: TabBarIndicatorSize.tab,
       ),
@@ -393,7 +390,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
               children: [
                 Opacity(
                   opacity: 0.2,
-                  child: Icon(Symbols.inventory_2, size: 80, color: AppColors.primaryGreen),
+                  child: Icon(Symbols.inventory_2, size: 80, color: AppColors.mistBlue),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -511,7 +508,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
                               const Text(
                                 'View Details',
                                 style: TextStyle(
-                                  color: AppColors.primaryGreen,
+                                  color: AppColors.mistBlue,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
                                 ),
@@ -519,7 +516,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
                               const SizedBox(width: 4),
                               const Icon(
                                 Symbols.chevron_right,
-                                color: AppColors.primaryGreen,
+                                color: AppColors.mistBlue,
                                 size: 16,
                               ),
                             ],
@@ -563,14 +560,14 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
       child: Icon(
         _getAnimalIcon(type),
         size: 40,
-        color: AppColors.primaryGreen.withValues(alpha: 0.3),
+        color: AppColors.mistBlue.withValues(alpha: 0.3),
       ),
     );
   }
 
   Widget _buildHealthBadge(int score) {
-    Color bg = const Color(0xFFF0FDF4); // Default Greenish
-    Color text = AppColors.primaryGreen;
+    Color bg = AppColors.mistBlue.withValues(alpha: 0.1); // Updated to match mistBlue
+    Color text = AppColors.mistBlue;
     
     if (score < 50) {
       bg = const Color(0xFFFEF2F2); // Redish
@@ -613,7 +610,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         icon: const Icon(Icons.add, size: 28),
-        backgroundColor: AppColors.primaryGreen,
+        backgroundColor: AppColors.mistBlue,
         foregroundColor: Colors.white,
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
@@ -642,5 +639,51 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
       default:
         return const Color(0xFF94A3B8);
     }
+  }
+
+  Widget _buildFieldFilter() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: _selectedFieldId,
+            isExpanded: true,
+            hint: const Text('All Farms / Fields', style: TextStyle(color: Color(0xFF64748B), fontSize: 14)),
+            icon: const Icon(Symbols.filter_list, color: AppColors.mistBlue),
+            items: [
+              const DropdownMenuItem<String>(
+                value: null,
+                child: Text('All Farms / Fields'),
+              ),
+              ..._fields.map((field) {
+                return DropdownMenuItem<String>(
+                  value: field.id,
+                  child: Text(field.name),
+                );
+              }),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _selectedFieldId = value;
+                _refreshData();
+              });
+            },
+          ),
+        ),
+      ),
+    );
   }
 }

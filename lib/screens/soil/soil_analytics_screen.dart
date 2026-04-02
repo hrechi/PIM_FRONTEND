@@ -8,6 +8,7 @@ import '../../models/soil_measurement.dart';
 import '../../models/ai_prediction.dart';
 import '../../widgets/soil/ai_prediction_card.dart';
 import '../../widgets/soil/chart_container.dart';
+import '../../widgets/app_drawer.dart';
 
 
 /// Screen displaying soil analytics and AI predictions
@@ -101,7 +102,14 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColorPalette.wheatWarmClay,
+      drawer: const AppDrawer(),
       appBar: AppBar(
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu_rounded),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -309,6 +317,22 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
             .reduce((a, b) => a + b) /
         historicalData.length;
 
+    // Calculate most common soil type
+    String mostCommonSoilType = 'Unknown';
+    if (historicalData.any((m) => m.soilType != null && m.soilType != 'Unknown')) {
+      final soilTypeCounts = <String, int>{};
+      for (final m in historicalData) {
+        if (m.soilType != null && m.soilType != 'Unknown') {
+          soilTypeCounts[m.soilType!] = (soilTypeCounts[m.soilType!] ?? 0) + 1;
+        }
+      }
+      if (soilTypeCounts.isNotEmpty) {
+        mostCommonSoilType = soilTypeCounts.entries
+            .reduce((a, b) => a.value > b.value ? a : b)
+            .key;
+      }
+    }
+
     final cards = [
       _SummaryCard(
         icon: Icons.science,
@@ -328,20 +352,48 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
         value: '${latestMeasurement.temperature.toStringAsFixed(0)}°C',
         color: AppColorPalette.alertError,
       ),
+      _SummaryCard(
+        icon: Icons.terrain,
+        label: 'Soil Type',
+        value: mostCommonSoilType,
+        color: AppColorPalette.charcoalGreen,
+      ),
     ];
 
-    // Display cards in a row on all screen sizes
+    // Display cards in a responsive grid
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: Responsive.horizontalPadding(context)),
-      child: Row(
-        children: [
-          Expanded(child: cards[0]),
-          SizedBox(width: Responsive.spacing(context, mobile: 8, tablet: 12, desktop: 16)),
-          Expanded(child: cards[1]),
-          SizedBox(width: Responsive.spacing(context, mobile: 8, tablet: 12, desktop: 16)),
-          Expanded(child: cards[2]),
-        ],
-      ),
+      child: Responsive.isMobile(context)
+          ? Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: cards[0]),
+                    SizedBox(width: Responsive.spacing(context, mobile: 8)),
+                    Expanded(child: cards[1]),
+                  ],
+                ),
+                SizedBox(height: Responsive.spacing(context, mobile: 8)),
+                Row(
+                  children: [
+                    Expanded(child: cards[2]),
+                    SizedBox(width: Responsive.spacing(context, mobile: 8)),
+                    Expanded(child: cards[3]),
+                  ],
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Expanded(child: cards[0]),
+                SizedBox(width: Responsive.spacing(context, tablet: 12, desktop: 16)),
+                Expanded(child: cards[1]),
+                SizedBox(width: Responsive.spacing(context, tablet: 12, desktop: 16)),
+                Expanded(child: cards[2]),
+                SizedBox(width: Responsive.spacing(context, tablet: 12, desktop: 16)),
+                Expanded(child: cards[3]),
+              ],
+            ),
     );
   }
 

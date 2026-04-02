@@ -145,25 +145,6 @@ class _AnimalDashboardScreenState extends State<AnimalDashboardScreen> {
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF64748B), size: 20),
-              ),
-            ),
           ],
         ),
       ],
@@ -227,8 +208,8 @@ class _AnimalDashboardScreenState extends State<AnimalDashboardScreen> {
               stats?['totalAnimals']?.toString() ?? '0',
               Symbols.pets,
               'Active',
-              const Color(0xFF22C55E),
-              const Color(0xFFF0FDF4),
+              AppColors.mistBlue,
+              AppColors.mistBlue.withValues(alpha: 0.1),
               subtitle: _getSpeciesDistributionText(stats?['speciesDistribution']),
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AnimalListScreen())),
             ),
@@ -376,7 +357,7 @@ class _AnimalDashboardScreenState extends State<AnimalDashboardScreen> {
           child: const Text(
             'View All',
             style: TextStyle(
-              color: AppColors.primaryGreen,
+              color: AppColors.mistBlue,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -423,7 +404,7 @@ class _AnimalDashboardScreenState extends State<AnimalDashboardScreen> {
                         width: 60,
                         height: 60,
                         color: const Color(0xFFF1F5F9),
-                        child: Icon(Symbols.pets, color: AppColors.primaryGreen.withValues(alpha: 0.3)),
+                        child: Icon(Symbols.pets, color: AppColors.mistBlue.withValues(alpha: 0.3)),
                       ),
               ),
               const SizedBox(width: 16),
@@ -535,11 +516,11 @@ class _AnimalDashboardScreenState extends State<AnimalDashboardScreen> {
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF2F7F34),
+              color: AppColors.mistBlue,
               borderRadius: BorderRadius.circular(32),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF2F7F34).withValues(alpha: 0.3),
+                  color: AppColors.mistBlue.withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -626,7 +607,7 @@ class _AnimalDashboardScreenState extends State<AnimalDashboardScreen> {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF2F7F34),
+                          foregroundColor: AppColors.mistBlue,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           elevation: 0,
@@ -673,7 +654,7 @@ class _AnimalDashboardScreenState extends State<AnimalDashboardScreen> {
   Widget _buildRemindersHeader() {
     return Row(
       children: [
-        const Icon(Symbols.calendar_today, color: AppColors.primaryGreen, size: 22),
+        const Icon(Symbols.calendar_today, color: AppColors.mistBlue, size: 22),
         const SizedBox(width: 8),
         const Text(
           "Today's reminders",

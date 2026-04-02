@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../models/soil_measurement.dart';
 import 'soil_api_service.dart';
 
@@ -36,9 +37,30 @@ class SoilRepository {
     );
   }
 
+  /// Get the latest soil measurement (most recent across all fields)
+  Future<SoilMeasurement?> getLatestMeasurement() async {
+    try {
+      final response = await getMeasurements(
+        limit: 1,
+        page: 1,
+        sortBy: 'createdAt',
+        order: 'DESC',
+      );
+      if (response.data.isNotEmpty) {
+        return response.data.first;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching latest measurement: $e');
+      return null;
+    }
+  }
+
   /// Get a single measurement by ID
   Future<SoilMeasurement> getMeasurementById(String id) async {
-    return await _apiService.getMeasurementById(id);
+    final measurement = await _apiService.getMeasurementById(id);
+    print('📊 Loaded measurement: soilType=${measurement.soilType}, confidence=${measurement.detectionConfidence}, imagePath=${measurement.imagePath}');
+    return measurement;
   }
 
   /// Create a new soil measurement
@@ -64,6 +86,34 @@ class SoilRepository {
     );
 
     return await _apiService.createMeasurement(dto);
+  }
+
+  /// Create a new soil measurement with image upload
+  /// 
+  /// Uploads a soil photo for AI classification
+  Future<SoilMeasurement> createMeasurementWithImage({
+    required String imagePath,
+    required double ph,
+    required double soilMoisture,
+    required double sunlight,
+    required Map<String, dynamic> nutrients,
+    required double temperature,
+    required double latitude,
+    required double longitude,
+    String? fieldId,
+  }) async {
+    final dto = CreateSoilMeasurementDto(
+      ph: ph,
+      soilMoisture: soilMoisture,
+      sunlight: sunlight,
+      nutrients: nutrients,
+      temperature: temperature,
+      latitude: latitude,
+      longitude: longitude,
+      fieldId: fieldId,
+    );
+
+    return await _apiService.createMeasurementWithImage(dto, imagePath);
   }
 
   /// Update an existing measurement

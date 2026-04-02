@@ -1,7 +1,10 @@
+import 'vaccine_models.dart' as vms;
+
 class Animal {
   final String id;
   final String nodeId;
   final String farmerId;
+  final String? fieldId;
   final String name;
   final String animalType; // cow, horse, sheep, dog
   final String? breed;
@@ -67,13 +70,14 @@ class Animal {
 
   // Related models as IDs or placeholder Lists
   // (In a full implementation, these would be separate model classes)
-  final List<VaccineRecord>? vaccineRecords;
-  final List<MedicalEvent>? medicalEvents;
+  final List<vms.VaccineRecord>? vaccineRecords;
+  final List<vms.MedicalEvent>? medicalEvents;
 
   Animal({
     required this.id,
     required this.nodeId,
     required this.farmerId,
+    this.fieldId,
     required this.name,
     required this.animalType,
     this.breed,
@@ -156,6 +160,7 @@ class Animal {
       id: json['id'],
       nodeId: json['nodeId'],
       farmerId: json['farmerId'],
+      fieldId: json['fieldId'],
       name: json['name'],
       animalType: json['animalType'],
       breed: json['breed'],
@@ -204,10 +209,10 @@ class Animal {
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
       vaccineRecords: json['vaccineRecords'] != null 
-          ? (json['vaccineRecords'] as List).map((v) => VaccineRecord.fromJson(v)).toList() 
+          ? (json['vaccineRecords'] as List).map((v) => vms.VaccineRecord.fromJson(v)).toList() 
           : null,
       medicalEvents: json['medicalEvents'] != null 
-          ? (json['medicalEvents'] as List).map((v) => MedicalEvent.fromJson(v)).toList() 
+          ? (json['medicalEvents'] as List).map((v) => vms.MedicalEvent.fromJson(v)).toList() 
           : null,
     );
   }
@@ -217,6 +222,7 @@ class Animal {
       'id': id,
       'nodeId': nodeId,
       'farmerId': farmerId,
+      'fieldId': fieldId,
       'name': name,
       'animalType': animalType,
       'breed': breed,
@@ -312,66 +318,3 @@ class Animal {
   }
 }
 
-class VaccineRecord {
-  final String id;
-  final String vaccineName;
-  final DateTime vaccineDate;
-  final DateTime? nextDueDate;
-  final String? vetName;
-  final String? lotNumber;
-
-  VaccineRecord({
-    required this.id,
-    required this.vaccineName,
-    required this.vaccineDate,
-    this.nextDueDate,
-    this.vetName,
-    this.lotNumber,
-  });
-
-  factory VaccineRecord.fromJson(Map<String, dynamic> json) {
-    return VaccineRecord(
-      id: json['id'],
-      vaccineName: json['vaccineName'],
-      vaccineDate: DateTime.parse(json['vaccineDate']),
-      nextDueDate: json['nextDueDate'] != null ? DateTime.parse(json['nextDueDate']) : null,
-      vetName: json['vetName'],
-      lotNumber: json['lotNumber'],
-    );
-  }
-}
-
-class MedicalEvent {
-  final String id;
-  final DateTime eventDate;
-  final String eventType;
-  final String? diagnosis;
-  final String? treatment;
-  final String? vetName;
-  final double? cost;
-  final String? notes;
-
-  MedicalEvent({
-    required this.id,
-    required this.eventDate,
-    required this.eventType,
-    this.diagnosis,
-    this.treatment,
-    this.vetName,
-    this.cost,
-    this.notes,
-  });
-
-  factory MedicalEvent.fromJson(Map<String, dynamic> json) {
-    return MedicalEvent(
-      id: json['id'],
-      eventDate: DateTime.parse(json['eventDate']),
-      eventType: json['eventType'],
-      diagnosis: json['diagnosis'],
-      treatment: json['treatment'],
-      vetName: json['vetName'],
-      cost: json['cost']?.toDouble(),
-      notes: json['notes'],
-    );
-  }
-}

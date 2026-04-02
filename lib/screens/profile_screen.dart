@@ -7,6 +7,7 @@ import '../utils/constants.dart';
 import '../widgets/custom_button.dart';
 import 'edit_profile_screen.dart';
 import 'signin_screen.dart';
+import '../widgets/app_drawer.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -14,6 +15,7 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const AppDrawer(),
       body: Consumer<AuthProvider>(
         builder: (context, auth, _) {
           final user = auth.user;
@@ -34,11 +36,13 @@ class ProfileScreen extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          IconButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            icon: const Icon(Icons.arrow_back_rounded),
-                            style: IconButton.styleFrom(
-                              foregroundColor: AppColors.primaryText,
+                          Builder(
+                            builder: (context) => IconButton(
+                              onPressed: () => Scaffold.of(context).openDrawer(),
+                              icon: const Icon(Icons.menu_rounded),
+                              style: IconButton.styleFrom(
+                                foregroundColor: AppColors.primaryText,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 4),
