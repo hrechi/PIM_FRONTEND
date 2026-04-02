@@ -21,7 +21,7 @@ class _PlantDoctorScreenState extends State<PlantDoctorScreen> {
   // ⚠️ IMPORTANT:
   // Android Emulator: 'http://10.0.2.2:8000/analyze'
   // iPhone Simulator: 'http://localhost:8000/analyze'
-  // Real Device: Use your computer's IP, e.g., 'http://192.168.1.15:8000/analyze'
+  // Real Device: Use your computer's IP, e.g., 'http://192.168.43.52:8000/analyze'
   final String _apiUrl = 'http://localhost:8000/analyze';
 
   final ImagePicker _picker = ImagePicker();

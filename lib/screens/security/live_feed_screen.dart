@@ -164,7 +164,7 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
               style: TextStyle(color: AppColorPalette.charcoalGreen),
               keyboardType: TextInputType.url,
               decoration: InputDecoration(
-                hintText: 'e.g. 192.168.1.18',
+                hintText: 'e.g. 192.168.43.52',
                 hintStyle: TextStyle(color: AppColorPalette.softSlate.withValues(alpha: 0.5)),
                 labelText: 'IP Address',
                 labelStyle: const TextStyle(color: AppColorPalette.robotTechStart),
