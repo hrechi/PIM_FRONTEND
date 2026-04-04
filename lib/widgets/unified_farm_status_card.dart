@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
-
+  
 /// Unified Farm Status Card combining plant chat and mood score
 class UnifiedFarmStatusCard extends StatefulWidget {
   final int farmScore;
