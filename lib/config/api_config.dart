@@ -4,11 +4,7 @@ class ApiConfig {
   // Base URLs
   // Use 10.0.2.2 for Android emulator (maps to host machine's localhost)
   // Use localhost for iOS simulator or web
-<<<<<<< HEAD
-  static const String _localBaseUrl = 'http://192.168.43.52:3000/api';
-=======
-  static const String _localBaseUrl = 'http://192.168.1.124:3000/api';
->>>>>>> main
+  static const String _localBaseUrl = 'http://192.168.1.13:3000/api';
   static const String _productionBaseUrl =
       'https://your-production-api.com/api';
 

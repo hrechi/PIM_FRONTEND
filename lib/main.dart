@@ -10,13 +10,15 @@ import 'providers/weather_provider.dart';
 import 'providers/irrigation_provider.dart';
 import 'providers/vaccine_provider.dart';
 import 'providers/shorts_provider.dart';
+import 'providers/asset_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
+import 'screens/asset_list_screen.dart';
 import 'screens/security/incident_detail_screen.dart';
 import 'screens/soil/soil_measurements_list_screen.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-/// Global navigator key — used for navigating from notification callbacks 
+/// Global navigator key — used for navigating from notification callbacks
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 /// Background message handler — must be a top-level function
@@ -95,6 +97,7 @@ class _FieldlyAppState extends State<FieldlyApp> {
         ChangeNotifierProvider(create: (_) => IrrigationProvider()),
         ChangeNotifierProvider(create: (_) => VaccineProvider()),
         ChangeNotifierProvider(create: (_) => ShortsProvider()),
+        ChangeNotifierProvider(create: (_) => AssetProvider()),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
@@ -103,6 +106,7 @@ class _FieldlyAppState extends State<FieldlyApp> {
         theme: AppTheme.lightTheme,
         home: const SplashScreen(),
         routes: {
+          '/assets': (context) => const AssetListScreen(),
           '/incident-details': (context) {
             final incidentId =
                 ModalRoute.of(context)!.settings.arguments as String;

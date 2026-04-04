@@ -164,17 +164,23 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
               style: TextStyle(color: AppColorPalette.charcoalGreen),
               keyboardType: TextInputType.url,
               decoration: InputDecoration(
-                hintText: 'e.g. 192.168.43.52',
-                hintStyle: TextStyle(color: AppColorPalette.softSlate.withValues(alpha: 0.5)),
+                hintText: 'e.g. 192.168.1.13',
+                hintStyle: TextStyle(
+                  color: AppColorPalette.softSlate.withValues(alpha: 0.5),
+                ),
                 labelText: 'IP Address',
-                labelStyle: const TextStyle(color: AppColorPalette.robotTechStart),
+                labelStyle: const TextStyle(
+                  color: AppColorPalette.robotTechStart,
+                ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: AppColorPalette.lightGrey),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColorPalette.robotTechStart),
+                  borderSide: const BorderSide(
+                    color: AppColorPalette.robotTechStart,
+                  ),
                 ),
               ),
             ),
@@ -188,18 +194,26 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: TextStyle(color: AppColorPalette.softSlate)),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColorPalette.softSlate),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, AppConfig.serverHost),
-            child: Text('Reset', style: TextStyle(color: AppColorPalette.warning)),
+            child: Text(
+              'Reset',
+              style: TextStyle(color: AppColorPalette.warning),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColorPalette.robotTechStart,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             child: const Text('Save'),
           ),
@@ -243,12 +257,17 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
               height: 10,
               margin: const EdgeInsets.only(right: 10),
               decoration: BoxDecoration(
-                color: _isConnected ? AppColorPalette.success : AppColorPalette.alertError,
+                color: _isConnected
+                    ? AppColorPalette.success
+                    : AppColorPalette.alertError,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: (_isConnected ? AppColorPalette.success : AppColorPalette.alertError)
-                        .withValues(alpha: 0.5),
+                    color:
+                        (_isConnected
+                                ? AppColorPalette.success
+                                : AppColorPalette.alertError)
+                            .withValues(alpha: 0.5),
                     blurRadius: 6,
                   ),
                 ],
@@ -324,10 +343,11 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (_isConnected
-                            ? AppColorPalette.robotTechStart
-                            : AppColorPalette.alertError)
-                        .withValues(alpha: 0.08),
+                    color:
+                        (_isConnected
+                                ? AppColorPalette.robotTechStart
+                                : AppColorPalette.alertError)
+                            .withValues(alpha: 0.08),
                     blurRadius: 20,
                     spreadRadius: 2,
                   ),
@@ -357,7 +377,9 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColorPalette.robotTechStart.withValues(alpha: 0.1),
+                    color: AppColorPalette.robotTechStart.withValues(
+                      alpha: 0.1,
+                    ),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
@@ -481,7 +503,9 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                 Text(
                   'Make sure the AI engine is running\non $_host:5050',
                   textAlign: TextAlign.center,
-                  style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate),
+                  style: AppTextStyles.bodySmall(
+                    color: AppColorPalette.softSlate,
+                  ),
                 ),
                 if (_lastError.isNotEmpty) ...[
                   const SizedBox(height: 12),
@@ -495,7 +519,9 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                       color: AppColorPalette.alertError.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: AppColorPalette.alertError.withValues(alpha: 0.15),
+                        color: AppColorPalette.alertError.withValues(
+                          alpha: 0.15,
+                        ),
                       ),
                     ),
                     child: Text(
@@ -564,7 +590,9 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(color: AppColorPalette.robotTechStart),
+            const CircularProgressIndicator(
+              color: AppColorPalette.robotTechStart,
+            ),
             const SizedBox(height: 16),
             Text(
               'Connecting to camera…',

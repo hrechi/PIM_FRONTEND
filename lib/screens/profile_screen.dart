@@ -9,8 +9,33 @@ import 'edit_profile_screen.dart';
 import 'signin_screen.dart';
 import '../widgets/app_drawer.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _showTimeoutError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // If user is not loaded after 5 seconds, show timeout error
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        final auth = context.read<AuthProvider>();
+        if (auth.user == null &&
+            auth.errorMessage == null &&
+            !_showTimeoutError) {
+          setState(() {
+            _showTimeoutError = true;
+          });
+        }
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,8 +44,77 @@ class ProfileScreen extends StatelessWidget {
       body: Consumer<AuthProvider>(
         builder: (context, auth, _) {
           final user = auth.user;
+
           if (user == null) {
-            return const Center(child: CircularProgressIndicator());
+            // Check if there's an error
+            if (auth.errorMessage != null || _showTimeoutError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Colors.red,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _showTimeoutError
+                            ? 'Connection Timeout'
+                            : 'Session Expired',
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryText,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        auth.errorMessage ??
+                            'Could not load profile. Please sign in again.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(
+                            context,
+                          ).pushNamedAndRemoveUntil('/', (route) => false);
+                        },
+                        child: Text(
+                          'Go to Sign In',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            // Still loading
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Loading profile...',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: AppColors.secondaryText,
+                    ),
+                  ),
+                ],
+              ),
+            );
           }
 
           return SafeArea(
@@ -38,7 +132,8 @@ class ProfileScreen extends StatelessWidget {
                         children: [
                           Builder(
                             builder: (context) => IconButton(
-                              onPressed: () => Scaffold.of(context).openDrawer(),
+                              onPressed: () =>
+                                  Scaffold.of(context).openDrawer(),
                               icon: const Icon(Icons.menu_rounded),
                               style: IconButton.styleFrom(
                                 foregroundColor: AppColors.primaryText,

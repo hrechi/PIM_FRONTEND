@@ -25,15 +25,27 @@ class AuthProvider with ChangeNotifier {
 
     if (token != null && rememberMe) {
       try {
-        await fetchProfile();
-      } catch (_) {
+        // Try to fetch profile with a timeout to prevent hanging
+        await fetchProfile().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            throw Exception('Profile fetch timeout');
+          },
+        );
+      } catch (e) {
+        // Any error during profile fetch: clear tokens and force re-login
         await ApiService.clearTokens();
         _isAuthenticated = false;
         _user = null;
+        _setError('Failed to restore session. Please sign in again.');
       }
     } else if (token != null && !rememberMe) {
       // Not remembered — clear tokens so user must log in again
       await ApiService.clearTokens();
+      _isAuthenticated = false;
+      _user = null;
+    } else {
+      // No token — user needs to log in
       _isAuthenticated = false;
       _user = null;
     }
@@ -139,15 +151,24 @@ class AuthProvider with ChangeNotifier {
   // ── Fetch Profile ──────────────────────────────────────────
 
   Future<void> fetchProfile() async {
-    final data = await ApiService.get('/user/profile', withAuth: true);
-    _user = UserModel.fromJson(data);
+    try {
+      final data = await ApiService.get('/user/profile', withAuth: true);
+      _user = UserModel.fromJson(data);
 
-    // Update saved user data
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user', jsonEncode(data));
+      // Update saved user data
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user', jsonEncode(data));
 
-    _isAuthenticated = true;
-    notifyListeners();
+      _isAuthenticated = true;
+      notifyListeners();
+    } catch (e) {
+      // Token expired or invalid — clear auth and require re-login
+      await ApiService.clearTokens();
+      _isAuthenticated = false;
+      _user = null;
+      _setError('Session expired. Please sign in again.');
+      notifyListeners();
+    }
   }
 
   // ── Update Profile ─────────────────────────────────────────

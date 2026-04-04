@@ -54,6 +54,8 @@ dependencies:
   share_plus: ^10.1.4
   table_calendar: ^3.1.2
   webview_flutter: ^4.10.0
+  mobile_scanner: ^6.0.2
+  qr_flutter: ^4.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
