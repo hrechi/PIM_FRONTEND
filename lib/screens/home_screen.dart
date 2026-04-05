@@ -45,6 +45,7 @@ import 'agricultural_news_screen.dart';
 import 'package:frontend_pim/screens/parcel_list_screen.dart';
 import 'plant_doctor_screen.dart';
 import 'shorts_screen.dart';
+import 'farm_quiz_screen.dart';
 
 /// Main home screen displaying the farm dashboard
 class HomeScreen extends StatefulWidget {
@@ -380,6 +381,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (_) => const IrrigationSchedulerScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.quiz_rounded,
+                    iconColor: const Color(0xFFFFB800),
+                    title: 'Farm Quiz',
+                    subtitle: 'AI-powered learning challenge',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FarmQuizScreen(),
                         ),
                       );
                     },
