@@ -11,8 +11,7 @@ import 'add_parcel_screen.dart';
 import 'crop_calendar_screen.dart';
 import '../widgets/gradient_container.dart';
 import '../services/crop_rotation_api_service.dart';
-import '../models/harvest_optimization_model.dart';
-import '../services/harvest_optimization_api_service.dart';
+
 // ─────────────────────────────────────────────────────────────
 // COLOR CONSTANTS (local)
 // ─────────────────────────────────────────────────────────────
@@ -36,8 +35,6 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
   late TabController _tabCtrl;
   late Future<ParcelHealthScore> _healthScoreFuture;
   late Future<Map<String, dynamic>> _cropRotationFuture;
-  late Future<HarvestOptimizationModel> _harvestOptimizationFuture;
-  String? _selectedCropId;
 
   @override
   void initState() {
@@ -45,19 +42,6 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
     _tabCtrl = TabController(length: 4, vsync: this);
     _healthScoreFuture = ParcelCrudService().getParcelHealthScore(widget.parcel.id);
     _cropRotationFuture = CropRotationApiService.getCropRotationPlan(widget.parcel.id);
-    
-    if (widget.parcel.crops.isNotEmpty) {
-      _selectedCropId = widget.parcel.crops.first.id;
-    }
-    _harvestOptimizationFuture = HarvestOptimizationApiService.getOptimization(widget.parcel.id, cropId: _selectedCropId);
-  }
-
-  void _onCropSelected(String? cropId) {
-    if (cropId == null) return;
-    setState(() {
-      _selectedCropId = cropId;
-      _harvestOptimizationFuture = HarvestOptimizationApiService.getOptimization(widget.parcel.id, cropId: _selectedCropId);
-    });
   }
 
   @override
@@ -338,198 +322,6 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
     );
   }
 
-  // ─── HARVEST OPTIMIZATION CARD ─────────────────────────
-  Widget _buildHarvestOptimizationCard() {
-    return FutureBuilder<HarvestOptimizationModel>(
-      future: _harvestOptimizationFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: _kGreen2)));
-        }
-        if (snapshot.hasError) {
-          return Container(
-            margin: const EdgeInsets.all(20),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(color: Colors.red.shade100, borderRadius: BorderRadius.circular(16)),
-            child: Text('Harvest Opt Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)),
-          );
-        }
-        if (!snapshot.hasData) {
-          return const SizedBox.shrink();
-        }
-
-        final data = snapshot.data!;
-        
-        Color statusColor;
-        IconData statusIcon;
-        String statusTitle;
-        if (data.status == 'OPTIMAL') {
-          statusColor = Colors.green;
-          statusIcon = Icons.check_circle;
-          statusTitle = 'Optimal Harvest Window';
-        } else if (data.status == 'NOT READY') {
-          statusColor = Colors.orange;
-          statusIcon = Icons.hourglass_bottom;
-          statusTitle = 'Harvest Not Ready';
-        } else {
-          statusColor = Colors.red;
-          statusIcon = Icons.warning_rounded;
-          statusTitle = 'Harvest Overdue';
-        }
-
-        return Container(
-          margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: statusColor.withValues(alpha: 0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(statusIcon, color: statusColor, size: 36),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text('Harvest Optimization', style: AppTextStyles.h3(color: AppColorPalette.charcoalGreen)),
-                            IconButton(
-                              icon: const Icon(Icons.info_outline, size: 18, color: Colors.grey),
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (ctx) => AlertDialog(
-                                    title: const Text('How it works'),
-                                    content: const Text('This simulation compares the optimal harvest window for your crop against real-time quality degradation. Harvesting too early results in lower yields, while harvesting late decreases market quality value. The dynamic AI recommendation gives you actionable advice based on these factors.'),
-                                    actions: [
-                                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Got it!'))
-                                    ],
-                                  ),
-                                );
-                              },
-                            )
-                          ],
-                        ),
-                        if (widget.parcel.crops.isNotEmpty)
-                          DropdownButton<String>(
-                            value: _selectedCropId,
-                            isDense: true,
-                            underline: const SizedBox(),
-                            icon: const Icon(Icons.arrow_drop_down, size: 16),
-                            style: AppTextStyles.bodySmall(color: statusColor).copyWith(fontWeight: FontWeight.bold),
-                            items: widget.parcel.crops.map((c) {
-                              return DropdownMenuItem(value: c.id, child: Text('${c.cropName} • $statusTitle'));
-                            }).toList(),
-                            onChanged: _onCropSelected,
-                          )
-                        else
-                          Text('\${data.crop} • $statusTitle', style: AppTextStyles.bodySmall(color: statusColor).copyWith(fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Divider()),
-              // Countdown & Date
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Best Date', style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate)),
-                      const SizedBox(height: 4),
-                      Text(data.bestHarvestDate != null ? DateFormat.yMMMd().format(DateTime.parse(data.bestHarvestDate!)) : 'N/A', 
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20)
-                    ),
-                    child: Text(
-                      data.status == 'OVERDUE' ? 'Overdue' : 'In ${data.daysRemaining} days',
-                      style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
-                    ),
-                  )
-                ],
-              ),
-              const SizedBox(height: 20),
-              // Profit Estimation
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: _kGreen3,
-                  borderRadius: BorderRadius.circular(16)
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    Column(
-                      children: [
-                        const Text('Profit Now', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                        Text('\$${data.profitAnalysis.profitNow}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                      ],
-                    ),
-                    Container(width: 1, height: 40, color: Colors.grey.withValues(alpha: 0.3)),
-                    Column(
-                      children: [
-                        const Text('Opt. Profit', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                        Text('\$${data.profitAnalysis.profitOptimal}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _kGreen1)),
-                      ],
-                    ),
-                    Container(width: 1, height: 40, color: Colors.grey.withValues(alpha: 0.3)),
-                    Column(
-                      children: [
-                        const Text('Diff', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                        Text('\$${data.profitAnalysis.difference}', style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 18, 
-                            color: data.profitAnalysis.difference > 0 ? Colors.red : Colors.green)),
-                      ],
-                    )
-                  ],
-                )
-              ),
-              const SizedBox(height: 16),
-              // Recommendation
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(16)
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.auto_awesome, color: Colors.amber, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(data.recommendation, style: AppTextStyles.bodySmall(color: AppColorPalette.charcoalGreen))
-                    )
-                  ],
-                ),
-              )
-            ],
-          ),
-        );
-      }
-    );
-  }
-
   // ─── BUILD ───────────────────────────────────────
   @override
   Widget build(BuildContext context) {
@@ -549,7 +341,6 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
         slivers: [
           _buildHeroAppBar(p),
           SliverToBoxAdapter(child: _buildHealthScoreCard()),
-          SliverToBoxAdapter(child: _buildHarvestOptimizationCard()),
           SliverToBoxAdapter(child: _buildCropRotationCard()),
           SliverToBoxAdapter(child: _buildAiBanner(p)),
           SliverToBoxAdapter(child: _buildInfoCard(p)),
