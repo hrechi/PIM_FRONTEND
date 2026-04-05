@@ -16,7 +16,6 @@ import '../models/parcel.dart';
 
 import '../providers/parcel_provider.dart';
 import '../providers/weather_provider.dart';
-import '../services/parcel_crud_service.dart';
 import '../services/animal_service.dart';
 import '../services/soil_repository.dart';
 import '../widgets/metric_card.dart';
@@ -63,7 +62,6 @@ class _HomeScreenState extends State<HomeScreen> {
   late List<Animal> animals;
 
   final AnimalService _animalService = AnimalService();
-  final ParcelCrudService _parcelService = ParcelCrudService();
   final SoilRepository _soilRepository = SoilRepository();
 
   Map<String, dynamic>? _animalStats;
@@ -80,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
   
   // Parcel management
   Parcel? _selectedParcel;
+  String? _selectedFieldName;
   
   // Background images from assets
   late int _selectedBackgroundIndex;
@@ -222,6 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           weatherInfo = weatherProvider.forecast?.current;
+          _selectedFieldName = weatherProvider.selectedField?.name;
         });
       }
     } catch (e) {
@@ -272,7 +272,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchSoilAndCropData() async {
-    if (_selectedParcel == null) {
+    final weatherProvider = context.read<WeatherProvider>();
+    final selectedFieldId = weatherProvider.selectedFieldId;
+    final selectedField = weatherProvider.selectedField;
+
+    if (selectedFieldId == null || selectedField == null) {
       if (mounted) {
         setState(() {
           _soilPh = null;
@@ -280,20 +284,39 @@ class _HomeScreenState extends State<HomeScreen> {
           _isLoadingSoilCrop = false;
         });
       }
-      debugPrint('⚠️ No parcel selected, clearing soil/crop data');
+      debugPrint('⚠️ No field selected, clearing soil/crop data');
       return;
     }
     
-    debugPrint('🔄 Fetching soil and crop data for parcel: ${_selectedParcel!.id}');
+    debugPrint('🔄 Fetching soil and crop data for field: $selectedFieldId');
     setState(() => _isLoadingSoilCrop = true);
     try {
-      // Fetch crop data from parcel
-      final parcel = await _parcelService.getParcelById(_selectedParcel!.id);
-      
-      // Fetch latest soil measurement
-      final soilMeasurement = await _soilRepository.getLatestMeasurement();
+      final parcelProvider = context.read<ParcelProvider>();
+      final parcels = parcelProvider.parcels;
 
-      debugPrint('✅ Data fetched: soilPh=${soilMeasurement?.ph}, crops count=${parcel.crops.length}');
+      final namedParcels = parcels
+          .where((p) => p.location.trim().toLowerCase() == selectedField.name.trim().toLowerCase())
+          .toList();
+      final fieldParcels = parcels.where((p) => p.fieldId == selectedFieldId).toList();
+
+      final parcelsForField = namedParcels.isNotEmpty
+          ? namedParcels
+          : (fieldParcels.isNotEmpty ? fieldParcels : <Parcel>[]);
+
+      final totalCropsForField = parcelsForField.fold<int>(0, (sum, p) => sum + p.crops.length);
+
+      final measurementsResponse = await _soilRepository.getMeasurements(
+        page: 1,
+        limit: 100,
+        sortBy: 'createdAt',
+        order: 'DESC',
+      );
+        final matchingMeasurements =
+          measurementsResponse.data.where((m) => m.fieldId == selectedFieldId).toList();
+        final soilMeasurement =
+          matchingMeasurements.isNotEmpty ? matchingMeasurements.first : null;
+
+      debugPrint('✅ Data fetched: soilPh=${soilMeasurement?.ph}, crops count=$totalCropsForField');
       
       if (mounted) {
         // Calculate soil health score and wilting risk from measurement
@@ -311,7 +334,7 @@ class _HomeScreenState extends State<HomeScreen> {
         
         setState(() {
           _soilPh = soilMeasurement?.ph;
-          _totalCrops = parcel.crops.length;
+          _totalCrops = totalCropsForField;
           _farmMoodData = moodData;
           _plantMessage = plantMessage;
           _isLoadingSoilCrop = false;
@@ -1024,8 +1047,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text('Hi, Good Morning',
                     style: AppTextStyles.h3()
                         .copyWith(color: AppColorPalette.white)),
-                if (_selectedParcel != null)
-                  Text(_selectedParcel!.location,
+                if (_selectedFieldName != null)
+                  Text(_selectedFieldName!,
                       style: AppTextStyles.bodySmall(
                           color: AppColorPalette.white.withValues(alpha: 0.9))),
               ],
@@ -1117,10 +1140,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 size: isSmall ? 16 : 18,
               ),
               SizedBox(width: isSmall ? 6 : 8),
-              if (_selectedParcel != null)
+              if (_selectedFieldName != null)
                 Flexible(
                   child: Text(
-                    _selectedParcel!.location,
+                    _selectedFieldName!,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.bodyMedium(
                       color: AppColorPalette.charcoalGreen,
@@ -1148,9 +1171,9 @@ class _HomeScreenState extends State<HomeScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) => Consumer<ParcelProvider>(
-        builder: (context, parcelProvider, _) {
-          final parcels = parcelProvider.parcels;
+      builder: (context) => Consumer<WeatherProvider>(
+        builder: (context, weatherProvider, _) {
+          final fields = weatherProvider.fields;
           
           return Container(
             padding: const EdgeInsets.all(16),
@@ -1165,16 +1188,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Text(
-                    'Select Parcel',
+                    'Select Field',
                     style: AppTextStyles.h3(color: AppColorPalette.charcoalGreen),
                   ),
                 ),
-                if (parcels.isEmpty)
+                if (fields.isEmpty)
                   Center(
                     child: Padding(
                       padding: const EdgeInsets.all(32.0),
                       child: Text(
-                        'No parcels available',
+                        'No fields available',
                         style: AppTextStyles.bodyMedium(color: Colors.grey),
                       ),
                     ),
@@ -1182,16 +1205,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 else
                   Expanded(
                     child: ListView.builder(
-                      itemCount: parcels.length,
+                      itemCount: fields.length,
                       itemBuilder: (context, index) {
-                        final parcel = parcels[index];
-                        final isSelected = _selectedParcel?.id == parcel.id;
+                        final field = fields[index];
+                        final isSelected = weatherProvider.selectedFieldId == field.id;
                         return GestureDetector(
-                          onTap: () {
-                            setState(() => _selectedParcel = parcel);
+                          onTap: () async {
+                            await weatherProvider.selectField(field.id);
+                            if (!mounted) return;
+                            setState(() => _selectedFieldName = field.name);
                             Navigator.pop(context);
-                            // Fetch animals and soil/crop data for the newly selected parcel
-                            _fetchAnimalsForField(parcel.id);
+                            // Fetch field-specific data after selecting field.
+                            _fetchAnimalsForField(field.id);
                             _fetchSoilAndCropData();
                           },
                           child: Container(
@@ -1221,11 +1246,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        parcel.location,
+                                        field.name,
                                         style: AppTextStyles.bodyLarge(color: AppColorPalette.charcoalGreen),
                                       ),
                                       Text(
-                                        '${parcel.areaSize} ha',
+                                        field.areaSize != null ? '${field.areaSize} ha' : 'Area not set',
                                         style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate),
                                       ),
                                     ],

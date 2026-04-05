@@ -94,6 +94,33 @@ class SoilApiService {
     }
   }
 
+  /// Get all soil measurements for a specific parcel
+  /// Loads all measurements and filters them by parcelId on the frontend
+  Future<List<SoilMeasurement>> getMeasurementsByParcelId(
+    String parcelId, {
+    int limit = 100,
+  }) async {
+    try {
+      // Backend doesn't support parcelId filtering, so we fetch all and filter on frontend
+      final queryParams = <String, dynamic>{
+        'limit': limit,
+        'sortBy': 'createdAt',
+        'order': 'DESC',
+      };
+
+      final response = await _dio.get(
+        '',
+        queryParameters: queryParams,
+      );
+
+      final paginatedResponse = PaginatedSoilResponse.fromJson(response.data);
+      // Filter measurements to only include those assigned to this parcel
+      return paginatedResponse.data.where((m) => m.parcelId == parcelId).toList();
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   /// Create a new soil measurement
   Future<SoilMeasurement> createMeasurement(
     CreateSoilMeasurementDto dto,
@@ -297,6 +324,7 @@ class CreateSoilMeasurementDto {
   final double latitude;
   final double longitude;
   final String? fieldId;
+  final String? parcelId;
 
   const CreateSoilMeasurementDto({
     required this.ph,
@@ -307,6 +335,7 @@ class CreateSoilMeasurementDto {
     required this.latitude,
     required this.longitude,
     this.fieldId,
+    this.parcelId,
   });
 
   Map<String, dynamic> toJson() {
@@ -319,6 +348,7 @@ class CreateSoilMeasurementDto {
       'latitude': latitude,
       'longitude': longitude,
       if (fieldId != null) 'fieldId': fieldId,
+      if (parcelId != null) 'parcelId': parcelId,
     };
   }
 }
@@ -333,6 +363,7 @@ class UpdateSoilMeasurementDto {
   final double? latitude;
   final double? longitude;
   final String? fieldId;
+  final String? parcelId;
 
   const UpdateSoilMeasurementDto({
     this.ph,
@@ -343,6 +374,7 @@ class UpdateSoilMeasurementDto {
     this.latitude,
     this.longitude,
     this.fieldId,
+    this.parcelId,
   });
 
   Map<String, dynamic> toJson() {
@@ -355,6 +387,7 @@ class UpdateSoilMeasurementDto {
     if (latitude != null) json['latitude'] = latitude;
     if (longitude != null) json['longitude'] = longitude;
     if (fieldId != null) json['fieldId'] = fieldId;
+    if (parcelId != null) json['parcelId'] = parcelId;
     return json;
   }
 }

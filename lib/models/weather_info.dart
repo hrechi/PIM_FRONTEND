@@ -271,6 +271,9 @@ class WeatherForecastResponse {
   final String? fieldName;
   final String? fieldId;
   final String? cropType;
+  final double? latitude;
+  final double? longitude;
+  final String? timezone;
 
   const WeatherForecastResponse({
     required this.current,
@@ -278,12 +281,16 @@ class WeatherForecastResponse {
     this.fieldName,
     this.fieldId,
     this.cropType,
+    this.latitude,
+    this.longitude,
+    this.timezone,
   });
 
   factory WeatherForecastResponse.fromJson(Map<String, dynamic> json) {
     final currentJson = json['current'] as Map<String, dynamic>;
     final dailyJson = json['daily'] as List<dynamic>;
     final fieldJson = json['field'] as Map<String, dynamic>?;
+    final locationJson = json['location'] as Map<String, dynamic>?;
 
     return WeatherForecastResponse(
       current: WeatherInfo.fromJson(currentJson),
@@ -293,6 +300,9 @@ class WeatherForecastResponse {
       fieldName: fieldJson?['name'] as String?,
       fieldId: fieldJson?['id'] as String?,
       cropType: fieldJson?['cropType'] as String?,
+      latitude: (locationJson?['latitude'] as num?)?.toDouble(),
+      longitude: (locationJson?['longitude'] as num?)?.toDouble(),
+      timezone: locationJson?['timezone'] as String?,
     );
   }
 }

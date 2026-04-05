@@ -141,6 +141,7 @@ class Harvest {
 class Parcel {
   final String id;
   final String location;
+  final String? fieldId;
   final double areaSize;
   final String boundariesDescription;
   final String soilType;
@@ -160,6 +161,7 @@ class Parcel {
   Parcel({
     required this.id,
     required this.location,
+    this.fieldId,
     required this.areaSize,
     required this.boundariesDescription,
     required this.soilType,
@@ -180,6 +182,7 @@ class Parcel {
     return Parcel(
       id: json['id'],
       location: json['location'],
+      fieldId: json['fieldId'] as String?,
       areaSize: (json['areaSize'] as num).toDouble(),
       boundariesDescription: json['boundariesDescription'],
       soilType: json['soilType'],
@@ -200,6 +203,7 @@ class Parcel {
   Map<String, dynamic> toJson() {
     return {
       'location': location,
+      if (fieldId != null) 'fieldId': fieldId,
       'areaSize': areaSize,
       'boundariesDescription': boundariesDescription,
       'soilType': soilType,

@@ -73,6 +73,7 @@ class SoilRepository {
     required double latitude,
     required double longitude,
     String? fieldId,
+    String? parcelId,
   }) async {
     final dto = CreateSoilMeasurementDto(
       ph: ph,
@@ -83,6 +84,7 @@ class SoilRepository {
       latitude: latitude,
       longitude: longitude,
       fieldId: fieldId,
+      parcelId: parcelId,
     );
 
     return await _apiService.createMeasurement(dto);
@@ -101,6 +103,7 @@ class SoilRepository {
     required double latitude,
     required double longitude,
     String? fieldId,
+    String? parcelId,
   }) async {
     final dto = CreateSoilMeasurementDto(
       ph: ph,
@@ -111,6 +114,7 @@ class SoilRepository {
       latitude: latitude,
       longitude: longitude,
       fieldId: fieldId,
+      parcelId: parcelId,
     );
 
     return await _apiService.createMeasurementWithImage(dto, imagePath);
@@ -127,6 +131,7 @@ class SoilRepository {
     double? latitude,
     double? longitude,
     String? fieldId,
+    String? parcelId,
   }) async {
     final dto = UpdateSoilMeasurementDto(
       ph: ph,
@@ -137,6 +142,7 @@ class SoilRepository {
       latitude: latitude,
       longitude: longitude,
       fieldId: fieldId,
+      parcelId: parcelId,
     );
 
     return await _apiService.updateMeasurement(id, dto);
@@ -175,5 +181,35 @@ class SoilRepository {
       limit: limit,
     );
     return response.data.where((m) => !m.isHealthy).toList();
+  }
+
+  /// Get soil measurements for a specific parcel
+  /// Fetches all measurements linked to a parcel and sorts by date (newest first)
+  Future<List<SoilMeasurement>> getMeasurementsByParcelId(
+    String parcelId, {
+    int limit = 100,
+  }) async {
+    try {
+      return await _apiService.getMeasurementsByParcelId(
+        parcelId,
+        limit: limit,
+      );
+    } catch (e) {
+      debugPrint('Error fetching measurements for parcel $parcelId: $e');
+      return [];
+    }
+  }
+
+  /// Get the latest measurement for a specific parcel (for status badge)
+  Future<SoilMeasurement?> getLatestMeasurementByParcelId(
+    String parcelId,
+  ) async {
+    try {
+      final measurements = await getMeasurementsByParcelId(parcelId, limit: 1);
+      return measurements.isNotEmpty ? measurements.first : null;
+    } catch (e) {
+      debugPrint('Error fetching latest measurement for parcel $parcelId: $e');
+      return null;
+    }
   }
 }

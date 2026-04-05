@@ -9,6 +9,7 @@ import '../../utils/responsive.dart';
 import '../../models/soil_measurement.dart';
 import '../../models/field_model.dart';
 import '../../services/field_service.dart';
+import '../../services/weather_service.dart';
 import 'location_picker_screen.dart';
 import 'soil_measurements_list_screen.dart';
 
@@ -51,6 +52,7 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
   double? _detectionConfidence;
 
   final FieldService _fieldService = FieldService();
+  final WeatherService _weatherService = WeatherService();
   final ImagePicker _imagePicker = ImagePicker();
 
   @override
@@ -255,6 +257,60 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
     }
   }
 
+  double _estimateSunlightFromWeather({
+    required int uvIndex,
+    required String condition,
+  }) {
+    // Approximate lux proxy for UI auto-fill when direct sunlight sensor is unavailable.
+    final baseLux = uvIndex * 150.0;
+    final lower = condition.toLowerCase();
+
+    double multiplier = 1.0;
+    if (lower.contains('overcast') || lower.contains('cloudy')) {
+      multiplier = 0.55;
+    } else if (lower.contains('partly')) {
+      multiplier = 0.8;
+    } else if (lower.contains('rain') || lower.contains('storm')) {
+      multiplier = 0.45;
+    }
+
+    final estimated = baseLux * multiplier;
+    return estimated < 50 ? 50 : estimated;
+  }
+
+  Future<void> _applyWeatherAutofillForField(String? fieldId) async {
+    if (fieldId == null || fieldId.isEmpty) {
+      return;
+    }
+
+    try {
+      final forecast = await _weatherService.getWeatherForField(fieldId);
+      final temperature = forecast.current.temperature;
+      final sunlight = _estimateSunlightFromWeather(
+        uvIndex: forecast.current.uvIndex,
+        condition: forecast.current.condition,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _temperatureController.text = temperature.toStringAsFixed(1);
+        _sunlightController.text = sunlight.toStringAsFixed(0);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Auto-filled from weather (${forecast.current.condition}): ${temperature.toStringAsFixed(1)}°C, sunlight ${sunlight.toStringAsFixed(0)} lux',
+          ),
+          backgroundColor: AppColorPalette.info,
+        ),
+      );
+    } catch (_) {
+      // Silent fail: user can still enter values manually.
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -335,58 +391,6 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
                 }
                 if (moisture < 0 || moisture > 100) {
                   return 'Moisture must be between 0 and 100';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // Sunlight Section
-            _SectionHeader(
-              icon: Icons.wb_sunny,
-              title: 'Sunlight',
-              color: AppColorPalette.warning,
-            ),
-            const SizedBox(height: 12),
-            _FormField(
-              controller: _sunlightController,
-              label: 'Sunlight Level',
-              hint: 'Enter sunlight in lux',
-              icon: Icons.wb_sunny,
-              suffix: 'lux',
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter sunlight level';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter a valid number';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // Temperature Section
-            _SectionHeader(
-              icon: Icons.thermostat,
-              title: 'Temperature',
-              color: AppColorPalette.alertError,
-            ),
-            const SizedBox(height: 12),
-            _FormField(
-              controller: _temperatureController,
-              label: 'Temperature',
-              hint: 'Enter temperature',
-              icon: Icons.thermostat,
-              suffix: '°C',
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter temperature';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter a valid number';
                 }
                 return null;
               },
@@ -533,9 +537,59 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
                           setState(() {
                             _selectedFieldId = value;
                           });
+                          _applyWeatherAutofillForField(value);
                         },
                       ),
                     ),
+            ),
+            const SizedBox(height: 24),
+
+            // Weather-driven Inputs Section
+            _SectionHeader(
+              icon: Icons.wb_sunny,
+              title: 'Sunlight & Temperature',
+              color: AppColorPalette.warning,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Auto-filled from Weather AI when you select a field. You can still edit manually.',
+              style: AppTextStyles.caption(color: AppColorPalette.softSlate),
+            ),
+            const SizedBox(height: 12),
+            _FormField(
+              controller: _sunlightController,
+              label: 'Sunlight Level',
+              hint: 'Auto from weather or enter in lux',
+              icon: Icons.wb_sunny,
+              suffix: 'lux',
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter sunlight level';
+                }
+                if (double.tryParse(value) == null) {
+                  return 'Please enter a valid number';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            _FormField(
+              controller: _temperatureController,
+              label: 'Temperature',
+              hint: 'Auto from weather or enter temperature',
+              icon: Icons.thermostat,
+              suffix: '°C',
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter temperature';
+                }
+                if (double.tryParse(value) == null) {
+                  return 'Please enter a valid number';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 24),
 

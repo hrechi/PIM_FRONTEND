@@ -4,12 +4,12 @@ import 'package:intl/intl.dart';
 import '../models/parcel.dart';
 import '../models/parcel_health_score_model.dart';
 import '../providers/parcel_provider.dart';
+import '../providers/weather_provider.dart';
 import '../services/parcel_crud_service.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import 'add_parcel_screen.dart';
 import 'crop_calendar_screen.dart';
-import '../widgets/gradient_container.dart';
 import '../services/crop_rotation_api_service.dart';
 
 // ─────────────────────────────────────────────────────────────
@@ -18,7 +18,7 @@ import '../services/crop_rotation_api_service.dart';
 const _kGreen1 = Color(0xFF1A4731);
 const _kGreen2 = Color(0xFF2ECC71);
 const _kGreen3 = Color(0xFFE8F8EF);
-const _kBg = Color(0xFFF2F5F0);
+const _kBg = Color(0xFFFAF7F2);
 const _kCard = Colors.white;
 
 class ParcelDetailScreen extends StatefulWidget {
@@ -35,6 +35,29 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
   late TabController _tabCtrl;
   late Future<ParcelHealthScore> _healthScoreFuture;
   late Future<Map<String, dynamic>> _cropRotationFuture;
+
+  String _displayParcelTitle(Parcel parcel) {
+    final rawLocation = parcel.location.trim();
+    final locationMatch = RegExp(r'^location\s*\((.+)\)$', caseSensitive: false)
+        .firstMatch(rawLocation);
+    if (locationMatch != null) {
+      final parsed = (locationMatch.group(1) ?? '').trim();
+      if (parsed.isNotEmpty) {
+        return parsed;
+      }
+    }
+
+    if (!rawLocation.toLowerCase().startsWith('location')) {
+      return rawLocation;
+    }
+
+    final selectedFieldName = context.read<WeatherProvider>().selectedField?.name;
+    if (selectedFieldName != null && selectedFieldName.trim().isNotEmpty) {
+      return selectedFieldName.trim();
+    }
+
+    return rawLocation;
+  }
 
   @override
   void initState() {
@@ -356,18 +379,19 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
 
   // ─── HERO APPBAR ─────────────────────────────────
   Widget _buildHeroAppBar(Parcel p) {
+    final displayTitle = _displayParcelTitle(p);
     return SliverAppBar(
-      expandedHeight: 220,
       pinned: true,
-      stretch: true,
-      backgroundColor: _kGreen1,
+      backgroundColor: _kBg,
+      surfaceTintColor: Colors.transparent,
+      foregroundColor: _kGreen1,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+        icon: const Icon(Icons.arrow_back_ios_new),
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.edit_rounded, color: Colors.white),
+          icon: const Icon(Icons.edit_rounded),
           onPressed: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -381,108 +405,12 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
         ),
         const SizedBox(width: 8),
       ],
-      flexibleSpace: FlexibleSpaceBar(
-        stretchModes: const [StretchMode.zoomBackground],
-        background: Stack(fit: StackFit.expand, children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF0D3320), _kGreen1, Color(0xFF27AE60)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
-          // decorative circles
-          Positioned(
-            right: -50, top: -50,
-            child: Container(
-              width: 220, height: 220,
-              decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.05)),
-            ),
-          ),
-          Positioned(
-            left: -30, bottom: 10,
-            child: Container(
-              width: 130, height: 130,
-              decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.04)),
-            ),
-          ),
-          // Content
-          Positioned(
-            bottom: 20, left: 20, right: 20,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Text('🌿',
-                        style: TextStyle(fontSize: 26)),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      p.location,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: 12),
-                // stat pills
-                Row(children: [
-                  _heroPill(
-                      '${p.areaSize} ha', Icons.square_foot_rounded),
-                  const SizedBox(width: 8),
-                  _heroPill(p.soilType, Icons.terrain),
-                  const SizedBox(width: 8),
-                  _heroPill(p.irrigationMethod, Icons.water_drop),
-                ]),
-              ],
-            ),
-          ),
-        ]),
-        title: Text(p.location,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16)),
-        titlePadding:
-            const EdgeInsets.symmetric(horizontal: 60, vertical: 16),
+      title: Text(
+        displayTitle,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTextStyles.h3(),
       ),
-    );
-  }
-
-  Widget _heroPill(String label, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, color: Colors.white, size: 13),
-        const SizedBox(width: 4),
-        Text(label,
-            style:
-                const TextStyle(color: Colors.white, fontSize: 12)),
-      ]),
     );
   }
 
@@ -1016,6 +944,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
       child: TabBarView(
         controller: _tabCtrl,
         children: [
+          // 🌱 Crops Tab
           _tabSection(
             p.crops,
             _showAddCropDialog,
@@ -1028,19 +957,25 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
               MaterialPageRoute(
                 builder: (_) => CropCalendarScreen(
                   parcelId: widget.parcel.id,
-                  parcelName: widget.parcel.location,
+                  parcelName: _displayParcelTitle(widget.parcel),
                 ),
               ),
             ),
           ),
+          
+          // 🧪 Fertilization Tab
           _tabSection(p.fertilizations, _showAddFertilizationDialog, '🧪',
               'No fertilizations',
               (f) => f.fertilizerType,
               (f) =>
                   '${f.quantityUsed} units • ${DateFormat.yMMMd().format(f.applicationDate)}'),
+          
+          // 🐛 Pests Tab
           _tabSection(p.pests, _showAddPestDialog, '🐛', 'No pest records',
               (d) => d.issueType ?? 'Unknown Issue',
               (d) => d.treatmentUsed ?? 'No treatment recorded'),
+          
+          // 🌾 Harvest Tab
           _tabSection(p.harvests, _showAddHarvestDialog, '🌾', 'No harvests',
               (h) =>
                   h.harvestDate != null
@@ -1122,7 +1057,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(vertical: 4),
               itemCount: items.length,
-              separatorBuilder: (_, _a) =>
+                separatorBuilder: (_, index) =>
                   const Divider(height: 1, indent: 16),
               itemBuilder: (_, i) {
                 final item = items[i];

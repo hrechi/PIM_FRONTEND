@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/parcel.dart';
+import '../models/soil_measurement.dart';
 import '../providers/parcel_provider.dart';
+import '../providers/weather_provider.dart';
+import '../services/soil_repository.dart';
+import '../theme/color_palette.dart';
+import '../theme/text_styles.dart';
+import '../widgets/soil/status_badge.dart';
 import 'add_parcel_screen.dart';
 import 'parcel_detail_screen.dart';
 import '../widgets/app_drawer.dart';
@@ -17,6 +23,17 @@ class _ParcelListScreenState extends State<ParcelListScreen>
     with TickerProviderStateMixin {
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
+
+  List<Parcel> _dedupeParcels(List<Parcel> parcels) {
+    final seen = <String>{};
+    final unique = <Parcel>[];
+    for (final parcel in parcels) {
+      if (seen.add(parcel.id)) {
+        unique.add(parcel);
+      }
+    }
+    return unique;
+  }
 
   @override
   void initState() {
@@ -40,22 +57,23 @@ class _ParcelListScreenState extends State<ParcelListScreen>
   @override
   Widget build(BuildContext context) {
     final prov = Provider.of<ParcelProvider>(context);
+    final displayParcels = _dedupeParcels(prov.parcels);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F0),
+      backgroundColor: AppColorPalette.wheatWarmClay,
       drawer: const AppDrawer(),
       body: CustomScrollView(
         slivers: [
-          _buildHeroAppBar(prov.parcels),
-          SliverToBoxAdapter(child: _buildQuickStats(prov.parcels)),
+          _buildHeroAppBar(displayParcels),
+          SliverToBoxAdapter(child: _buildQuickStats(displayParcels)),
           if (prov.isLoading)
             const SliverFillRemaining(
                 child: Center(
                     child: CircularProgressIndicator(
-                        color: Color(0xFF2ECC71))))
+                  color: Color(0xFF2ECC71))))
           else if (prov.error != null)
             SliverFillRemaining(child: _buildErrorView(prov))
-          else if (prov.parcels.isEmpty)
+          else if (displayParcels.isEmpty)
             SliverFillRemaining(child: _buildEmptyState())
           else
             SliverPadding(
@@ -65,15 +83,15 @@ class _ParcelListScreenState extends State<ParcelListScreen>
                   (ctx, i) => FadeTransition(
                     opacity: _fadeAnim,
                     child: _ParcelCard(
-                      parcel: prov.parcels[i],
+                      parcel: displayParcels[i],
                       index: i,
                       onTap: () => Navigator.push(ctx,
                           MaterialPageRoute(
                               builder: (_) =>
-                                  ParcelDetailScreen(parcel: prov.parcels[i]))),
+                                  ParcelDetailScreen(parcel: displayParcels[i]))),
                     ),
                   ),
-                  childCount: prov.parcels.length,
+                  childCount: displayParcels.length,
                 ),
               ),
             ),
@@ -85,82 +103,35 @@ class _ParcelListScreenState extends State<ParcelListScreen>
 
   Widget _buildHeroAppBar(List<Parcel> parcels) {
     return SliverAppBar(
-      expandedHeight: 200,
       pinned: true,
-      stretch: true,
-      backgroundColor: const Color(0xFF1A4731),
-      flexibleSpace: FlexibleSpaceBar(
-        stretchModes: const [StretchMode.zoomBackground],
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Background
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF1A4731), Color(0xFF2ECC71)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-            ),
-            // Decorative circles
-            Positioned(
-              right: -40, top: -40,
-              child: Container(
-                width: 200, height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.06),
-                ),
-              ),
-            ),
-            Positioned(
-              left: -30, bottom: -30,
-              child: Container(
-                width: 150, height: 150,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.05),
-                ),
-              ),
-            ),
-            // Text
-            Positioned(
-              bottom: 20, left: 24,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(children: [
-                    const Text('🌾', style: TextStyle(fontSize: 28)),
-                    const SizedBox(width: 10),
-                    const Text('My Parcels',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -0.5,
-                        )),
-                  ]),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${parcels.length} parcel${parcels.length == 1 ? '' : 's'} registered',
-                    style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-          ],
+      toolbarHeight: 72,
+      backgroundColor: AppColorPalette.wheatWarmClay,
+      surfaceTintColor: Colors.transparent,
+      leading: Builder(
+        builder: (context) => IconButton(
+          icon: const Icon(Icons.menu_rounded),
+          onPressed: () => Scaffold.of(context).openDrawer(),
         ),
-        title: const Text('My Parcels',
-            style: TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-        titlePadding:
-            const EdgeInsets.symmetric(horizontal: 60, vertical: 16),
       ),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text('My Parcels', style: AppTextStyles.h3()),
+          Text(
+            '${parcels.length} parcel${parcels.length == 1 ? '' : 's'} registered',
+            style: AppTextStyles.caption(color: AppColorPalette.softSlate),
+          ),
+        ],
+      ),
+      actions: [
+        IconButton(
+          onPressed: () => context.read<ParcelProvider>().fetchParcels(),
+          icon: const Icon(Icons.refresh_rounded),
+          tooltip: 'Refresh',
+        ),
+        const SizedBox(width: 8),
+      ],
     );
   }
 
@@ -209,7 +180,7 @@ class _ParcelListScreenState extends State<ParcelListScreen>
               style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A4731))),
+                color: Color(0xFF2C3E50))),
           Text(label,
               style: const TextStyle(fontSize: 11, color: Colors.grey)),
         ],
@@ -229,7 +200,7 @@ class _ParcelListScreenState extends State<ParcelListScreen>
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF2ECC71).withValues(alpha: 0.1),
+              color: const Color(0xFF2ECC71).withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: const Text('🌾', style: TextStyle(fontSize: 56)),
@@ -239,7 +210,7 @@ class _ParcelListScreenState extends State<ParcelListScreen>
               style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A4731))),
+                  color: Color(0xFF2C3E50))),
           const SizedBox(height: 8),
           Text('Tap + to add your first parcel',
               style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
@@ -270,44 +241,12 @@ class _ParcelListScreenState extends State<ParcelListScreen>
   }
 
   Widget _buildFab(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2ECC71), Color(0xFF1A8A45)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-              color: const Color(0xFF2ECC71).withValues(alpha: 0.4),
-              blurRadius: 16,
-              offset: const Offset(0, 6)),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const AddParcelScreen())),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.add_rounded, color: Colors.white, size: 22),
-                SizedBox(width: 8),
-                Text('Add Parcel',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16)),
-              ],
-            ),
-          ),
-        ),
-      ),
+    return FloatingActionButton.extended(
+      onPressed: () => Navigator.push(
+          context, MaterialPageRoute(builder: (_) => const AddParcelScreen())),
+      icon: const Icon(Icons.add),
+      label: const Text('Add Parcel'),
+      backgroundColor: const Color(0xFF2ECC71),
     );
   }
 }
@@ -315,7 +254,7 @@ class _ParcelListScreenState extends State<ParcelListScreen>
 // ─────────────────────────────────────────────────────────────
 // PARCEL CARD
 // ─────────────────────────────────────────────────────────────
-class _ParcelCard extends StatelessWidget {
+class _ParcelCard extends StatefulWidget {
   final Parcel parcel;
   final int index;
   final VoidCallback onTap;
@@ -323,19 +262,58 @@ class _ParcelCard extends StatelessWidget {
   const _ParcelCard(
       {required this.parcel, required this.index, required this.onTap});
 
+  @override
+  State<_ParcelCard> createState() => _ParcelCardState();
+}
+
+class _ParcelCardState extends State<_ParcelCard> {
+  late Future<SoilMeasurement?> _latestSoilFuture;
+  final SoilRepository _soilRepository = SoilRepository();
+
+  String _displayParcelTitle() {
+    final rawLocation = widget.parcel.location.trim();
+    final locationMatch = RegExp(r'^location\s*\((.+)\)$', caseSensitive: false)
+        .firstMatch(rawLocation);
+    if (locationMatch != null) {
+      final parsed = (locationMatch.group(1) ?? '').trim();
+      if (parsed.isNotEmpty) {
+        return parsed;
+      }
+    }
+
+    if (!rawLocation.toLowerCase().startsWith('location')) {
+      return rawLocation;
+    }
+
+    final selectedFieldName = context.read<WeatherProvider>().selectedField?.name;
+    if (selectedFieldName != null && selectedFieldName.trim().isNotEmpty) {
+      return selectedFieldName.trim();
+    }
+
+    return rawLocation;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _latestSoilFuture =
+        _soilRepository.getLatestMeasurementByParcelId(widget.parcel.id);
+  }
+
   Color get _cardAccent {
     final colors = [
       const Color(0xFF2ECC71),
-      const Color(0xFF3498DB),
-      const Color(0xFFE67E22),
-      const Color(0xFF9B59B6),
-      const Color(0xFF1ABC9C),
+      const Color(0xFF27AE60),
+      const Color(0xFF1F8F4C),
+      const Color(0xFF6FCF97),
+      const Color(0xFF145A32),
     ];
-    return colors[index % colors.length];
+    return colors[widget.index % colors.length];
   }
 
   @override
   Widget build(BuildContext context) {
+    final displayTitle = _displayParcelTitle();
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -352,7 +330,7 @@ class _ParcelCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
+          onTap: widget.onTap,
           child: Column(
             children: [
               // Color bar top
@@ -388,7 +366,7 @@ class _ParcelCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                parcel.location,
+                                displayTitle,
                                 style: const TextStyle(
                                     fontSize: 17,
                                     fontWeight: FontWeight.bold,
@@ -403,7 +381,7 @@ class _ParcelCard extends StatelessWidget {
                                       size: 13, color: Colors.grey.shade500),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '${parcel.areaSize} ha  •  ${parcel.soilType}',
+                                    '${widget.parcel.areaSize} ha  •  ${widget.parcel.soilType}',
                                     style: TextStyle(
                                         fontSize: 13,
                                         color: Colors.grey.shade600),
@@ -425,19 +403,8 @@ class _ParcelCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 14),
-                    // Chips row
-                    Row(
-                      children: [
-                        _chip('🌱 ${parcel.crops.length} Crops',
-                            const Color(0xFFE8F8EF), const Color(0xFF27AE60)),
-                        const SizedBox(width: 8),
-                        _chip('💧 ${parcel.irrigationMethod}',
-                            const Color(0xFFEBF5FD), const Color(0xFF2980B9)),
-                        const SizedBox(width: 8),
-                        _chip('🌾 ${parcel.harvests.length} Harvests',
-                            const Color(0xFFFEF9EC), const Color(0xFFF39C12)),
-                      ],
-                    ),
+                    // Chips row with soil status
+                    _buildChipsWithSoilStatus(),
                   ],
                 ),
               ),
@@ -445,6 +412,84 @@ class _ParcelCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  /// Build chips row including soil status badge
+  Widget _buildChipsWithSoilStatus() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Top row with standard chips
+        SizedBox(
+          height: 32,
+          child: Row(
+            children: [
+              _chip('🌱 ${widget.parcel.crops.length} Crops',
+                  const Color(0xFFE8F8EF), const Color(0xFF27AE60)),
+              const SizedBox(width: 8),
+              _chip('💧 ${widget.parcel.irrigationMethod}',
+                  const Color(0xFFEAF7F0), const Color(0xFF1F8F4C)),
+              const SizedBox(width: 8),
+              _chip('🌾 ${widget.parcel.harvests.length} Harvests',
+                  const Color(0xFFE3F5EA), const Color(0xFF145A32)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        // Soil status badge
+        FutureBuilder<SoilMeasurement?>(
+          future: _latestSoilFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2ECC71)),
+                ),
+              );
+            }
+
+            if (snapshot.hasData && snapshot.data != null) {
+              final soilMeasurement = snapshot.data!;
+              return SizedBox(
+                height: 24,
+                child: Row(
+                  children: [
+                    const Icon(Icons.science,
+                        size: 16, color: Color(0xFF1A4731)),
+                    const SizedBox(width: 6),
+                    StatusBadge.health(
+                      isHealthy: soilMeasurement.isHealthy,
+                      compact: true,
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            // No soil data
+            return SizedBox(
+              height: 24,
+              child: Row(
+                children: [
+                  const Icon(Icons.science,
+                      size: 16, color: Colors.grey),
+                  const SizedBox(width: 6),
+                  Text(
+                    'No soil data',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 

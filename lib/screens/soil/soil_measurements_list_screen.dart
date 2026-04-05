@@ -106,6 +106,7 @@ class SoilMeasurementsProvider extends ChangeNotifier {
     required double latitude,
     required double longitude,
     String? fieldId,
+    String? parcelId,
   }) async {
     try {
       await _repository.createMeasurement(
@@ -117,6 +118,7 @@ class SoilMeasurementsProvider extends ChangeNotifier {
         latitude: latitude,
         longitude: longitude,
         fieldId: fieldId,
+        parcelId: parcelId,
       );
       
       // Refresh the list
@@ -140,6 +142,7 @@ class SoilMeasurementsProvider extends ChangeNotifier {
     required double latitude,
     required double longitude,
     String? fieldId,
+    String? parcelId,
   }) async {
     try {
       await _repository.createMeasurementWithImage(
@@ -175,6 +178,7 @@ class SoilMeasurementsProvider extends ChangeNotifier {
     double? latitude,
     double? longitude,
     String? fieldId,
+    String? parcelId,
   }) async {
     try {
       final updated = await _repository.updateMeasurement(
@@ -187,6 +191,7 @@ class SoilMeasurementsProvider extends ChangeNotifier {
         latitude: latitude,
         longitude: longitude,
         fieldId: fieldId,
+        parcelId: parcelId,
       );
       
       // Update in local list
