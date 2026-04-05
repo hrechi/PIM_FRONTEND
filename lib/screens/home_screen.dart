@@ -48,6 +48,7 @@ import 'package:frontend_pim/screens/parcel_list_screen.dart';
 import 'plant_doctor_screen.dart';
 import 'shorts_screen.dart';
 import 'community_feed_screen.dart';
+import 'farm_quiz_screen.dart';
  
 /// Main home screen displaying the farm dashboard
 class HomeScreen extends StatefulWidget {
@@ -680,8 +681,24 @@ class _HomeScreenState extends State<HomeScreen> {
                           MaterialPageRoute(builder: (_) => const SoilMeasurementsListScreen()));
                     },
                   ),
+                  _buildDrawerItem(
+                    icon: Icons.quiz_rounded,
+                    iconColor: Colors.deepPurple,
+                    title: 'Farm Quiz',
+                    subtitle: 'Learn & earn badges',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FarmQuizScreen(parcelId: _selectedParcel?.id),
+                        ),
+                      );
+                    },
+                  ),
 
                   const Divider(height: 1),
+
 
                   // ── Security ──────────────────────────
                   _buildDrawerSection('Security'),
