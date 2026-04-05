@@ -186,7 +186,9 @@ class _WeatherScreenState extends State<WeatherScreen> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: wp.selectedFieldId,
+          value: wp.fields.any((f) => f.id == wp.selectedFieldId)
+              ? wp.selectedFieldId
+              : null,
           isExpanded: true,
           icon: const Icon(Icons.keyboard_arrow_down_rounded),
           hint: Text('Select a field',
