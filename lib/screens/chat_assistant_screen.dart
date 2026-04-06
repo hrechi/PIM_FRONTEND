@@ -3,6 +3,7 @@ import '../models/chat_message.dart';
 import '../models/conversation_model.dart';
 import '../services/chat_service.dart';
 import '../services/conversation_service.dart';
+import 'voice_assistant_screen.dart';
 import '../utils/constants.dart';
 
 class ChatAssistantScreen extends StatefulWidget {
@@ -245,6 +246,23 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
     }
   }
 
+  Future<void> _openVoiceAssistant() async {
+    final selectedConversationId =
+        await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => VoiceAssistantScreen(
+          conversationId: _currentConversationId,
+        ),
+      ),
+    );
+
+    await _loadConversations();
+
+    if (selectedConversationId != null && selectedConversationId.isNotEmpty) {
+      await _loadConversationMessages(selectedConversationId);
+    }
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -363,6 +381,12 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
                                 ),
                               ),
                               const SizedBox(width: 10),
+                              IconButton(
+                                onPressed: _openVoiceAssistant,
+                                tooltip: 'Voice Assistant',
+                                icon: const Icon(Icons.mic_rounded),
+                              ),
+                              const SizedBox(width: 6),
                               ElevatedButton(
                                 onPressed:
                                     _isSending ? null : _sendMessage,
