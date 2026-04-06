@@ -50,5 +50,9 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Fieldly uses the microphone so you can talk to the voice assistant.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Fieldly uses speech recognition to convert your voice into chat messages.</string>
 </dict>
 </plist>
