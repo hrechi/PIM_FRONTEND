@@ -5,6 +5,8 @@ import '../../models/animal.dart';
 import '../../services/animal_service.dart';
 import '../../utils/constants.dart';
 import 'add_animal_screen.dart';
+import 'animal_finance_screen.dart';
+import 'sell_animal_screen.dart';
 
 class AnimalDetailsScreen extends StatefulWidget {
   final Animal animal;
@@ -95,6 +97,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
                         _buildIdentitySection(),
                         _buildHealthRiskBanner(),
                         _buildStatusAndAgeTiles(),
+                        _buildGenealogySection(),
                         _buildSpeciesSpecificInfo(),
                         _buildFinanceSection(),
                         _buildMedicalSection(),
@@ -210,6 +213,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
             children: [
               _buildChip(_animal.breed ?? 'Unknown breed', Symbols.pets),
               _buildChip(_animal.sex == 'female' ? 'Female' : 'Male', _animal.sex == 'female' ? Symbols.female : Symbols.male),
+              _buildChip(_animal.origin == 'born' ? 'Born on Farm' : 'Purchased', _animal.origin == 'born' ? Symbols.child_care : Symbols.shopping_cart),
               if (_animal.tagNumber != null) _buildChip(_animal.tagNumber!, Symbols.sell),
             ],
           ),
@@ -280,6 +284,65 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
     );
   }
 
+  Widget _buildGenealogySection() {
+    if (_animal.motherId == null && _animal.fatherId == null) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(28), border: Border.all(color: const Color(0xFFF1F5F9))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle('Genealogy 🧬'),
+          if (_animal.motherId != null) _buildParentLink('Mother', _animal.motherId!),
+          if (_animal.fatherId != null) _buildParentLink('Father', _animal.fatherId!),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildParentLink(String label, String parentId) {
+    return FutureBuilder<Animal>(
+      future: _animalService.getAnimalById(parentId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(label, style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+              ],
+            ),
+          );
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return _buildDetailRow(label, 'Unknown ID'); 
+        }
+        final parentAnimal = snapshot.data!;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => AnimalDetailsScreen(animal: parentAnimal)));
+                },
+                child: Text(
+                  parentAnimal.name, 
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.blue, decoration: TextDecoration.underline, decorationColor: Colors.blue)
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildInfoTile(String label, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
@@ -336,25 +399,38 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
   }
 
   Widget _buildFinanceSection() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(28), border: Border.all(color: const Color(0xFFF1F5F9))),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionTitle('Finance & Value 💰'),
-          _buildDetailRow('Purchase price', _animal.purchasePrice != null ? _nf.format(_animal.purchasePrice) : 'N/A'),
-          _buildDetailRow('Purchase date', _animal.purchaseDate != null ? _df.format(_animal.purchaseDate!) : 'N/A'),
-          _buildDetailRow('Estimated value', _animal.estimatedValue != null ? _nf.format(_animal.estimatedValue) : 'N/A'),
-          if (_animal.status == 'sold') ...[
-            _buildDetailRow('Sale price', _animal.salePrice != null ? _nf.format(_animal.salePrice) : 'N/A'),
-            _buildDetailRow('Sale date', _animal.saleDate != null ? _df.format(_animal.saleDate!) : 'N/A'),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => AnimalFinanceScreen(animal: _animal)));
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(28), border: Border.all(color: const Color(0xFFF1F5F9))),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildSectionTitle('Finance & Value 💰'),
+                const Icon(Symbols.arrow_forward_ios, size: 16, color: Colors.grey),
+              ],
+            ),
+          if (_animal.origin == 'purchased') ...[
+            _buildDetailRow('Purchase price', _animal.purchasePrice != null ? _nf.format(_animal.purchasePrice) : 'N/A'),
+            _buildDetailRow('Purchase date', _animal.purchaseDate != null ? _df.format(_animal.purchaseDate!) : 'N/A'),
+          ] else ...[
+            _buildDetailRow('Birth cost', _animal.birthCost != null ? _nf.format(_animal.birthCost) : 'N/A'),
+            _buildDetailRow('Birth weight', _animal.birthWeightKg != null ? '${_animal.birthWeightKg} kg' : 'N/A'),
           ],
+          _buildDetailRow('Estimated value', _animal.estimatedValue != null ? _nf.format(_animal.estimatedValue) : 'N/A'),
+          
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildMedicalSection() {
     return Container(
@@ -479,11 +555,32 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
                 child: Container(
                   height: 56,
                   decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFE2E8F0), width: 2)),
-                  child: const Center(child: Text('Delete', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF64748B)))),
+                  child: const Center(child: Icon(Symbols.delete, color: Color(0xFF64748B))),
                 ),
               ),
             ),
-            const SizedBox(width: 16),
+            if (_animal.status == 'active') ...[
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 1,
+                child: GestureDetector(
+                  onTap: () async {
+                    final updated = await Navigator.push(context, MaterialPageRoute(builder: (context) => SellAnimalScreen(animal: _animal)));
+                    if (updated == true && mounted) Navigator.pop(context, true);
+                  },
+                  child: Container(
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [BoxShadow(color: Colors.green.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 5))],
+                    ),
+                    child: const Center(child: Text('Sell', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white))),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(width: 8),
             Expanded(
               flex: 2,
               child: GestureDetector(
@@ -503,7 +600,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
                     children: [
                       Icon(Symbols.edit, color: Colors.white, size: 20),
                       SizedBox(width: 8),
-                      Text('Edit profile', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
+                      Text('Edit', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
                     ],
                   ),
                 ),

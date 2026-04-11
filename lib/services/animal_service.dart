@@ -67,6 +67,11 @@ class AnimalService {
     return Animal.fromJson(response);
   }
 
+  Future<Animal> getAnimalById(String id) async {
+    final response = await ApiService.get('/animals/id/$id', withAuth: true);
+    return Animal.fromJson(response);
+  }
+
   Future<Animal> updateAnimal(String nodeId, Map<String, dynamic> animalData) async {
     final response = await ApiService.patch('/animals/$nodeId', animalData, withAuth: true);
     return Animal.fromJson(response);
@@ -74,5 +79,20 @@ class AnimalService {
 
   Future<void> deleteAnimal(String nodeId) async {
     await ApiService.delete('/animals/$nodeId', withAuth: true);
+  }
+
+  Future<Animal> sellAnimal(String nodeId, Map<String, dynamic> sellData) async {
+    final response = await ApiService.patch('/animals/$nodeId/sell', sellData, withAuth: true);
+    return Animal.fromJson(response);
+  }
+
+  Future<List<Animal>> getSoldAnimals({String? fieldId}) async {
+    String endpoint = '/animals/sold';
+    if (fieldId != null) {
+      endpoint += '?fieldId=$fieldId';
+    }
+    final response = await ApiService.get(endpoint, withAuth: true);
+    final List<dynamic> data = response is List ? response : (response['data'] ?? []);
+    return data.map((json) => Animal.fromJson(json)).toList();
   }
 }

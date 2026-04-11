@@ -20,6 +20,8 @@ import '../screens/live_feed_screen.dart';
 import '../screens/soil/soil_measurements_list_screen.dart';
 import '../screens/security/incident_history_screen.dart';
 import '../screens/shorts_screen.dart';
+import '../screens/expenses/add_expense_screen.dart';
+import '../services/field_service.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -176,6 +178,24 @@ class AppDrawer extends StatelessWidget {
                           builder: (_) => const IrrigationSchedulerScreen(),
                         ),
                       );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.payments_rounded,
+                    iconColor: Colors.amber,
+                    title: 'Gestion des dépenses',
+                    subtitle: 'Suivi financier de la ferme',
+                    onTap: () async {
+                      Navigator.pop(context);
+                      final fields = await FieldService().getFields();
+                      if (fields.isNotEmpty && context.mounted) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AddExpenseScreen(field: fields.first),
+                          ),
+                        );
+                      }
                     },
                   ),
                   _buildDrawerItem(

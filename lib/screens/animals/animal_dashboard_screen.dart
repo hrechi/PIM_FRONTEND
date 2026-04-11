@@ -7,6 +7,10 @@ import '../../widgets/app_drawer.dart';
 import 'animal_list_screen.dart';
 import 'milk_production_screen.dart';
 import 'milk_analytics_screen.dart';
+import 'add_animal_screen.dart';
+import '../expenses/add_expense_screen.dart';
+import '../../services/field_service.dart';
+import '../../models/field_model.dart';
 
 class AnimalDashboardScreen extends StatefulWidget {
   const AnimalDashboardScreen({super.key});
@@ -17,7 +21,9 @@ class AnimalDashboardScreen extends StatefulWidget {
 
 class _AnimalDashboardScreenState extends State<AnimalDashboardScreen> {
   final AnimalService _animalService = AnimalService();
+  final FieldService _fieldService = FieldService();
   late Future<Map<String, dynamic>> _statsFuture;
+  FieldModel? _defaultField;
 
   @override
   void initState() {
@@ -28,6 +34,11 @@ class _AnimalDashboardScreenState extends State<AnimalDashboardScreen> {
   void _refreshData() {
     setState(() {
       _statsFuture = _animalService.getStatistics();
+    });
+    _fieldService.getFields().then((fields) {
+      if (fields.isNotEmpty && mounted) {
+        setState(() => _defaultField = fields.first);
+      }
     });
   }
 
@@ -237,7 +248,11 @@ class _AnimalDashboardScreenState extends State<AnimalDashboardScreen> {
               '',
               const Color(0xFFF59E0B),
               const Color(0xFFFFFBEB),
-              subtitle: 'Forecasted: \$3,200',
+              subtitle: 'Forecasted: ${_defaultField?.currencySymbol ?? "\$"}3,200',
+              onTap: _defaultField == null ? null : () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => AddExpenseScreen(field: _defaultField!)),
+              ).then((_) => _refreshData()),
             ),
           ],
         );

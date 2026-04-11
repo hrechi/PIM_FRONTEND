@@ -7,6 +7,8 @@ class FieldModel {
   final double? areaSize;
   final String? countryCode;
   final String? regionCode;
+  final String currency;
+  final String currencySymbol;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -19,6 +21,8 @@ class FieldModel {
     this.areaSize,
     this.countryCode,
     this.regionCode,
+    required this.currency,
+    required this.currencySymbol,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -37,6 +41,8 @@ class FieldModel {
       areaSize: json['areaSize'] != null ? (json['areaSize'] as num).toDouble() : null,
       countryCode: json['countryCode'] as String?,
       regionCode: json['regionCode'] as String?,
+      currency: json['currency'] as String? ?? 'USD',
+      currencySymbol: json['currencySymbol'] as String? ?? '\$',
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
@@ -52,6 +58,8 @@ class FieldModel {
       'areaSize': areaSize,
       'countryCode': countryCode,
       'regionCode': regionCode,
+      'currency': currency,
+      'currencySymbol': currencySymbol,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -66,6 +74,8 @@ class FieldModel {
     double? areaSize,
     String? countryCode,
     String? regionCode,
+    String? currency,
+    String? currencySymbol,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -78,6 +88,8 @@ class FieldModel {
       areaSize: areaSize ?? this.areaSize,
       countryCode: countryCode ?? this.countryCode,
       regionCode: regionCode ?? this.regionCode,
+      currency: currency ?? this.currency,
+      currencySymbol: currencySymbol ?? this.currencySymbol,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

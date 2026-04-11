@@ -22,17 +22,35 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
   bool _selectionMode = false;
   final Set<String> _selectedAnimalIds = {};
 
-  // ── Filters ──
+  // --- Search & Tabs ---
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  int _activeTabIndex = 0; // 0: All, 1: Vaccinated, 2: Pending
+
+  // --- Filter State ---
   String? _filterType;
   String? _filterSex;
   String? _filterStatus;
 
   List<Animal> get _filteredAnimals {
     return _animals.where((a) {
+      // 1. Search Query
+      if (_searchQuery.isNotEmpty) {
+        final name = a.name.toLowerCase();
+        final tag = a.nodeId.toLowerCase();
+        if (!name.contains(_searchQuery) && !tag.contains(_searchQuery)) return false;
+      }
+
+      // 2. Status Tab
+      if (_activeTabIndex == 1 && !a.vaccination) return false;
+      if (_activeTabIndex == 2 && a.vaccination) return false;
+
+      // 3. Species & Gender Filters
       if (_filterType != null && a.animalType.toLowerCase() != _filterType) return false;
       if (_filterSex != null && a.sex.toLowerCase() != _filterSex) return false;
       if (_filterStatus == 'vaccinated' && !a.vaccination) return false;
       if (_filterStatus == 'unvaccinated' && a.vaccination) return false;
+      
       return true;
     }).toList();
   }
@@ -41,6 +59,15 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
   void initState() {
     super.initState();
     _loadAnimals();
+    _searchController.addListener(() {
+      setState(() => _searchQuery = _searchController.text.toLowerCase());
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadAnimals() async {
@@ -89,123 +116,32 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-              child: Row(children: [
-                Builder(
-                  builder: (context) => GestureDetector(
-                    onTap: () => Scaffold.of(context).openDrawer(),
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(Icons.menu_rounded, color: Color(0xFF64748B), size: 24),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text(
-                      'Vaccination',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF141E15)),
-                    ),
-                    Text(
-                      '${_animals.length} animals',
-                      style: const TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w500),
-                    ),
-                  ]),
-                ),
-                // Calendar button
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.calendar_month_rounded, color: Color(0xFF64748B)),
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VaccineCalendarScreen())),
-                    tooltip: 'Calendar',
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Selection mode toggle
-                Container(
-                  decoration: BoxDecoration(
-                    color: _selectionMode ? AppColors.mistBlue.withValues(alpha: 0.1) : Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: _selectionMode ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
-                  ),
-                  child: IconButton(
-                    icon: Icon(
-                      _selectionMode ? Icons.fact_check_rounded : Icons.fact_check_outlined,
-                      color: _selectionMode ? AppColors.mistBlue : const Color(0xFF64748B),
-                    ),
-                    onPressed: () => setState(() {
-                      _selectionMode = !_selectionMode;
-                      if (!_selectionMode) _selectedAnimalIds.clear();
-                    }),
-                    tooltip: 'Multiple selection',
-                  ),
-                ),
-              ]),
-            ),
+            // ── Search & Header ──
+            if (!_loading) _buildModernHeader(),
 
-            const SizedBox(height: 20),
+            // ── Status Tabs ──
+            if (!_loading && !_selectionMode) _buildStatusTabs(),
 
-            // ── Stats cards ──
-            if (!_loading && !_selectionMode) _buildStatsRow(),
+            const SizedBox(height: 12),
 
             // ── Section title ──
             if (!_loading)
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
                 child: Row(
                   children: [
-                    const Icon(Icons.pets_rounded, color: AppColors.mistBlue, size: 20),
-                    const SizedBox(width: 8),
                     Text(
-                      _selectionMode ? 'MULTIPLE SELECTION' : 'YOUR HERD',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF141E15),
-                        fontSize: 16,
+                      _selectionMode ? 'MULTIPLE SELECTION' : 'QUICK FILTERS',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF141E15).withValues(alpha: 0.4),
+                        fontSize: 11,
+                        letterSpacing: 1.2,
                       ),
                     ),
                     const Spacer(),
                     if (!_selectionMode)
-                      GestureDetector(
-                        onTap: () => setState(() => _selectionMode = true),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)],
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.checklist_rounded, size: 14, color: AppColors.mistBlue),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Selection',
-                                style: TextStyle(color: AppColors.mistBlue, fontSize: 11, fontWeight: FontWeight.w800),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                      _buildStatsMiniCount(),
                   ],
                 ),
               ),
@@ -266,26 +202,155 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
     );
   }
 
-  Widget _buildStatsRow() {
-    final total = _animals.length;
-    final vaccinated = _animals.where((a) => a.vaccination).length;
-    final toVaccinate = total - vaccinated;
+  Widget _buildModernHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              _buildCircleIconButton(Icons.menu_rounded, onPressed: () => Scaffold.of(context).openDrawer()),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Text(
+                  'Health & Vaccines',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1E293B), letterSpacing: -0.5),
+                ),
+              ),
+              _buildCircleIconButton(
+                _selectionMode ? Icons.close_rounded : Icons.checklist_rtl_rounded,
+                active: _selectionMode,
+                onPressed: () => setState(() {
+                  _selectionMode = !_selectionMode;
+                  if (!_selectionMode) _selectedAnimalIds.clear();
+                }),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // --- Search Bar ---
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 15, offset: const Offset(0, 8)),
+              ],
+            ),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search animals by name or tag...',
+                hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14, fontWeight: FontWeight.w500),
+                prefixIcon: const Icon(Icons.search_rounded, color: AppColors.mistBlue, size: 20),
+                suffixIcon: _searchQuery.isNotEmpty 
+                  ? IconButton(
+                      icon: const Icon(Icons.cancel_rounded, size: 18, color: Color(0xFFCBD5E1)),
+                      onPressed: () => _searchController.clear(),
+                    )
+                  : IconButton(
+                      icon: const Icon(Icons.calendar_month_rounded, color: Color(0xFF64748B), size: 18),
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VaccineCalendarScreen())),
+                    ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 15),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildCircleIconButton(IconData icon, {VoidCallback? onPressed, bool active = false}) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: active ? AppColors.mistBlue : Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Icon(icon, color: active ? Colors.white : const Color(0xFF64748B), size: 22),
+      ),
+    );
+  }
+
+  Widget _buildStatusTabs() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Row(children: [
-        _StatCard(label: 'Total', value: total.toString(), icon: Icons.pets_rounded, color: AppColors.mistBlue),
-        const SizedBox(width: 12),
-        _StatCard(label: 'Up to date', value: vaccinated.toString(), icon: Icons.check_circle_rounded, color: const Color(0xFF16A34A)),
-        const SizedBox(width: 12),
-        _StatCard(label: 'To schedule', value: toVaccinate.toString(), icon: Icons.schedule_rounded, color: const Color(0xFFF59E0B)),
-      ]),
+      child: Container(
+        height: 50,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10)],
+        ),
+        child: Row(
+          children: [
+            _buildTabItem(0, 'All', Icons.grid_view_rounded),
+            _buildTabItem(1, 'Vaccinated', Icons.check_circle_rounded),
+            _buildTabItem(2, 'Pending', Icons.pending_actions_rounded),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabItem(int index, String label, IconData icon) {
+    final isActive = _activeTabIndex == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _activeTabIndex = index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.mistBlue : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: isActive ? Colors.white : const Color(0xFF94A3B8)),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isActive ? Colors.white : const Color(0xFF64748B),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsMiniCount() {
+    final vaccinated = _animals.where((a) => a.vaccination).length;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF16A34A).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        '$vaccinated/${_animals.length} Proteced',
+        style: const TextStyle(color: Color(0xFF16A34A), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+      ),
     );
   }
 
   Widget _buildFilters() {
     final types = ['cow', 'horse', 'sheep', 'dog'];
-    final typeLabels = {'cow': '🐄 Vache', 'horse': '🐎 Cheval', 'sheep': '🐑 Mouton', 'dog': '🐶 Chien'};
+    final typeIcons = {'cow': Icons.set_meal_rounded, 'horse': Icons.directions_run_rounded, 'sheep': Icons.cloud_rounded, 'dog': Icons.pets_rounded};
+    final typeLabels = {'cow': 'Cows', 'horse': 'Horses', 'sheep': 'Sheep', 'dog': 'Dogs'};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -295,77 +360,75 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
             children: [
-              _buildFilterChip('All', _filterType == null, () => setState(() => _filterType = null)),
-              const SizedBox(width: 8),
+              _buildFilterChip('All Species', _filterType == null, () => setState(() => _filterType = null), icon: Icons.grid_view_rounded),
+              const SizedBox(width: 10),
               ...types.map((t) => Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: _buildFilterChip(typeLabels[t]!, _filterType == t, () => setState(() => _filterType = _filterType == t ? null : t)),
+                padding: const EdgeInsets.only(right: 10),
+                child: _buildFilterChip(typeLabels[t]!, _filterType == t, () => setState(() => _filterType = _filterType == t ? null : t), icon: typeIcons[t]),
               )),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            children: [
-              _buildFilterChip('♂ Male', _filterSex == 'male', () => setState(() => _filterSex = _filterSex == 'male' ? null : 'male')),
-              const SizedBox(width: 8),
-              _buildFilterChip('♀ Female', _filterSex == 'female', () => setState(() => _filterSex = _filterSex == 'female' ? null : 'female')),
-              const SizedBox(width: 16),
-              _buildFilterChip('✅ Vaccinated', _filterStatus == 'vaccinated', () => setState(() => _filterStatus = _filterStatus == 'vaccinated' ? null : 'vaccinated'), activeColor: const Color(0xFF16A34A)),
-              const SizedBox(width: 8),
-              _buildFilterChip('⚠️ To vaccinate', _filterStatus == 'unvaccinated', () => setState(() => _filterStatus = _filterStatus == 'unvaccinated' ? null : 'unvaccinated'), activeColor: const Color(0xFFEF4444)),
+              const VerticalDivider(width: 20, indent: 10, endIndent: 10, color: Color(0xFFE2E8F0)),
+              _buildFilterChip('Male', _filterSex == 'male', () => setState(() => _filterSex = _filterSex == 'male' ? null : 'male'), icon: Icons.male_rounded),
+              const SizedBox(width: 10),
+              _buildFilterChip('Female', _filterSex == 'female', () => setState(() => _filterSex = _filterSex == 'female' ? null : 'female'), icon: Icons.female_rounded),
             ],
           ),
         ),
         if (_selectionMode) ...[
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.mistBlue.withValues(alpha: 0.2)),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8)],
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    _allSelected ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
-                    color: AppColors.mistBlue,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    _allSelected ? '${_filteredAnimals.length} selected' : '${_selectedAnimalIds.length}/${_filteredAnimals.length} selected',
-                    style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF141E15), fontSize: 13),
-                  ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: _allSelected ? _clearAll : _selectAll,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.mistBlue,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        _allSelected ? 'Deselect All' : 'Select All',
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                  ),
-                ],
+          const SizedBox(height: 16),
+          _buildSelectionStatusCard(),
+        ],
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Widget _buildSelectionStatusCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.mistBlue, AppColors.mistBlue.withValues(alpha: 0.8)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: AppColors.mistBlue.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 6))],
+        ),
+        child: Row(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _allSelected ? 'ALL SELECTED' : '${_selectedAnimalIds.length} SELECTED',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5),
+                ),
+                Text(
+                  'Marking as vaccinated in bulk',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 11, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+            const Spacer(),
+            GestureDetector(
+              onTap: _allSelected ? _clearAll : _selectAll,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _allSelected ? 'Deselect' : 'Select All',
+                  style: TextStyle(color: AppColors.mistBlue, fontSize: 13, fontWeight: FontWeight.w800),
+                ),
               ),
             ),
-          ),
-        ],
-        const SizedBox(height: 8),
-      ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -374,26 +437,31 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: isActive ? color : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isActive ? color : const Color(0xFFE2E8F0), width: 1.5),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isActive ? color : const Color(0xFFCBD5E1).withValues(alpha: 0.3), width: 1),
           boxShadow: isActive
-              ? [BoxShadow(color: color.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 3))]
-              : [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4)],
+              ? [BoxShadow(color: color.withValues(alpha: 0.25), blurRadius: 10, offset: const Offset(0, 4))]
+              : [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4)],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 14, color: isActive ? Colors.white : color),
-              const SizedBox(width: 4),
+              Icon(icon, size: 16, color: isActive ? Colors.white : color),
+              const SizedBox(width: 8),
             ],
             Text(
               label,
-              style: TextStyle(color: isActive ? Colors.white : const Color(0xFF64748B), fontWeight: FontWeight.w700, fontSize: 12),
+              style: TextStyle(
+                color: isActive ? Colors.white : const Color(0xFF64748B), 
+                fontWeight: isActive ? FontWeight.w800 : FontWeight.w600, 
+                fontSize: 13,
+              ),
             ),
           ],
         ),
@@ -613,7 +681,10 @@ class _BulkMarkDoneSheetState extends State<_BulkMarkDoneSheet> {
   Future<void> _loadVaccines() async {
     try {
       final res = await context.read<VaccineProvider>().loadVaccines();
-      setState(() { _availableVaccines = res; _loadingVaccines = false; });
+      setState(() { 
+        _availableVaccines = res.map((v) => {'code': v.code, 'nameEn': v.nameEn ?? v.nameFr}).toList(); 
+        _loadingVaccines = false; 
+      });
     } catch (_) {
       setState(() => _loadingVaccines = false);
     }
@@ -691,7 +762,7 @@ class _BulkMarkDoneSheetState extends State<_BulkMarkDoneSheet> {
                     decoration: _inputDecoration('Select a vaccine', Icons.vaccines_rounded),
                     items: _availableVaccines.map<DropdownMenuItem<String>>((v) => DropdownMenuItem(
                       value: v['code'],
-                      child: Text(v['nameFr'] ?? v['code'], style: const TextStyle(fontWeight: FontWeight.w600)),
+                      child: Text(v['nameEn'] ?? v['code'], style: const TextStyle(fontWeight: FontWeight.w600)),
                     )).toList(),
                     onChanged: (v) => setState(() => _selectedVaccineCode = v),
                     dropdownColor: Colors.white,

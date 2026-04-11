@@ -263,7 +263,9 @@ class MedicalEvent {
         diagnosis: json['diagnosis'],
         treatment: json['treatment'],
         vetName: json['vetName'],
-        cost: json['cost'] != null ? (json['cost'] as num).toDouble() : null,
+        cost: json['cost'] != null 
+            ? (json['cost'] is String ? double.tryParse(json['cost']) : (json['cost'] as num).toDouble()) 
+            : null,
         notes: json['notes'],
       );
 }
