@@ -3,7 +3,7 @@ class NDVIRecordModel {
   final String fieldId;
   final DateTime date;
   final double avgNDVI;
-  final List<List<double>> gridData;
+  final List<List<double?>> gridData;
 
   NDVIRecordModel({
     required this.id,
@@ -15,8 +15,9 @@ class NDVIRecordModel {
 
   factory NDVIRecordModel.fromJson(Map<String, dynamic> json) {
     var rawGrid = json['gridData'] as List;
-    List<List<double>> parsedGrid = rawGrid.map((row) {
-      return (row as List).map((val) => (val as num).toDouble()).toList();
+    List<List<double?>> parsedGrid = rawGrid.map((row) {
+      if (row is! List) return <double?>[];
+      return (row).map((val) => val != null ? (val as num).toDouble() : null).toList();
     }).toList();
 
     return NDVIRecordModel(
@@ -30,28 +31,28 @@ class NDVIRecordModel {
 }
 
 class AeroTwinAlert {
-  final String zone;
-  final String severity; // low, medium, high
-  final String message;
+  final String issue;
+  final double confidence;
+  final String recommendation;
 
   AeroTwinAlert({
-    required this.zone,
-    required this.severity,
-    required this.message,
+    required this.issue,
+    required this.confidence,
+    required this.recommendation,
   });
 
   factory AeroTwinAlert.fromJson(Map<String, dynamic> json) {
     return AeroTwinAlert(
-      zone: json['zone'] ?? 'Unknown',
-      severity: json['severity'] ?? 'low',
-      message: json['message'] ?? '',
+      issue: json['issue'] ?? 'unknown',
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+      recommendation: json['recommendation'] ?? '',
     );
   }
 }
 
 class SimulationResult {
   final double predictedAvgNDVI;
-  final List<List<double>> predictedGrid;
+  final List<List<double?>> predictedGrid;
   final int riskZonesCount;
   final int totalZones;
   
@@ -64,8 +65,9 @@ class SimulationResult {
 
   factory SimulationResult.fromJson(Map<String, dynamic> json) {
      var rawGrid = json['predictedGrid'] as List;
-     List<List<double>> parsedGrid = rawGrid.map((row) {
-        return (row as List).map((val) => (val as num).toDouble()).toList();
+     List<List<double?>> parsedGrid = rawGrid.map((row) {
+        if (row is! List) return <double?>[];
+        return (row).map((val) => val != null ? (val as num).toDouble() : null).toList();
      }).toList();
 
      return SimulationResult(
