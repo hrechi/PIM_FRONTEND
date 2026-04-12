@@ -59,7 +59,7 @@ class AeroTwinService {
        });
        return SimulationResult.fromJson(response.data);
      } catch (e) {
-       throw Exception('Failed to run simulation');
+       print('Dio error: ${e}'); if (e is DioException) { print(e.response?.data); } throw Exception('Failed to run simulation ${e is DioException ? e.response?.data : e}');
      }
   }
 }
