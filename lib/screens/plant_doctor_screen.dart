@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
@@ -16,7 +17,8 @@ class PlantDoctorScreen extends StatefulWidget {
 }
 
 class _PlantDoctorScreenState extends State<PlantDoctorScreen> {
-  File? _selectedImage;
+  XFile? _selectedImage;
+  Uint8List? _imageBytes;
   bool _isLoading = false;
   Map<String, dynamic>? _aiResult;
 
@@ -28,15 +30,17 @@ class _PlantDoctorScreenState extends State<PlantDoctorScreen> {
   Future<void> _pickImage(ImageSource source) async {
     final XFile? image = await _picker.pickImage(source: source);
     if (image != null) {
+      final bytes = await image.readAsBytes();
       setState(() {
-        _selectedImage = File(image.path);
+        _selectedImage = image;
+        _imageBytes = bytes;
         _aiResult = null; // Reset previous results
       });
     }
   }
 
   Future<void> _analyzePlant() async {
-    if (_selectedImage == null) return;
+    if (_selectedImage == null || _imageBytes == null) return;
 
     setState(() {
       _isLoading = true;
@@ -45,7 +49,11 @@ class _PlantDoctorScreenState extends State<PlantDoctorScreen> {
     try {
       // 1. Prepare the request
       var request = http.MultipartRequest('POST', Uri.parse(_apiUrl));
-      request.files.add(await http.MultipartFile.fromPath('file', _selectedImage!.path));
+      request.files.add(http.MultipartFile.fromBytes(
+        'file', 
+        _imageBytes!, 
+        filename: _selectedImage!.name,
+      ));
 
       // 2. Send to Python Backend
       var streamedResponse = await request.send();
@@ -99,8 +107,8 @@ class _PlantDoctorScreenState extends State<PlantDoctorScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: AppColorPalette.emeraldGreen.withOpacity(0.5), width: 2),
-                  image: _selectedImage != null
-                      ? DecorationImage(image: FileImage(_selectedImage!), fit: BoxFit.cover)
+                  image: (_selectedImage != null && _imageBytes != null)
+                      ? DecorationImage(image: MemoryImage(_imageBytes!), fit: BoxFit.cover)
                       : null,
                 ),
                 child: _selectedImage == null

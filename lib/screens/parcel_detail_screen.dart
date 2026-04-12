@@ -11,6 +11,8 @@ import '../theme/text_styles.dart';
 import 'add_parcel_screen.dart';
 import 'crop_calendar_screen.dart';
 import '../services/crop_rotation_api_service.dart';
+import '../services/harvest_optimization_service.dart';
+import '../models/harvest_optimization_model.dart';
 
 // ─────────────────────────────────────────────────────────────
 // COLOR CONSTANTS (local)
@@ -35,6 +37,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
   late TabController _tabCtrl;
   late Future<ParcelHealthScore> _healthScoreFuture;
   late Future<Map<String, dynamic>> _cropRotationFuture;
+  late Future<HarvestOptimizationResult> _harvestFuture;
 
   String _displayParcelTitle(Parcel parcel) {
     final rawLocation = parcel.location.trim();
@@ -65,6 +68,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
     _tabCtrl = TabController(length: 4, vsync: this);
     _healthScoreFuture = ParcelCrudService().getParcelHealthScore(widget.parcel.id);
     _cropRotationFuture = CropRotationApiService.getCropRotationPlan(widget.parcel.id);
+    _harvestFuture = HarvestOptimizationApiService.getHarvestOptimization(widget.parcel.id);
   }
 
   @override
@@ -364,6 +368,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
         slivers: [
           _buildHeroAppBar(p),
           SliverToBoxAdapter(child: _buildHealthScoreCard()),
+          SliverToBoxAdapter(child: _buildHarvestOptimizationCard()),
           SliverToBoxAdapter(child: _buildCropRotationCard()),
           SliverToBoxAdapter(child: _buildAiBanner(p)),
           SliverToBoxAdapter(child: _buildInfoCard(p)),
@@ -550,6 +555,405 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
           ]),
         ],
       ]),
+    );
+  }
+
+  // ─── HARVEST OPTIMIZATION CARD ──────────────────
+  Widget _buildHarvestOptimizationCard() {
+    return FutureBuilder<HarvestOptimizationResult>(
+      future: _harvestFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: const Center(child: CircularProgressIndicator(color: _kGreen2)),
+          );
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return const SizedBox.shrink();
+        }
+
+        final result = snapshot.data!;
+        final crop = result.activeCrop;
+        if (crop == null) return const SizedBox.shrink();
+
+        // ─── Color / icon by status ───────────────────
+        Color statusColor;
+        Color statusBg;
+        IconData statusIcon;
+        String statusLabel;
+        switch (crop.status) {
+          case HarvestStatus.optimal:
+            statusColor = const Color(0xFF27AE60);
+            statusBg = const Color(0xFFE8F8EF);
+            statusIcon = Icons.check_circle_rounded;
+            statusLabel = 'OPTIMAL — Harvest Now!';
+            break;
+          case HarvestStatus.overdue:
+            statusColor = const Color(0xFFE74C3C);
+            statusBg = const Color(0xFFFDEDEC);
+            statusIcon = Icons.warning_amber_rounded;
+            statusLabel = 'OVERDUE — Harvest Urgently!';
+            break;
+          default:
+            statusColor = const Color(0xFFE67E22);
+            statusBg = const Color(0xFFFEF5E7);
+            statusIcon = Icons.hourglass_bottom_rounded;
+            statusLabel = 'NOT READY — ${crop.daysUntilOptimal}d until optimal';
+        }
+
+        final pctFmt = (crop.maturityPercent * 100).toStringAsFixed(0);
+        final profitGain = crop.profitOptimal - crop.profitNow;
+
+        return Container(
+          margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: statusColor.withValues(alpha: 0.12),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Header gradient bar ──────────────────
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [statusColor.withValues(alpha: 0.85), statusColor],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                child: Row(
+                  children: [
+                    Icon(Icons.agriculture_rounded, color: Colors.white, size: 22),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Harvest Timing Optimizer',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Status pill ─────────────────────
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: statusBg,
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(statusIcon, color: statusColor, size: 18),
+                          const SizedBox(width: 6),
+                          Text(
+                            statusLabel,
+                            style: TextStyle(
+                              color: statusColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // ── Crop info row ───────────────────
+                    Row(
+                      children: [
+                        Container(
+                          width: 48, height: 48,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F8EF),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Center(child: Text('🌱', style: TextStyle(fontSize: 24))),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${crop.cropName} · ${crop.variety}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  color: _kGreen1,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Day ${crop.daysSincePlanting} of ${crop.optimalGrowthDuration}',
+                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          '$pctFmt%',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: statusColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
+                    // ── Maturity progress bar ───────────
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: crop.maturityPercent,
+                        minHeight: 10,
+                        backgroundColor: Colors.grey.shade200,
+                        valueColor: AlwaysStoppedAnimation(statusColor),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Planted', style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+                        Text('Optimal harvest', style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+                      ],
+                    ),
+
+                    const SizedBox(height: 18),
+                    const Divider(height: 1),
+                    const SizedBox(height: 16),
+
+                    // ── Profit Estimator ────────────────
+                    Row(
+                      children: [
+                        const Text('💰', style: TextStyle(fontSize: 18)),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Crop Profit Estimator',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: _kGreen1),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _profitBox(
+                            label: 'Harvest Now',
+                            amount: crop.profitNow,
+                            sub: '${result.areaSize} ha · ${crop.expectedYieldTons.toStringAsFixed(1)}t',
+                            color: statusColor,
+                            icon: Icons.flash_on_rounded,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _profitBox(
+                            label: 'At Optimal Time',
+                            amount: crop.profitOptimal,
+                            sub: '\$${crop.pricePerTon.toStringAsFixed(0)}/ton',
+                            color: const Color(0xFF27AE60),
+                            icon: Icons.trending_up_rounded,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    if (profitGain > 0) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F8EF),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            const Text('📈', style: TextStyle(fontSize: 14)),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Wait for optimal timing to gain an extra \$${profitGain.toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF1A4731),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    if (result.aiExplanation.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      const Divider(height: 1),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          const Text('🤖', style: TextStyle(fontSize: 16)),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'AI Recommendation',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: _kGreen1),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0F9F4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFB2DFDB)),
+                        ),
+                        child: Text(
+                          result.aiExplanation,
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.5,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    // ── All crops mini-list ─────────────
+                    if (result.allCrops.length > 1) ...[
+                      const SizedBox(height: 18),
+                      const Divider(height: 1),
+                      const SizedBox(height: 14),
+                      Text(
+                        'All Crops on this Parcel',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...result.allCrops.map((c) => _miniCropTile(c)),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _profitBox({
+    required String label,
+    required double amount,
+    required String sub,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 14),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(label,
+                    style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '\$${amount.toStringAsFixed(0)}',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
+          ),
+          Text(sub, style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniCropTile(CropProfit c) {
+    Color col;
+    switch (c.status) {
+      case HarvestStatus.optimal:
+        col = const Color(0xFF27AE60);
+        break;
+      case HarvestStatus.overdue:
+        col = const Color(0xFFE74C3C);
+        break;
+      default:
+        col = const Color(0xFFE67E22);
+    }
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: col.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: col.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8, height: 8,
+            decoration: BoxDecoration(color: col, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '${c.cropName} · ${c.variety}',
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+          ),
+          Text(
+            c.status == HarvestStatus.notReady
+                ? '${c.daysUntilOptimal}d left'
+                : c.status == HarvestStatus.optimal
+                    ? 'Ready'
+                    : 'Overdue',
+            style: TextStyle(fontSize: 12, color: col, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
     );
   }
 

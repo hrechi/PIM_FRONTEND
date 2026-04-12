@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend_pim/screens/animals/animal_dashboard_screen.dart';
 import '../screens/agricultural_news_screen.dart';
 import '../screens/harvest_analytics_screen.dart';
+import '../screens/aerotwin_screen.dart';
 import '../screens/crop_calendar_screen.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
@@ -147,6 +148,21 @@ class AppDrawer extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (_) => const HarvestAnalyticsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.map_rounded,
+                    iconColor: Colors.deepPurpleAccent,
+                    title: 'Aero-Twin NDVI',
+                    subtitle: 'Digital Twin & NDVI Maps',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AeroTwinScreen(),
                         ),
                       );
                     },
