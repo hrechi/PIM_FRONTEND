@@ -14,6 +14,8 @@ import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'screens/security/incident_detail_screen.dart';
 import 'screens/soil/soil_measurements_list_screen.dart';
+import 'screens/soil/soil_alert_notifications_screen.dart';
+import 'services/local_notification_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 /// Global navigator key — used for navigating from notification callbacks 
@@ -27,14 +29,30 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 /// Handle incoming FCM message — extract incidentId and navigate
-void handleMessage(RemoteMessage message) {
-  final incidentId = message.data['incidentId'];
+void handleNotificationData(Map<String, dynamic> data) {
+  final screen = (data['screen'] ?? '').toString().toUpperCase();
+  final type = (data['type'] ?? '').toString().toUpperCase();
+
+  if (screen == 'SOIL_ALERTS' || type == 'SOIL_WEATHER_ALERT') {
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (_) => const SoilAlertNotificationsScreen(),
+      ),
+    );
+    return;
+  }
+
+  final incidentId = data['incidentId'];
   if (incidentId != null && incidentId.toString().isNotEmpty) {
     navigatorKey.currentState?.pushNamed(
       '/incident-details',
       arguments: incidentId,
     );
   }
+}
+
+void handleMessage(RemoteMessage message) {
+  handleNotificationData(Map<String, dynamic>.from(message.data));
 }
 
 void main() async {
@@ -45,6 +63,7 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    await LocalNotificationService.initialize(onTap: handleNotificationData);
   }
 
   await initializeDateFormatting('fr_FR', null);
@@ -82,6 +101,11 @@ class _FieldlyAppState extends State<FieldlyApp> {
 
     // App was in background → user tapped notification
     FirebaseMessaging.onMessageOpenedApp.listen(handleMessage);
+
+    // App is in foreground → show local notification so it appears in the phone tray.
+    FirebaseMessaging.onMessage.listen((message) {
+      LocalNotificationService.showFromRemoteMessage(message);
+    });
   }
 
   @override

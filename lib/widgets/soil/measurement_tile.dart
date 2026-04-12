@@ -11,7 +11,7 @@ import 'status_badge.dart';
 class MeasurementTile extends StatefulWidget {
   final SoilMeasurement measurement;
   final VoidCallback? onTap;
-  final VoidCallback? onDelete;
+  final Future<bool> Function()? onDelete;
   final bool showActions;
 
   const MeasurementTile({
@@ -251,7 +251,7 @@ class _MeasurementTileState extends State<MeasurementTile> {
     // Wrap with dismissible for swipe to delete
     if (widget.showActions && widget.onDelete != null) {
       return Dismissible(
-        key: Key(widget.measurement.id),
+        key: ValueKey('${widget.measurement.id}-${widget.measurement.createdAt.toIso8601String()}'),
         direction: DismissDirection.endToStart,
         background: Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -268,13 +268,13 @@ class _MeasurementTileState extends State<MeasurementTile> {
           ),
         ),
         confirmDismiss: (direction) async {
-          return await showDialog(
+          final confirmed = await showDialog<bool>(
             context: context,
             builder: (BuildContext context) {
               return AlertDialog(
                 title: const Text('Confirm Delete'),
                 content: Text(
-                  'Are you sure you want to delete measurement at ${_displayName}?',
+                  'Are you sure you want to delete measurement at $_displayName?',
                 ),
                 actions: [
                   TextButton(
@@ -292,9 +292,13 @@ class _MeasurementTileState extends State<MeasurementTile> {
               );
             },
           );
-        },
-        onDismissed: (direction) {
-          widget.onDelete?.call();
+
+          if (confirmed != true) {
+            return false;
+          }
+
+          final deleted = await widget.onDelete!.call();
+          return deleted;
         },
         child: content,
       );
