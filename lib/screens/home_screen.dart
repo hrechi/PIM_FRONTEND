@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -11,13 +13,16 @@ import '../utils/farm_mood_calculator.dart';
 import '../utils/plant_message_generator.dart';
 import '../models/animal.dart';
 import '../models/alert_item.dart';
+import '../models/soil_intelligence.dart';
 import '../models/weather_info.dart';
 import '../models/parcel.dart';
 
 import '../providers/parcel_provider.dart';
 import '../providers/weather_provider.dart';
 import '../services/animal_service.dart';
+import '../services/local_notification_service.dart';
 import '../services/soil_repository.dart';
+import '../services/soil_intelligence_service.dart';
 import '../widgets/metric_card.dart';
 import '../widgets/security_alert_overlay.dart';
 import '../widgets/unified_farm_status_card.dart';
@@ -38,6 +43,7 @@ import 'security/incident_history_screen.dart';
 import 'security/live_feed_screen.dart';
 import 'security/daily_report_screen.dart';
 import 'security/acoustic_monitor_screen.dart';
+import 'soil/soil_alert_notifications_screen.dart';
 import 'weather_screen.dart';
 import 'irrigation_scheduler_screen.dart';
 import 'agricultural_news_screen.dart';
@@ -64,6 +70,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final AnimalService _animalService = AnimalService();
   final SoilRepository _soilRepository = SoilRepository();
+  final SoilIntelligenceService _soilIntelligenceService = SoilIntelligenceService();
+  Timer? _soilAlertPollTimer;
+  final Set<String> _notifiedSoilAlertIds = <String>{};
+  bool _soilAlertsPrimed = false;
 
   Map<String, dynamic>? _animalStats;
   bool _isLoadingStats = true;
@@ -111,6 +121,10 @@ class _HomeScreenState extends State<HomeScreen> {
     
     _initSocket();
     _initFcmListener();
+    _soilAlertPollTimer = Timer.periodic(
+      const Duration(minutes: 2),
+      (_) => _refreshSoilAlertsForBell(),
+    );
     
     // Listen to parcel provider changes
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -147,6 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
           debugPrint('📍 Auto-selected new parcel: ${_selectedParcel!.id}');
           _fetchAnimalsForField(_selectedParcel!.id);
           _fetchSoilAndCropData();
+          _refreshSoilAlertsForBell();
         } else {
           // All parcels deleted, clear data
           debugPrint('🗑️ All parcels deleted, clearing data');
@@ -155,6 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _totalCrops = 0;
             weatherInfo = null;
             animals = [];
+            alerts = [];
           });
         }
       } else if (_selectedParcel == null && parcels.isNotEmpty) {
@@ -165,6 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
         });
         _fetchAnimalsForField(_selectedParcel!.id);
         _fetchSoilAndCropData();
+        _refreshSoilAlertsForBell();
       }
       
       debugPrint('Parcel provider changed, selected: ${_selectedParcel?.location}');
@@ -173,6 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _soilAlertPollTimer?.cancel();
     _socket.disconnect();
     _socket.dispose();
     
@@ -199,8 +217,123 @@ class _HomeScreenState extends State<HomeScreen> {
         await _fetchAnimalsForField(_selectedParcel!.id);
         await _fetchSoilAndCropData();
       }
+
+      if (mounted) {
+        await _refreshSoilAlertsForBell();
+      }
     } catch (e) {
       debugPrint('Error loading parcels: $e');
+    }
+  }
+
+  Future<void> _refreshSoilAlertsForBell() async {
+    try {
+      final parcelProvider = context.read<ParcelProvider>();
+      final parcels = parcelProvider.parcels;
+
+      if (parcels.isEmpty) {
+        if (!mounted) return;
+        setState(() {
+          alerts = [];
+        });
+        return;
+      }
+
+      final allByParcel = await Future.wait(
+        parcels.map((parcel) async {
+          try {
+            return await _soilIntelligenceService.getActiveAlerts(parcel.id);
+          } catch (_) {
+            return <SoilWeatherAlert>[];
+          }
+        }),
+      );
+
+      final soilAlerts = allByParcel.expand((items) => items).toList();
+      final deduped = <String, SoilWeatherAlert>{
+        for (final alert in soilAlerts) alert.id: alert,
+      }.values.toList();
+
+      deduped.sort((a, b) => b.triggeredAt.compareTo(a.triggeredAt));
+
+      final mapped = deduped
+          .map(
+            (alert) => AlertItem(
+              id: alert.id,
+              title: 'Soil Alert: ${alert.type.replaceAll('_', ' ')}',
+              description: alert.message,
+              severity: _mapAlertSeverity(alert.severity),
+              type: AlertType.environment,
+              timestamp: alert.triggeredAt,
+              relatedEntityId: alert.id,
+              isRead: alert.isRead,
+              isResolved: false,
+            ),
+          )
+          .toList();
+
+      await _notifyNewSoilAlertsLocally(deduped);
+
+      if (!mounted) return;
+      setState(() {
+        alerts = mapped;
+      });
+    } catch (e) {
+      debugPrint('Error refreshing soil alerts for bell: $e');
+    }
+  }
+
+  Future<void> _notifyNewSoilAlertsLocally(List<SoilWeatherAlert> alertsList) async {
+    if (!_soilAlertsPrimed) {
+      _soilAlertsPrimed = true;
+
+      final unread = alertsList.where((alert) => !alert.isRead).toList();
+      if (unread.isNotEmpty) {
+        final top = unread.first;
+        await LocalNotificationService.showSoilAlertNotification(
+          alertId: top.id,
+          parcelId: top.parcelId,
+          severity: top.severity,
+          alertType: top.type,
+          message: unread.length > 1
+              ? '${top.message} (+${unread.length - 1} more active alerts)'
+              : top.message,
+        );
+      }
+
+      _notifiedSoilAlertIds.addAll(alertsList.map((alert) => alert.id));
+      return;
+    }
+
+    if (alertsList.isEmpty) {
+      return;
+    }
+
+    final newUnreadAlerts = alertsList.where((alert) {
+      return !alert.isRead && !_notifiedSoilAlertIds.contains(alert.id);
+    });
+
+    for (final alert in newUnreadAlerts) {
+      _notifiedSoilAlertIds.add(alert.id);
+      await LocalNotificationService.showSoilAlertNotification(
+        alertId: alert.id,
+        parcelId: alert.parcelId,
+        severity: alert.severity,
+        alertType: alert.type,
+        message: alert.message,
+      );
+    }
+  }
+
+  AlertSeverity _mapAlertSeverity(String severity) {
+    switch (severity.toUpperCase()) {
+      case 'CRITICAL':
+      case 'HIGH':
+        return AlertSeverity.critical;
+      case 'MEDIUM':
+        return AlertSeverity.warning;
+      default:
+        return AlertSeverity.info;
     }
   }
   
@@ -453,8 +586,25 @@ class _HomeScreenState extends State<HomeScreen> {
   void _initFcmListener() {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       final data = message.data;
+      final screen = (data['screen'] ?? '').toString().toUpperCase();
+      final type = (data['type'] ?? 'intruder').toString();
+
+      if (screen == 'SOIL_ALERTS' || type.toUpperCase() == 'SOIL_WEATHER_ALERT') {
+        _refreshSoilAlertsForBell();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                data['message']?.toString() ?? 'New soil alert received',
+              ),
+              backgroundColor: AppColorPalette.alertError,
+            ),
+          );
+        }
+        return;
+      }
+
       final incidentId = data['incidentId'] ?? '';
-      final type = data['type'] ?? 'intruder';
       final imageUrl = data['image_url'] ?? '';
 
       if (!mounted) return;
@@ -1029,7 +1179,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ─────────────────────────────────────────────
   // HEADER
-  // Transparent AppBar + notification bell → IncidentHistoryScreen (Doc6)
+  // Transparent AppBar + notification bell → Soil Alert Notification Center
   // ─────────────────────────────────────────────
   Widget _buildHeader() {
     return SliverAppBar(
@@ -1078,12 +1228,13 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             IconButton(
               icon: const Icon(Icons.notifications_outlined, color: AppColorPalette.white),
-              onPressed: () {
-                Navigator.of(context).push(
+              onPressed: () async {
+                await Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const IncidentHistoryScreen(),
+                    builder: (_) => const SoilAlertNotificationsScreen(),
                   ),
                 );
+                _refreshSoilAlertsForBell();
               },
             ),
             if (alerts.where((a) => !a.isRead).isNotEmpty)
