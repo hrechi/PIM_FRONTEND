@@ -23,9 +23,12 @@ class AeroTwinService {
     ));
   }
 
-  Future<NDVIRecordModel> getNDVI(String fieldId) async {
+  Future<NDVIRecordModel> getNDVI(String fieldId, {String? date}) async {
     try {
-      final response = await _dio.get('/aerotwin/ndvi', queryParameters: {'fieldId': fieldId});
+      final queryParams = {'fieldId': fieldId};
+      if (date != null) queryParams['date'] = date;
+      
+      final response = await _dio.get('/aerotwin/ndvi', queryParameters: queryParams);
       return NDVIRecordModel.fromJson(response.data);
     } catch (e) {
       throw Exception('Failed to load NDVI data');
