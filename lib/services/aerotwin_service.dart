@@ -57,6 +57,8 @@ class AeroTwinService {
     required double irrigationChange,
     required double temperature,
     required double nitrogenLevel,
+    required double pestRisk,
+    required double sunlightHours,
   }) async {
      try {
        final response = await _dio.post('/aerotwin/simulate', data: {
@@ -65,6 +67,8 @@ class AeroTwinService {
            'irrigationChange': irrigationChange,
            'temperature': temperature,
            'nitrogenLevel': nitrogenLevel,
+           'pestRisk': pestRisk,
+           'sunlightHours': sunlightHours,
          }
        });
        return SimulationResult.fromJson(response.data);

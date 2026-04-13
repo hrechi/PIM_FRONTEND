@@ -32,6 +32,8 @@ class _AeroTwinScreenState extends State<AeroTwinScreen> {
   double _irrigation = 0; // -50 to 50
   double _temperature = 25; // 0 to 50
   double _nitrogen = 0.5; // 0 to 1
+  double _pestRisk = 0; // 0 to 100
+  double _sunlightHours = 12; // 0 to 24
 
   @override
   void initState() {
@@ -106,6 +108,8 @@ class _AeroTwinScreenState extends State<AeroTwinScreen> {
         irrigationChange: _irrigation,
         temperature: _temperature,
         nitrogenLevel: _nitrogen,
+        pestRisk: _pestRisk,
+        sunlightHours: _sunlightHours,
       );
       setState(() {
         _simulationResult = result;
@@ -141,7 +145,9 @@ class _AeroTwinScreenState extends State<AeroTwinScreen> {
         double newVal = baseVal 
           + (_irrigation * 0.001) 
           + (_nitrogen * 0.1) 
-          - (_temperature > 35 ? 0.1 : 0);
+          - (_temperature > 35 ? 0.1 : 0)
+          - (_pestRisk * 0.002)
+          + ((_sunlightHours - 12) * 0.01);
 
         // Clamp between 0 and 1
         if (newVal < 0) newVal = 0;
@@ -199,7 +205,7 @@ class _AeroTwinScreenState extends State<AeroTwinScreen> {
   }
 
   bool _isModified() {
-    return _irrigation != 0 || _nitrogen != 0.5 || _temperature != 25;
+    return _irrigation != 0 || _nitrogen != 0.5 || _temperature != 25 || _pestRisk != 0 || _sunlightHours != 12;
   }
 
   @override
@@ -399,8 +405,22 @@ class _AeroTwinScreenState extends State<AeroTwinScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _simpleSlider('Temperature', _temperature, 0, 50, '°C', 
-            onChanged: (v) => setState(() => _temperature = v),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _compactSlider('Temperature', _temperature, 0, 50, '°C', 
+                onChanged: (v) => setState(() => _temperature = v),
+                onChangedEnd: (_) => _runSimulation(),
+              ),
+              _compactSlider('Pest Risk', _pestRisk, 0, 100, '%', 
+                onChanged: (v) => setState(() => _pestRisk = v),
+                onChangedEnd: (_) => _runSimulation(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _simpleSlider('Sunlight', _sunlightHours, 0, 24, 'h', 
+            onChanged: (v) => setState(() => _sunlightHours = v),
             onChangedEnd: (_) => _runSimulation(),
           ),
           const SizedBox(height: 16),
