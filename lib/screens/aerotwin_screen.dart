@@ -44,6 +44,7 @@ class _AeroTwinScreenState extends State<AeroTwinScreen> {
   Future<void> _loadFields() async {
     try {
       final fields = await _fieldService.getFields();
+      if (!mounted) return;
       setState(() {
         _fields = fields;
         if (fields.isNotEmpty) {
@@ -55,6 +56,7 @@ class _AeroTwinScreenState extends State<AeroTwinScreen> {
         _fetchNDVIData();
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
       _showError('Failed to load fields: $e');
     }
@@ -77,6 +79,7 @@ class _AeroTwinScreenState extends State<AeroTwinScreen> {
         // Map not ready yet, initialCenter in MapOptions will handle it
       }
 
+      if (!mounted) return;
       setState(() {
         _currentNDVI = ndvi;
         _alert = alert;
@@ -84,6 +87,7 @@ class _AeroTwinScreenState extends State<AeroTwinScreen> {
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
       _showError('Failed to load NDVI: $e');
     }
@@ -111,11 +115,13 @@ class _AeroTwinScreenState extends State<AeroTwinScreen> {
         pestRisk: _pestRisk,
         sunlightHours: _sunlightHours,
       );
+      if (!mounted) return;
       setState(() {
         _simulationResult = result;
         _isSimulating = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isSimulating = false);
       _showError('Simulation failed: $e');
     }
