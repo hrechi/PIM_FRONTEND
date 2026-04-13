@@ -11,6 +11,8 @@ import 'providers/irrigation_provider.dart';
 import 'providers/vaccine_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/shorts_provider.dart';
+import 'providers/field_provider.dart';
+import 'providers/finance_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'screens/security/incident_detail_screen.dart';
@@ -99,6 +101,8 @@ class _FieldlyAppState extends State<FieldlyApp> {
         ChangeNotifierProvider(create: (_) => VaccineProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => ShortsProvider()),
+        ChangeNotifierProvider(create: (_) => FieldProvider()),
+        ChangeNotifierProvider(create: (_) => FinanceProvider()),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,

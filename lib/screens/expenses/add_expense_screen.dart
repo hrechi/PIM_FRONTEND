@@ -27,6 +27,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Animal? _selectedAnimal;
   File? _receiptImage;
   bool _isLoading = false;
+  bool _isLoadingAnimals = false;
+  String? _animalsError;
   List<Animal> _animals = [];
 
   final List<Map<String, dynamic>> _categories = [
@@ -54,11 +56,28 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   }
 
   Future<void> _fetchAnimals() async {
+    setState(() {
+      _isLoadingAnimals = true;
+      _animalsError = null;
+    });
     try {
+      debugPrint('📌 Fetching animals for fieldId: ${widget.field.id}');
       final animals = await AnimalService().getAnimals(fieldId: widget.field.id);
-      setState(() => _animals = animals);
+      debugPrint('✅ Animals fetched: ${animals.length} found');
+      if (mounted) {
+        setState(() {
+          _animals = animals;
+          _isLoadingAnimals = false;
+        });
+      }
     } catch (e) {
-      debugPrint('Error fetching animals: $e');
+      debugPrint('❌ Error fetching animals: $e');
+      if (mounted) {
+        setState(() {
+          _animalsError = 'Erreur lors de la récupération des animaux';
+          _isLoadingAnimals = false;
+        });
+      }
     }
   }
 
@@ -448,6 +467,36 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   }
 
   void _showAnimalPicker() {
+    // Show error if animals failed to load
+    if (_animalsError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_animalsError!),
+          action: SnackBarAction(
+            label: 'Réessayer',
+            onPressed: _fetchAnimals,
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Show loading if still loading
+    if (_isLoadingAnimals) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Chargement des animaux...')),
+      );
+      return;
+    }
+
+    // Show empty message if no animals
+    if (_animals.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aucun animal trouvé pour ce champ')),
+      );
+      return;
+    }
+
     String query = '';
     showModalBottomSheet(
       context: context,
@@ -495,31 +544,41 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     ),
                   ),
                 ),
-                Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(24),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final a = filtered[index];
-                      return ListTile(
-                        onTap: () {
-                          setState(() {
-                            _selectedAnimalId = a.id;
-                            _selectedAnimal = a;
-                          });
-                          Navigator.pop(context);
-                        },
-                        leading: CircleAvatar(
-                          backgroundColor: AppColors.mistyBlue.withValues(alpha: 0.1),
-                          child: Text(a.name.isNotEmpty ? a.name[0].toUpperCase() : '?', style: const TextStyle(color: AppColors.mistyBlue)),
-                        ),
-                        title: Text(a.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text(a.tagNumber ?? a.nodeId),
-                      );
-                    },
+                if (filtered.isEmpty)
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        query.isEmpty ? 'Aucun animal trouvé' : 'Aucun résultat pour "$query"',
+                        style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 16),
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: ListView.separated(
+                      padding: const EdgeInsets.all(24),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final a = filtered[index];
+                        return ListTile(
+                          onTap: () {
+                            setState(() {
+                              _selectedAnimalId = a.id;
+                              _selectedAnimal = a;
+                            });
+                            Navigator.pop(context);
+                          },
+                          leading: CircleAvatar(
+                            backgroundColor: AppColors.mistyBlue.withValues(alpha: 0.1),
+                            child: Text(a.name.isNotEmpty ? a.name[0].toUpperCase() : '?', style: const TextStyle(color: AppColors.mistyBlue)),
+                          ),
+                          title: Text(a.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text(a.tagNumber ?? a.nodeId),
+                        );
+                      },
+                    ),
                   ),
-                ),
               ],
             ),
           );

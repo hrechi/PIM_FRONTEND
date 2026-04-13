@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../models/animal.dart';
+import '../utils/animal_utils.dart';
 import 'status_chip.dart';
 
 /// Reusable card widget for displaying live health metrics
@@ -154,18 +155,7 @@ class MetricCard extends StatelessWidget {
 
   /// Get appropriate icon for animal type
   IconData _getAnimalIcon(String type) {
-    switch (type.toUpperCase()) {
-      case 'COW':
-        return Icons.agriculture;
-      case 'SHEEP':
-        return Icons.pets;
-      case 'GOAT':
-        return Icons.pets;
-      case 'BIRD':
-        return Icons.egg;
-      default:
-        return Icons.pets;
-    }
+    return AnimalUtils.getAnimalIcon(type);
   }
 }
 

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../models/animal.dart';
 import '../../services/animal_service.dart';
 import '../../utils/constants.dart';
+import '../../utils/animal_utils.dart';
 import 'add_animal_screen.dart';
 import 'animal_finance_screen.dart';
 import 'sell_animal_screen.dart';
@@ -161,7 +162,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
                 : Container(
                     color: AppColors.mistyBlue.withValues(alpha: 0.1),
                     child: Center(
-                      child: Icon(_getAnimalIcon(_animal.animalType), size: 100, color: AppColors.mistyBlue.withValues(alpha: 0.2)),
+                      child: Icon(AnimalUtils.getAnimalIcon(_animal.animalType), size: 100, color: AppColors.mistyBlue.withValues(alpha: 0.2)),
                     ),
                   ),
           ),
@@ -203,7 +204,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(color: AppColors.mistyBlue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-                child: Text(_getAnimalEmoji(_animal.animalType), style: const TextStyle(fontSize: 24)),
+                child: Text(AnimalUtils.getAnimalEmoji(_animal.animalType), style: const TextStyle(fontSize: 24)),
               ),
             ],
           ),
@@ -612,23 +613,4 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
     );
   }
 
-  IconData _getAnimalIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'cow': return Symbols.cruelty_free;
-      case 'sheep': return Symbols.pest_control_rodent;
-      case 'horse': return Symbols.emoji_nature;
-      case 'dog': return Symbols.sound_detection_dog_barking;
-      default: return Symbols.pets;
-    }
-  }
-
-  String _getAnimalEmoji(String type) {
-    switch (type.toLowerCase()) {
-      case 'cow': return '🐄';
-      case 'sheep': return '🐑';
-      case 'horse': return '🐎';
-      case 'dog': return '🐕';
-      default: return '🐾';
-    }
-  }
 }

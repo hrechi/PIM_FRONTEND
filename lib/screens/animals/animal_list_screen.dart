@@ -3,6 +3,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../models/animal.dart';
 import '../../services/animal_service.dart';
 import '../../utils/constants.dart';
+import '../../utils/animal_utils.dart';
 import '../../widgets/app_drawer.dart';
 import '../../services/field_service.dart';
 import '../../models/field_model.dart';
@@ -62,6 +63,64 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
       );
       _statsFuture = _animalService.getStatistics(fieldId: _selectedFieldId);
     });
+  }
+
+  void _showCancelSaleDialog(Animal animal) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Annuler la vente'),
+        content: Text('Êtes-vous sûr de vouloir annuler la vente de ${animal.name}?\n\nL\'animal sera marqué comme actif.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Non'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _cancelSale(animal);
+            },
+            child: const Text('Oui, annuler'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _cancelSale(Animal animal) async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      await _animalService.cancelSale(animal.nodeId);
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('La vente de ${animal.name} a été annulée'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _refreshData();
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -491,7 +550,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
                           Row(
                             children: [
                               Icon(
-                                _getAnimalIcon(animal.animalType),
+                                AnimalUtils.getAnimalIcon(animal.animalType),
                                 size: 16,
                                 color: const Color(0xFF94A3B8),
                               ),
@@ -503,24 +562,55 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
                               ),
                             ],
                           ),
-                          Row(
-                            children: [
-                              const Text(
-                                'View Details',
-                                style: TextStyle(
-                                  color: AppColors.mistBlue,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                          if (animal.status.toLowerCase() == 'sold')
+                            GestureDetector(
+                              onTap: () => _showCancelSaleDialog(animal),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEF4444).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFEF4444), width: 1),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(
+                                      Symbols.close,
+                                      color: Color(0xFFEF4444),
+                                      size: 14,
+                                    ),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Cancel Sale',
+                                      style: TextStyle(
+                                        color: Color(0xFFEF4444),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Symbols.chevron_right,
-                                color: AppColors.mistBlue,
-                                size: 16,
-                              ),
-                            ],
-                          ),
+                            )
+                          else
+                            Row(
+                              children: [
+                                const Text(
+                                  'View Details',
+                                  style: TextStyle(
+                                    color: AppColors.mistBlue,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Symbols.chevron_right,
+                                  color: AppColors.mistBlue,
+                                  size: 16,
+                                ),
+                              ],
+                            ),
                         ],
                       ),
                     ],
@@ -558,7 +648,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
   Widget _buildFallbackIcon(String type) {
     return Center(
       child: Icon(
-        _getAnimalIcon(type),
+        AnimalUtils.getAnimalIcon(type),
         size: 40,
         color: AppColors.mistBlue.withValues(alpha: 0.3),
       ),
@@ -618,15 +708,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
     );
   }
 
-  IconData _getAnimalIcon(String type) {
-    switch (type.toUpperCase()) {
-      case 'COW': return Symbols.cruelty_free;
-      case 'SHEEP': return Symbols.pest_control_rodent;
-      case 'HORSE': return Symbols.emoji_nature;
-      case 'DOG': return Symbols.sound_detection_dog_barking;
-      default: return Symbols.pets;
-    }
-  }
+
 
   Color _getHealthStatusColor(String status) {
     switch (status.toUpperCase()) {

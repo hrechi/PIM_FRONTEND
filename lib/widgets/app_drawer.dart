@@ -22,6 +22,7 @@ import '../screens/security/incident_history_screen.dart';
 import '../screens/shorts_screen.dart';
 import '../screens/expenses/add_expense_screen.dart';
 import '../services/field_service.dart';
+import '../screens/finance/finance_dashboard_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -136,16 +137,15 @@ class AppDrawer extends StatelessWidget {
                     },
                   ),
                   _buildDrawerItem(
-                    icon: Icons.newspaper,
-                    iconColor: Colors.orange,
-                    title: 'Agricultural News',
-                    subtitle: 'Latest farming updates',
+                    icon: Icons.attach_money,
+                    title: 'Finance Dashboard',
+                    subtitle: 'Financial overview',
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => AgriculturalNewsScreen(),
+                          builder: (_) => const FinanceDashboardScreen(),
                         ),
                       );
                     },

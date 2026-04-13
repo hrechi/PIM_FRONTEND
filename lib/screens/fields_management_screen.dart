@@ -66,6 +66,7 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
     final nameController = TextEditingController();
     List<List<double>>? coordinates;
     double? areaSize;
+    String selectedCurrency = 'USD'; // Default currency
     String? validationError;
 
     final result = await showDialog<Map<String, dynamic>>(
@@ -107,6 +108,35 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
                     border: const OutlineInputBorder(),
                   ),
                   onChanged: (value) => setState(() => validationError = null),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedCurrency,
+                  decoration: const InputDecoration(
+                    labelText: 'Currency',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'TND', child: Text('TND - Tunisian Dinar')),
+                    DropdownMenuItem(value: 'MAD', child: Text('MAD - Moroccan Dirham')),
+                    DropdownMenuItem(value: 'DZD', child: Text('DZD - Algerian Dinar')),
+                    DropdownMenuItem(value: 'EUR', child: Text('EUR - Euro')),
+                    DropdownMenuItem(value: 'GBP', child: Text('GBP - British Pound')),
+                    DropdownMenuItem(value: 'CHF', child: Text('CHF - Swiss Franc')),
+                    DropdownMenuItem(value: 'USD', child: Text('USD - US Dollar')),
+                    DropdownMenuItem(value: 'CAD', child: Text('CAD - Canadian Dollar')),
+                    DropdownMenuItem(value: 'BRL', child: Text('BRL - Brazilian Real')),
+                    DropdownMenuItem(value: 'ARS', child: Text('ARS - Argentine Peso')),
+                    DropdownMenuItem(value: 'AUD', child: Text('AUD - Australian Dollar')),
+                    DropdownMenuItem(value: 'INR', child: Text('INR - Indian Rupee')),
+                    DropdownMenuItem(value: 'CNY', child: Text('CNY - Chinese Yuan')),
+                    DropdownMenuItem(value: 'TRY', child: Text('TRY - Turkish Lira')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => selectedCurrency = value);
+                    }
+                  },
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
@@ -177,6 +207,7 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
                   'name': nameController.text.trim(),
                   'coordinates': coordinates,
                   'areaSize': areaSize,
+                  'currency': selectedCurrency,
                 });
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.mistBlue),
@@ -195,6 +226,7 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
         result['name'],
         result['coordinates'],
         result['areaSize'],
+        result['currency'],
       );
     }
   }
@@ -203,12 +235,14 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
     String name,
     List<List<double>> coordinates,
     double? areaSize,
+    String? currency,
   ) async {
     try {
       await fieldService.createField(
         name: name,
         areaCoordinates: coordinates,
         areaSize: areaSize,
+        currency: currency,
       );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Field created successfully')),
@@ -225,6 +259,7 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
     final nameController = TextEditingController(text: field.name);
     List<List<double>>? coordinates = field.areaCoordinates;
     double? areaSize = field.areaSize;
+    String selectedCurrency = field.currency;
     String? validationError;
 
     final result = await showDialog<Map<String, dynamic>>(
@@ -266,6 +301,35 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
                     border: const OutlineInputBorder(),
                   ),
                   onChanged: (value) => setState(() => validationError = null),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedCurrency,
+                  decoration: const InputDecoration(
+                    labelText: 'Currency',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'TND', child: Text('TND - Tunisian Dinar')),
+                    DropdownMenuItem(value: 'MAD', child: Text('MAD - Moroccan Dirham')),
+                    DropdownMenuItem(value: 'DZD', child: Text('DZD - Algerian Dinar')),
+                    DropdownMenuItem(value: 'EUR', child: Text('EUR - Euro')),
+                    DropdownMenuItem(value: 'GBP', child: Text('GBP - British Pound')),
+                    DropdownMenuItem(value: 'CHF', child: Text('CHF - Swiss Franc')),
+                    DropdownMenuItem(value: 'USD', child: Text('USD - US Dollar')),
+                    DropdownMenuItem(value: 'CAD', child: Text('CAD - Canadian Dollar')),
+                    DropdownMenuItem(value: 'BRL', child: Text('BRL - Brazilian Real')),
+                    DropdownMenuItem(value: 'ARS', child: Text('ARS - Argentine Peso')),
+                    DropdownMenuItem(value: 'AUD', child: Text('AUD - Australian Dollar')),
+                    DropdownMenuItem(value: 'INR', child: Text('INR - Indian Rupee')),
+                    DropdownMenuItem(value: 'CNY', child: Text('CNY - Chinese Yuan')),
+                    DropdownMenuItem(value: 'TRY', child: Text('TRY - Turkish Lira')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => selectedCurrency = value);
+                    }
+                  },
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
@@ -357,6 +421,7 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
         result['name'],
         result['coordinates'],
         result['areaSize'],
+        result['currency'],
       );
     }
   }
@@ -366,6 +431,7 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
     String name,
     List<List<double>> coordinates,
     double? areaSize,
+    String? currency,
   ) async {
     try {
       await fieldService.updateField(
@@ -373,6 +439,7 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
         name: name,
         areaCoordinates: coordinates,
         areaSize: areaSize,
+        currency: currency,
       );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Field updated successfully')),
@@ -496,6 +563,13 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
                                             color: Colors.grey[600],
                                           ),
                                         ),
+                                      Text(
+                                        'Currency: ${field.currency} (${field.currencySymbol})',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),

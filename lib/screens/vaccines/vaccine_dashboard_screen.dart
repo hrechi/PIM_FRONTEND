@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/vaccine_provider.dart';
 import '../../utils/constants.dart';
+import '../../utils/animal_utils.dart';
 import '../../services/animal_service.dart';
 import '../../models/animal.dart';
 import 'vaccine_planning_screen.dart';
@@ -349,7 +350,6 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
 
   Widget _buildFilters() {
     final types = ['cow', 'horse', 'sheep', 'dog'];
-    final typeIcons = {'cow': Icons.set_meal_rounded, 'horse': Icons.directions_run_rounded, 'sheep': Icons.cloud_rounded, 'dog': Icons.pets_rounded};
     final typeLabels = {'cow': 'Cows', 'horse': 'Horses', 'sheep': 'Sheep', 'dog': 'Dogs'};
 
     return Column(
@@ -364,7 +364,7 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
               const SizedBox(width: 10),
               ...types.map((t) => Padding(
                 padding: const EdgeInsets.only(right: 10),
-                child: _buildFilterChip(typeLabels[t]!, _filterType == t, () => setState(() => _filterType = _filterType == t ? null : t), icon: typeIcons[t]),
+                child: _buildFilterChip(typeLabels[t]!, _filterType == t, () => setState(() => _filterType = _filterType == t ? null : t), icon: AnimalUtils.getAnimalIcon(t)),
               )),
               const VerticalDivider(width: 20, indent: 10, endIndent: 10, color: Color(0xFFE2E8F0)),
               _buildFilterChip('Male', _filterSex == 'male', () => setState(() => _filterSex = _filterSex == 'male' ? null : 'male'), icon: Icons.male_rounded),
@@ -518,13 +518,7 @@ class _AnimalVaccineRow extends StatelessWidget {
   });
 
   IconData get _icon {
-    switch (animal.animalType.toLowerCase()) {
-      case 'cow': return Icons.set_meal_rounded;
-      case 'sheep': return Icons.cloud_rounded;
-      case 'horse': return Icons.directions_run_rounded;
-      case 'dog': return Icons.pets_rounded;
-      default: return Icons.cruelty_free_rounded;
-    }
+    return AnimalUtils.getAnimalIcon(animal.animalType);
   }
 
   @override
