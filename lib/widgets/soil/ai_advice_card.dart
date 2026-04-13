@@ -150,9 +150,11 @@ class AiAdviceCard extends StatelessWidget {
                 color: AppColorPalette.charcoalGreen,
               ),
               const SizedBox(width: 8),
-              Text(
-                'Current Soil Measurements',
-                style: AppTextStyles.h4(),
+              Expanded(
+                child: Text(
+                  'Current Soil Measurements',
+                  style: AppTextStyles.h4(),
+                ),
               ),
             ],
           ),
@@ -287,10 +289,13 @@ class AiAdviceCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Text(
-              'Optimal: $optimalRange',
-              style: AppTextStyles.caption(
-                color: AppColorPalette.softSlate,
+            Flexible(
+              child: Text(
+                'Optimal: $optimalRange',
+                style: AppTextStyles.caption(
+                  color: AppColorPalette.softSlate,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

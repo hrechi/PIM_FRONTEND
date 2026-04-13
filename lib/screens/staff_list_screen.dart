@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import 'add_staff_screen.dart';
+import '../widgets/app_drawer.dart';
 
 /// Screen that displays all whitelisted staff members with their photos.
 /// Allows deletion of staff members from the whitelist.
@@ -124,16 +125,10 @@ class _StaffListScreenState extends State<StaffListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColorPalette.wheatWarmClay,
+      drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: AppColorPalette.wheatWarmClay,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_rounded,
-            color: AppColorPalette.charcoalGreen,
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
         title: Text(
           'Security Whitelist',
           style: AppTextStyles.h3(color: AppColorPalette.charcoalGreen),

@@ -8,13 +8,15 @@ import 'providers/auth_provider.dart';
 import 'providers/parcel_provider.dart';
 import 'providers/weather_provider.dart';
 import 'providers/irrigation_provider.dart';
+import 'providers/vaccine_provider.dart';
+import 'providers/shorts_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
-import 'screens/incident_detail_screen.dart';
+import 'screens/security/incident_detail_screen.dart';
 import 'screens/soil/soil_measurements_list_screen.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
-
-/// Global navigator key — used for navigating from notification callbacks
+/// Global navigator key — used for navigating from notification callbacks 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 /// Background message handler — must be a top-level function
@@ -44,6 +46,8 @@ void main() async {
     );
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   }
+
+  await initializeDateFormatting('fr_FR', null);
 
   runApp(const FieldlyApp());
 }
@@ -89,6 +93,8 @@ class _FieldlyAppState extends State<FieldlyApp> {
         ChangeNotifierProvider(create: (_) => ParcelProvider()),
         ChangeNotifierProvider(create: (_) => WeatherProvider()),
         ChangeNotifierProvider(create: (_) => IrrigationProvider()),
+        ChangeNotifierProvider(create: (_) => VaccineProvider()),
+        ChangeNotifierProvider(create: (_) => ShortsProvider()),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,

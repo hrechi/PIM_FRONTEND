@@ -225,4 +225,54 @@ class SoilMetricCard extends StatelessWidget {
       onTap: onTap,
     );
   }
+
+  /// Factory for soil type metric
+  factory SoilMetricCard.soilType({
+    required String? soilType,
+    double? confidence,
+    bool compact = false,
+    VoidCallback? onTap,
+  }) {
+    final type = soilType ?? 'Unknown';
+    String subtitle = 'Detected by AI';
+    if (confidence != null && confidence >= 0.7) {
+      subtitle = 'AI Confidence: ${(confidence * 100).toStringAsFixed(0)}%';
+    } else if (confidence != null) {
+      subtitle = 'Low confidence: ${(confidence * 100).toStringAsFixed(0)}%';
+    }
+
+    Color iconColor;
+    switch (type.toLowerCase()) {
+      case 'clay':
+        iconColor = AppColorPalette.alertError;
+        break;
+      case 'sandy':
+        iconColor = AppColorPalette.warning;
+        break;
+      case 'loam':
+        iconColor = AppColorPalette.success;
+        break;
+      case 'silt':
+        iconColor = AppColorPalette.info;
+        break;
+      case 'peat':
+        iconColor = AppColorPalette.charcoalGreen;
+        break;
+      case 'chalky':
+        iconColor = AppColorPalette.mistyBlue;
+        break;
+      default:
+        iconColor = AppColorPalette.softSlate;
+    }
+
+    return SoilMetricCard(
+      label: 'Soil Type',
+      value: type,
+      icon: Icons.terrain,
+      iconColor: iconColor,
+      subtitle: soilType != null ? subtitle : null,
+      compact: compact,
+      onTap: onTap,
+    );
+  }
 }

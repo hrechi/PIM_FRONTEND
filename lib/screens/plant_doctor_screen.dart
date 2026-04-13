@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
+import '../widgets/app_drawer.dart';
+import '../utils/constants.dart';
 
 class PlantDoctorScreen extends StatefulWidget {
   const PlantDoctorScreen({super.key});
@@ -18,11 +20,8 @@ class _PlantDoctorScreenState extends State<PlantDoctorScreen> {
   bool _isLoading = false;
   Map<String, dynamic>? _aiResult;
 
-  // ⚠️ IMPORTANT:
-  // Android Emulator: 'http://10.0.2.2:8000/analyze'
-  // iPhone Simulator: 'http://localhost:8000/analyze'
-  // Real Device: Use your computer's IP, e.g., 'http://192.168.1.15:8000/analyze'
-  final String _apiUrl = 'http://localhost:8000/analyze';
+  String get _apiUrl =>
+      'http://${AppConfig.serverHost}:${AppConfig.plantDoctorPort}/analyze';
 
   final ImagePicker _picker = ImagePicker();
 
@@ -80,6 +79,7 @@ class _PlantDoctorScreenState extends State<PlantDoctorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColorPalette.wheatWarmClay,
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('AI Plant Doctor 🌿', style: TextStyle(color: Colors.white)),
         backgroundColor: AppColorPalette.emeraldGreen,

@@ -20,10 +20,18 @@ class AnimalService {
     return null;
   }
 
-  Future<List<Animal>> getAnimals({String? animalType}) async {
+  Future<List<Animal>> getAnimals({String? animalType, String? fieldId}) async {
     String endpoint = '/animals';
+    List<String> params = [];
     if (animalType != null) {
-      endpoint += '?animalType=$animalType';
+      params.add('animalType=$animalType');
+    }
+    if (fieldId != null) {
+      params.add('fieldId=$fieldId');
+    }
+    
+    if (params.isNotEmpty) {
+      endpoint += '?${params.join('&')}';
     }
     
     final response = await ApiService.get(endpoint, withAuth: true);
@@ -39,8 +47,12 @@ class AnimalService {
     return animals;
   }
 
-  Future<Map<String, dynamic>> getStatistics() async {
-    return await ApiService.get('/animals/stats', withAuth: true);
+  Future<Map<String, dynamic>> getStatistics({String? fieldId}) async {
+    String endpoint = '/animals/stats';
+    if (fieldId != null) {
+      endpoint += '?fieldId=$fieldId';
+    }
+    return await ApiService.get(endpoint, withAuth: true);
   }
 
   Future<Animal> createAnimal(Map<String, dynamic> animalData) async {

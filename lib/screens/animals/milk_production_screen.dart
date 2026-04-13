@@ -572,10 +572,6 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
             ),
           ],
         ),
-        GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: _buildCircleIconButton(Icons.arrow_back_ios_new_rounded),
-        ),
       ],
     );
   }

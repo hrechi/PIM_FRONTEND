@@ -4,8 +4,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../utils/constants.dart';
 import '../../services/milk_production_service.dart';
-import '../../widgets/app_drawer.dart';
 import 'milk_production_screen.dart';
+import '../../widgets/app_drawer.dart';
 
 class MilkAnalyticsScreen extends StatefulWidget {
   const MilkAnalyticsScreen({super.key});
@@ -131,7 +131,7 @@ class _MilkAnalyticsScreenState extends State<MilkAnalyticsScreen> with SingleTi
         elevation: 0,
         leading: Builder(
           builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: Color(0xFF1E293B)),
+            icon: const Icon(Icons.menu_rounded, color: Color(0xFF1E293B)),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
