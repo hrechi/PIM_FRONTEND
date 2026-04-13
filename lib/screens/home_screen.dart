@@ -141,6 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   void _onParcelProviderChanged() {
+    if (!mounted) return;
     final parcelProvider = context.read<ParcelProvider>();
     final parcels = parcelProvider.parcels;
     
@@ -207,6 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadParcels() async {
     try {
+      if (!mounted) return;
       final parcelProvider = context.read<ParcelProvider>();
       await parcelProvider.fetchParcels();
       if (mounted && parcelProvider.parcels.isNotEmpty) {
@@ -346,6 +348,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (weatherProvider.fields.isEmpty) {
         await weatherProvider.loadFields();
       }
+      if (!mounted) return;
 
       final selectedFieldId = weatherProvider.selectedFieldId;
       if (selectedFieldId != null) {
@@ -406,6 +409,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchSoilAndCropData() async {
+    if (!mounted) return;
     final weatherProvider = context.read<WeatherProvider>();
     final selectedFieldId = weatherProvider.selectedFieldId;
     final selectedField = weatherProvider.selectedField;

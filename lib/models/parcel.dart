@@ -152,6 +152,7 @@ class Parcel {
   final String waterSource;
   final String irrigationMethod;
   final String irrigationFrequency;
+  final dynamic polygon;
   
   final List<Crop> crops;
   final List<Fertilization> fertilizations;
@@ -172,6 +173,7 @@ class Parcel {
     required this.waterSource,
     required this.irrigationMethod,
     required this.irrigationFrequency,
+    this.polygon,
     this.crops = const [],
     this.fertilizations = const [],
     this.pests = const [],
@@ -193,6 +195,7 @@ class Parcel {
       waterSource: json['waterSource'],
       irrigationMethod: json['irrigationMethod'],
       irrigationFrequency: json['irrigationFrequency'],
+      polygon: json['polygon'],
       crops: (json['crops'] as List<dynamic>?)?.map((e) => Crop.fromJson(e)).toList() ?? [],
       fertilizations: (json['fertilizations'] as List<dynamic>?)?.map((e) => Fertilization.fromJson(e)).toList() ?? [],
       pests: (json['pests'] as List<dynamic>?)?.map((e) => PestDisease.fromJson(e)).toList() ?? [],
@@ -214,6 +217,7 @@ class Parcel {
       'waterSource': waterSource,
       'irrigationMethod': irrigationMethod,
       'irrigationFrequency': irrigationFrequency,
+      if (polygon != null) 'polygon': polygon,
     };
   }
 }

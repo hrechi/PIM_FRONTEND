@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -56,6 +57,14 @@ void handleNotificationData(Map<String, dynamic> data) {
 
 void handleMessage(RemoteMessage message) {
   handleNotificationData(Map<String, dynamic>.from(message.data));
+class MyScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+      };
 }
 
 void main() async {
@@ -134,6 +143,7 @@ class _FieldlyAppState extends State<FieldlyApp> {
       child: MaterialApp(
         navigatorKey: navigatorKey,
         title: 'Fieldly',
+        scrollBehavior: MyScrollBehavior(),
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         home: const SplashScreen(),

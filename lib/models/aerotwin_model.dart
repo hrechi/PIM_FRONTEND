@@ -30,21 +30,21 @@ class NDVIRecordModel {
 }
 
 class AeroTwinAlert {
-  final String zone;
-  final String severity; // low, medium, high
-  final String message;
+  final String issue;
+  final double confidence;
+  final String recommendation;
 
   AeroTwinAlert({
-    required this.zone,
-    required this.severity,
-    required this.message,
+    required this.issue,
+    required this.confidence,
+    required this.recommendation,
   });
 
   factory AeroTwinAlert.fromJson(Map<String, dynamic> json) {
     return AeroTwinAlert(
-      zone: json['zone'] ?? 'Unknown',
-      severity: json['severity'] ?? 'low',
-      message: json['message'] ?? '',
+      issue: json['issue'] ?? 'unknown',
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+      recommendation: json['recommendation'] ?? '',
     );
   }
 }
@@ -52,27 +52,24 @@ class AeroTwinAlert {
 class SimulationResult {
   final double predictedAvgNDVI;
   final List<List<double>> predictedGrid;
-  final int riskZonesCount;
-  final int totalZones;
+  final AeroTwinAlert? alert;
   
   SimulationResult({
     required this.predictedAvgNDVI,
     required this.predictedGrid,
-    required this.riskZonesCount,
-    required this.totalZones,
+    this.alert,
   });
 
   factory SimulationResult.fromJson(Map<String, dynamic> json) {
-     var rawGrid = json['predictedGrid'] as List;
-     List<List<double>> parsedGrid = rawGrid.map((row) {
-        return (row as List).map((val) => (val as num).toDouble()).toList();
-     }).toList();
+    var rawGrid = json['predictedGrid'] as List;
+    List<List<double>> parsedGrid = rawGrid.map((row) {
+      return (row as List).map((val) => (val as num).toDouble()).toList();
+    }).toList();
 
-     return SimulationResult(
-       predictedAvgNDVI: (json['predictedAvgNDVI'] as num).toDouble(),
-       predictedGrid: parsedGrid,
-       riskZonesCount: json['riskZonesCount'] as int,
-       totalZones: json['totalZones'] as int,
-     );
+    return SimulationResult(
+      predictedAvgNDVI: (json['predictedAvgNDVI'] as num).toDouble(),
+      predictedGrid: parsedGrid,
+      alert: json['alerts'] != null ? AeroTwinAlert.fromJson(json['alerts']) : null,
+    );
   }
 }

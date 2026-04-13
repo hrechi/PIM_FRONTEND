@@ -15,7 +15,7 @@ class ApiConfig {
   static String get baseUrl =>
       isProduction ? _productionBaseUrl : _localBaseUrl;
 
-  // API Endpoints
+  // API Endpoints 
   static String get soilEndpoint => '$baseUrl/soil';
   static String get userEndpoint => '$baseUrl/user';
   static String get authEndpoint => '$baseUrl/auth';

@@ -1,14 +1,15 @@
 import 'package:dio/dio.dart';
 import '../models/aerotwin_model.dart';
+import '../config/api_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AeroTwinService {
   final Dio _dio;
 
   AeroTwinService() : _dio = Dio(BaseOptions(
-    baseUrl: 'http://localhost:3000/api', 
-    connectTimeout: const Duration(seconds: 10),
-    receiveTimeout: const Duration(seconds: 30),
+    baseUrl: ApiConfig.baseUrl, 
+    connectTimeout: ApiConfig.connectTimeout,
+    receiveTimeout: ApiConfig.receiveTimeout,
   )) {
      _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
@@ -34,6 +35,15 @@ class AeroTwinService {
     }
   }
 
+  Future<List<NDVIRecordModel>> getHistory(String fieldId) async {
+    try {
+      final response = await _dio.get('/aerotwin/history', queryParameters: {'fieldId': fieldId});
+      return (response.data as List).map((x) => NDVIRecordModel.fromJson(x)).toList();
+    } catch (e) {
+      throw Exception('Failed to load history');
+    }
+  }
+
   Future<AeroTwinAlert> getAlerts(String fieldId) async {
     try {
       final response = await _dio.get('/aerotwin/alerts', queryParameters: {'fieldId': fieldId});
@@ -47,6 +57,8 @@ class AeroTwinService {
     required double irrigationChange,
     required double temperature,
     required double nitrogenLevel,
+    required double pestRisk,
+    required double sunlightHours,
   }) async {
      try {
        final response = await _dio.post('/aerotwin/simulate', data: {
@@ -55,11 +67,13 @@ class AeroTwinService {
            'irrigationChange': irrigationChange,
            'temperature': temperature,
            'nitrogenLevel': nitrogenLevel,
+           'pestRisk': pestRisk,
+           'sunlightHours': sunlightHours,
          }
        });
        return SimulationResult.fromJson(response.data);
      } catch (e) {
-       print('Dio error: ${e}'); if (e is DioException) { print(e.response?.data); } throw Exception('Failed to run simulation ${e is DioException ? e.response?.data : e}');
+       throw Exception('Failed to run simulation');
      }
   }
 }
