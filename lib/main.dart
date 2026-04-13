@@ -10,12 +10,15 @@ import 'providers/weather_provider.dart';
 import 'providers/irrigation_provider.dart';
 import 'providers/vaccine_provider.dart';
 import 'providers/shorts_provider.dart';
+import 'providers/voice_access_mode_provider.dart';
+import 'providers/global_voice_controller.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'screens/security/incident_detail_screen.dart';
 import 'screens/soil/soil_measurements_list_screen.dart';
 import 'screens/soil/soil_alert_notifications_screen.dart';
 import 'services/local_notification_service.dart';
+import 'widgets/global_voice_fab.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 /// Global navigator key — used for navigating from notification callbacks 
@@ -119,6 +122,14 @@ class _FieldlyAppState extends State<FieldlyApp> {
         ChangeNotifierProvider(create: (_) => IrrigationProvider()),
         ChangeNotifierProvider(create: (_) => VaccineProvider()),
         ChangeNotifierProvider(create: (_) => ShortsProvider()),
+        ChangeNotifierProvider(
+          create: (_) => VoiceAccessModeProvider()..load(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => GlobalVoiceController(
+            accessModeProvider: context.read<VoiceAccessModeProvider>(),
+          ),
+        ),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
@@ -126,6 +137,14 @@ class _FieldlyAppState extends State<FieldlyApp> {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         home: const SplashScreen(),
+        builder: (context, child) {
+          return Stack(
+            children: [
+              child ?? const SizedBox.shrink(),
+              const GlobalVoiceFab(),
+            ],
+          );
+        },
         routes: {
           '/incident-details': (context) {
             final incidentId =
