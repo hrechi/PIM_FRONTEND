@@ -91,6 +91,29 @@ class ApiService {
     return prefs.getString('refreshToken');
   }
 
+  static Future<String?> getCurrentUserId() async {
+    final token = await getAccessToken();
+    if (token == null) return null;
+
+    try {
+      // JWT is in format: header.payload.signature
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+
+      // Decode payload (add padding if necessary)
+      String payload = parts[1];
+      payload = payload.padRight((payload.length + 3) ~/ 4 * 4, '=');
+      
+      final decoded = utf8.decode(base64Url.decode(payload));
+      final json = jsonDecode(decoded) as Map<String, dynamic>;
+      
+      return json['sub']?.toString();
+    } catch (e) {
+      print('[ApiService] Error decoding JWT: $e');
+      return null;
+    }
+  }
+
   static Future<void> clearTokens() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('accessToken');

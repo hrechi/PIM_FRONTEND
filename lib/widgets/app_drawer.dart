@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:frontend_pim/screens/animals/animal_dashboard_screen.dart';
 import '../screens/agricultural_news_screen.dart';
+import '../screens/harvest_analytics_screen.dart';
+import '../screens/crop_calendar_screen.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../screens/home_screen.dart';
@@ -20,6 +22,7 @@ import '../screens/live_feed_screen.dart';
 import '../screens/soil/soil_measurements_list_screen.dart';
 import '../screens/security/incident_history_screen.dart';
 import '../screens/shorts_screen.dart';
+import '../screens/community_feed_screen.dart';
 import '../screens/expenses/add_expense_screen.dart';
 import '../services/field_service.dart';
 import '../screens/finance/finance_dashboard_screen.dart';
@@ -137,6 +140,66 @@ class AppDrawer extends StatelessWidget {
                     },
                   ),
                   _buildDrawerItem(
+                    icon: Icons.bar_chart_rounded,
+                    iconColor: const Color(0xFF2E7D32),
+                    title: 'Harvest Analytics',
+                    subtitle: 'Yield trends & insights',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const HarvestAnalyticsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.calendar_month_rounded,
+                    iconColor: AppColorPalette.mistyBlue,
+                    title: 'Crop Calendar',
+                    subtitle: 'Planting & Harvest timeline',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CropCalendarScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.cloud,
+                    iconColor: const Color(0xFF57A0D3),
+                    title: 'Weather & Advice',
+                    subtitle: 'Forecast & recommendations',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const WeatherScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.water_drop,
+                    iconColor: const Color(0xFF2196F3),
+                    title: 'Irrigation Scheduler',
+                    subtitle: 'Smart 7-day irrigation plan',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const IrrigationSchedulerScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
                     icon: Icons.attach_money,
                     title: 'Finance Dashboard',
                     subtitle: 'Financial overview',
@@ -146,6 +209,95 @@ class AppDrawer extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (_) => const FinanceDashboardScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.bar_chart_rounded,
+                    iconColor: const Color(0xFF2E7D32),
+                    title: 'Harvest Analytics',
+                    subtitle: 'Yield trends & insights',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const HarvestAnalyticsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.calendar_month_rounded,
+                    iconColor: AppColorPalette.mistyBlue,
+                    title: 'Crop Calendar',
+                    subtitle: 'Planting & Harvest timeline',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CropCalendarScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.cloud,
+                    iconColor: const Color(0xFF57A0D3),
+                    title: 'Weather & Advice',
+                    subtitle: 'Forecast & recommendations',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const WeatherScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.water_drop,
+                    iconColor: const Color(0xFF2196F3),
+                    title: 'Irrigation Scheduler',
+                    subtitle: 'Smart 7-day irrigation plan',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const IrrigationSchedulerScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.attach_money,
+                    title: 'Finance Dashboard',
+                    subtitle: 'Financial overview',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FinanceDashboardScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.newspaper,
+                    iconColor: Colors.orange,
+                    title: 'Agricultural News',
+                    subtitle: 'Latest farming updates',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AgriculturalNewsScreen(),
                         ),
                       );
                     },
@@ -208,6 +360,21 @@ class AppDrawer extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const ShortsScreen()),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.forum_rounded,
+                    iconColor: const Color(0xFF0E7A43),
+                    title: 'Community Feed',
+                    subtitle: 'Posts, votes, and discussions',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CommunityFeedScreen(),
+                        ),
                       );
                     },
                   ),
@@ -362,6 +529,19 @@ class AppDrawer extends StatelessWidget {
                         MaterialPageRoute(
                           builder: (_) => const LiveFeedScreen(),
                         ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.videocam_rounded,
+                    iconColor: AppColorPalette.emeraldGreen,
+                    title: 'Live Feed',
+                    subtitle: 'View live camera',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LiveFeedScreen()),
                       );
                     },
                   ),
