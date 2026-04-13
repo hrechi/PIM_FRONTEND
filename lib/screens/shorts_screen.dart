@@ -45,7 +45,7 @@ class _ShortsScreenState extends State<ShortsScreen> {
   Timer? _autoScrollTimer;
   bool _isAutoScrollTicking = false;
 
-  // Pull-to-refresh state
+  // Pull-to-refresh state 
   double _pullDistance = 0.0;
   bool _isRefreshTriggered = false;
   static const double _refreshThreshold = 120.0;
