@@ -7,7 +7,6 @@ import '../utils/validators.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/custom_button.dart';
 import 'signup_screen.dart';
-import 'home_screen.dart';
 import 'forgot_password_screen.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -41,9 +40,12 @@ class _SignInScreenState extends State<SignInScreen> {
     );
 
     if (success && mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
+      final role = authProvider.user?.role.toUpperCase();
+      if (role == 'WORKER') {
+        Navigator.of(context).pushReplacementNamed('/worker_home');
+      } else {
+        Navigator.of(context).pushReplacementNamed('/owner_dashboard');
+      }
     }
   }
 

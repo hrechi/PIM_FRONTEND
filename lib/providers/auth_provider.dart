@@ -80,7 +80,9 @@ class AuthProvider with ChangeNotifier {
         data['refreshToken'] as String,
       );
 
-      _user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
+      final userData = Map<String, dynamic>.from(data['user'] as Map);
+      userData['role'] = userData['role'] ?? data['role'] ?? 'OWNER';
+      _user = UserModel.fromJson(userData);
 
       // Save user data for stateless services
       final prefs = await SharedPreferences.getInstance();
@@ -97,7 +99,7 @@ class AuthProvider with ChangeNotifier {
       _setLoading(false);
       return false;
     } catch (e) {
-      _setError('Connection failed. Please check your internet.');
+      _setError('Sign in failed: $e');
       _setLoading(false);
       return false;
     }
@@ -125,7 +127,9 @@ class AuthProvider with ChangeNotifier {
       );
       await ApiService.setRememberMe(rememberMe);
 
-      _user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
+      final userData = Map<String, dynamic>.from(data['user'] as Map);
+      userData['role'] = userData['role'] ?? data['role'] ?? 'OWNER';
+      _user = UserModel.fromJson(userData);
 
       // Save user data for stateless services
       final prefs = await SharedPreferences.getInstance();
@@ -142,7 +146,7 @@ class AuthProvider with ChangeNotifier {
       _setLoading(false);
       return false;
     } catch (e) {
-      _setError('Connection failed. Please check your internet.');
+      _setError('Connection failed. Please check that the backend is running and your device is on the same network.');
       _setLoading(false);
       return false;
     }

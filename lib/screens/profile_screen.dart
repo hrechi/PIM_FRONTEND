@@ -44,6 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: Consumer<AuthProvider>(
         builder: (context, auth, _) {
           final user = auth.user;
+          final isWorker = user?.role.toUpperCase() == 'WORKER';
 
           if (user == null) {
             // Check if there's an error
@@ -259,18 +260,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 4),
 
-                  // Farm Name
+                  // Account type / farm context
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.agriculture_rounded,
+                        isWorker ? Icons.badge_outlined : Icons.agriculture_rounded,
                         size: 16,
                         color: AppColors.mistyBlue,
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        user.farmName,
+                        isWorker ? 'Worker account' : user.farmName,
                         style: GoogleFonts.inter(
                           fontSize: 15,
                           color: AppColors.mistyBlue,
@@ -282,6 +283,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 32),
 
                   // Info Cards
+                  if (isWorker && (user.username?.isNotEmpty ?? false)) ...[
+                    _InfoCard(
+                      icon: Icons.alternate_email,
+                      title: 'Username',
+                      value: user.username!,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   _InfoCard(
                     icon: Icons.email_outlined,
                     title: 'Email',
@@ -319,15 +328,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Delete Account button
-                  CustomButton(
-                    text: 'Delete Account',
-                    isOutlined: true,
-                    backgroundColor: AppColors.error,
-                    textColor: AppColors.error,
-                    icon: Icons.delete_outline_rounded,
-                    onPressed: () => _showDeleteDialog(context, auth),
-                  ),
+                  if (!isWorker) ...[
+                    // Delete Account button
+                    CustomButton(
+                      text: 'Delete Account',
+                      isOutlined: true,
+                      backgroundColor: AppColors.error,
+                      textColor: AppColors.error,
+                      icon: Icons.delete_outline_rounded,
+                      onPressed: () => _showDeleteDialog(context, auth),
+                    ),
+                  ],
 
                   const SizedBox(height: 40),
                 ],

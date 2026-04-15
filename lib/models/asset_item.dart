@@ -1,6 +1,11 @@
 class AssetItem {
   final String id;
   final String name;
+  final String brand;
+  final String? model;
+  final int? modelYear;
+  final double? mileage;
+  final double? operatingHours;
   final String category;
   final String status;
   final String serialNumber;
@@ -9,12 +14,18 @@ class AssetItem {
   final Map<String, dynamic>? assignedTo;
   final String? fieldId;
   final Map<String, dynamic>? field;
+  final Map<String, dynamic>? diagnosis;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
   const AssetItem({
     required this.id,
     required this.name,
+    required this.brand,
+    this.model,
+    this.modelYear,
+    this.mileage,
+    this.operatingHours,
     required this.category,
     required this.status,
     required this.serialNumber,
@@ -23,6 +34,7 @@ class AssetItem {
     this.assignedTo,
     this.fieldId,
     this.field,
+    this.diagnosis,
     this.createdAt,
     this.updatedAt,
   });
@@ -34,6 +46,13 @@ class AssetItem {
     return AssetItem(
       id: (json['id'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
+        brand: (json['brand'] ?? '').toString(),
+        model: json['model']?.toString(),
+        modelYear: json['modelYear'] is num ? (json['modelYear'] as num).toInt() : null,
+        mileage: json['mileage'] is num ? (json['mileage'] as num).toDouble() : null,
+        operatingHours: json['operatingHours'] is num
+          ? (json['operatingHours'] as num).toDouble()
+          : null,
       category: (json['category'] ?? '').toString(),
       status: (json['status'] ?? 'AVAILABLE').toString(),
       serialNumber: (json['serial_number'] ?? '').toString(),
@@ -48,6 +67,9 @@ class AssetItem {
       field: json['field'] is Map<String, dynamic>
           ? json['field'] as Map<String, dynamic>
           : null,
+        diagnosis: json['diagnosis'] is Map<String, dynamic>
+          ? json['diagnosis'] as Map<String, dynamic>
+          : null,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())
           : null,
@@ -55,5 +77,28 @@ class AssetItem {
           ? DateTime.tryParse(json['updatedAt'].toString())
           : null,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'brand': brand,
+      'model': model,
+      'modelYear': modelYear,
+      'mileage': mileage,
+      'operatingHours': operatingHours,
+      'category': category,
+      'status': status,
+      'serial_number': serialNumber,
+      'image_url': imageUrl,
+      'last_service_date': lastServiceDate?.toIso8601String(),
+      'assignedTo': assignedTo,
+      'field_id': fieldId,
+      'field': field,
+      'diagnosis': diagnosis,
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+    };
   }
 }

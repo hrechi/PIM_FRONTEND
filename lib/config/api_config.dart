@@ -2,9 +2,9 @@
 /// Centralized configuration for API endpoints and settings
 class ApiConfig {
   // Base URLs
-  // Use 10.0.2.2 for Android emulator (maps to host machine's localhost)
-  // Use localhost for iOS simulator or web
-  static const String _localBaseUrl = 'http://192.168.1.13:3000/api';
+  // Uses the project WiFi IP for local/dev connectivity.
+  // Update this value when your local network IP changes.
+  static const String _localBaseUrl = 'http://192.168.100.9:3000/api';
   static const String _productionBaseUrl =
       'https://your-production-api.com/api';
 

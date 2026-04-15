@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
-import 'home_screen.dart';
 
 /// Welcome screen with onboarding carousel shown only once
 class WelcomeScreen extends StatefulWidget {
@@ -69,9 +68,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   void _handleGetStarted() async {
     await _markWelcomeAsViewed();
     if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen())
-      );
+      Navigator.of(context).pushReplacementNamed('/owner_dashboard');
     }
   }
 

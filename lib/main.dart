@@ -13,6 +13,8 @@ import 'providers/shorts_provider.dart';
 import 'providers/asset_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/farmer_home_screen_v2.dart';
 import 'screens/asset_list_screen.dart';
 import 'screens/security/incident_detail_screen.dart';
 import 'screens/soil/soil_measurements_list_screen.dart';
@@ -106,6 +108,9 @@ class _FieldlyAppState extends State<FieldlyApp> {
         theme: AppTheme.lightTheme,
         home: const SplashScreen(),
         routes: {
+          '/owner_dashboard': (context) => const HomeScreen(),
+          '/worker_home': (context) => const FarmerHomeScreenV2(),
+          '/farmer_home': (context) => const FarmerHomeScreenV2(),
           '/assets': (context) => const AssetListScreen(),
           '/incident-details': (context) {
             final incidentId =
