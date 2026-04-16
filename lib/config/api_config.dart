@@ -4,7 +4,7 @@ class ApiConfig {
   // Base URLs
   // Uses the project WiFi IP for local/dev connectivity.
   // Update this value when your local network IP changes.
-  static const String _localBaseUrl = 'http://192.168.100.9:3000/api';
+  static const String _localBaseUrl = 'http://192.168.1.144:3000/api';
   static const String _productionBaseUrl =
       'https://your-production-api.com/api';
 

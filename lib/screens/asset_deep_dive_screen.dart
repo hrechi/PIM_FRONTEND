@@ -3,10 +3,15 @@ import 'dart:ui';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../models/asset_item.dart';
 import '../providers/asset_provider.dart';
+import '../services/api_service.dart';
+import '../utils/asset_image_utils.dart';
+import '../widgets/custom_button.dart';
 
 class AssetDeepDiveScreen extends StatefulWidget {
   const AssetDeepDiveScreen({super.key, required this.asset});
@@ -22,11 +27,171 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
   String? _error;
   Map<String, dynamic>? _historyResult;
   Map<String, dynamic>? _diagnosticsResult;
+  late String _status;
 
   @override
   void initState() {
     super.initState();
+    _status = widget.asset.status;
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
+  }
+
+  ImageProvider? _assetImageProvider() {
+    return resolveAssetImageProvider(
+      widget.asset.imageUrl,
+      mediaBaseUrl: ApiService.mediaBaseUrl,
+    );
+  }
+
+  Color _statusColor() {
+    switch (_status) {
+      case 'IN_USE':
+        return const Color(0xFFE3A77B);
+      case 'MAINTENANCE':
+        return const Color(0xFFE57373);
+      default:
+        return const Color(0xFF61C06F);
+    }
+  }
+
+  String _statusLabel() {
+    switch (_status) {
+      case 'IN_USE':
+        return 'In use';
+      case 'MAINTENANCE':
+        return 'Maintenance';
+      default:
+        return 'Available';
+    }
+  }
+
+  Widget _detailChip(String label, {Color? color}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: (color ?? Colors.white).withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.poppins(
+          color: color ?? Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _detailTile(String label, String value, {IconData? icon}) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, color: Colors.white70, size: 18),
+            const SizedBox(height: 10),
+          ],
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              color: Colors.white.withValues(alpha: 0.72),
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _setStatus(String status) async {
+    setState(() => _status = status);
+    await context.read<AssetProvider>().updateAsset(
+      assetId: widget.asset.id,
+      status: status,
+    );
+  }
+
+  void _showQrCode() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Asset QR Code',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: QrImageView(
+                    data: widget.asset.serialNumber.isNotEmpty
+                        ? widget.asset.serialNumber
+                        : widget.asset.id,
+                    version: QrVersions.auto,
+                    size: 220,
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  widget.asset.name,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Serial: ${widget.asset.serialNumber}',
+                  style: GoogleFonts.poppins(fontSize: 12),
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    child: const Text('Close'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _loadData() async {
@@ -78,9 +243,10 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 240,
+            expandedHeight: 330,
             pinned: true,
             backgroundColor: const Color(0xFF08140E),
+            surfaceTintColor: Colors.transparent,
             title: Text(
               widget.asset.name,
               style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
@@ -89,24 +255,66 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (widget.asset.imageUrl != null && widget.asset.imageUrl!.isNotEmpty)
-                    Image.network(
-                      widget.asset.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _assetFallback(),
-                    )
-                  else
-                    _assetFallback(),
+                  Hero(
+                    tag: 'asset-image-${widget.asset.id}',
+                    child: _assetImageProvider() == null
+                        ? _assetFallback()
+                        : Image(
+                            image: _assetImageProvider()!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _assetFallback(),
+                          ),
+                  ),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
                           Colors.transparent,
-                          const Color(0xFF08140E).withValues(alpha: 0.95),
+                          const Color(0xFF08140E).withValues(alpha: 0.94),
                         ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                       ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: 18,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _detailChip(widget.asset.brand),
+                            _detailChip(widget.asset.category),
+                            _detailChip(_statusLabel(), color: _statusColor()),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          widget.asset.model != null && widget.asset.model!.isNotEmpty
+                              ? '${widget.asset.model}${widget.asset.modelYear != null ? ' • ${widget.asset.modelYear}' : ''}'
+                              : 'Asset details',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          widget.asset.serialNumber.isNotEmpty
+                              ? 'Serial ${widget.asset.serialNumber}'
+                              : 'Serial not set',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white.withValues(alpha: 0.78),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -115,13 +323,124 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (_isLoading) const Center(child: CircularProgressIndicator()),
+                  if (_isLoading)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 24, bottom: 24),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
                   if (_error != null) _errorCard(_error!),
                   if (!_isLoading && _error == null) ...[
+                    _glassCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.asset.name,
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            widget.asset.brand,
+                            style: GoogleFonts.poppins(
+                              color: Colors.white.withValues(alpha: 0.75),
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _detailChip('Status: ${_statusLabel()}', color: _statusColor()),
+                              _detailChip('Category: ${widget.asset.category}'),
+                              if (widget.asset.fieldName != null)
+                                _detailChip('Field: ${widget.asset.fieldName}'),
+                              if (widget.asset.assignedToName != null)
+                                _detailChip('Assigned: ${widget.asset.assignedToName}'),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _detailTile(
+                                  'Model',
+                                  widget.asset.model ?? 'Not set',
+                                  icon: Icons.precision_manufacturing_rounded,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _detailTile(
+                                  'Mileage',
+                                  widget.asset.mileage != null
+                                      ? '${widget.asset.mileage!.toStringAsFixed(0)} km'
+                                      : 'Not set',
+                                  icon: Icons.route_rounded,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _detailTile(
+                                  'Operating hours',
+                                  widget.asset.operatingHours != null
+                                      ? '${widget.asset.operatingHours!.toStringAsFixed(0)} h'
+                                      : 'Not set',
+                                  icon: Icons.schedule_rounded,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _detailTile(
+                                  'Last service',
+                                  widget.asset.lastServiceDate != null
+                                      ? DateFormat('dd MMM yyyy').format(widget.asset.lastServiceDate!)
+                                      : 'Not set',
+                                  icon: Icons.handyman_rounded,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: CustomButton(
+                                  text: 'QR Code',
+                                  onPressed: _showQrCode,
+                                  backgroundColor: const Color(0xFF2F8ED1),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: CustomButton(
+                                  text: _status == 'IN_USE' ? 'Mark Available' : 'Mark In Use',
+                                  onPressed: () => _setStatus(
+                                    _status == 'IN_USE' ? 'AVAILABLE' : 'IN_USE',
+                                  ),
+                                  backgroundColor: _status == 'IN_USE'
+                                      ? const Color(0xFF61C06F)
+                                      : const Color(0xFFE3A77B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
                     _aiInsightCard(dynamicReport, diagnostics),
                     const SizedBox(height: 14),
                     _metricsCard(aggregates),
@@ -143,8 +462,20 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
 
   Widget _assetFallback() {
     return Container(
-      color: const Color(0xFF123021),
-      child: const Icon(Icons.precision_manufacturing_rounded, color: Color(0xFF9EE6B7), size: 72),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF163024), Color(0xFF07120D)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.precision_manufacturing_rounded,
+          color: Color(0xFF9EE6B7),
+          size: 80,
+        ),
+      ),
     );
   }
 

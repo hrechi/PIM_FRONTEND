@@ -12,6 +12,7 @@ class AssetSuggestField extends StatefulWidget {
   final String? categoryValue;
   final String? helperText;
   final bool required;
+  final AutovalidateMode? autovalidateMode;
   final Function(List<String>)? onModelSuggestions;
   final Function(List<String>)? onCategorySuggestions;
   final Function(List<String>)? onUsageSuggestions;
@@ -25,6 +26,7 @@ class AssetSuggestField extends StatefulWidget {
     this.categoryValue,
     this.helperText,
     this.required = false,
+    this.autovalidateMode,
     this.onModelSuggestions,
     this.onCategorySuggestions,
     this.onUsageSuggestions,
@@ -60,20 +62,44 @@ class _AssetSuggestFieldState extends State<AssetSuggestField> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(covariant AssetSuggestField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final brandChanged = oldWidget.brandValue != widget.brandValue;
+    final categoryChanged = oldWidget.categoryValue != widget.categoryValue;
+    if ((brandChanged || categoryChanged) && widget.fieldType == 'model') {
+      _suggestions = <String>[];
+      if (_hasFocus && widget.controller.text.trim().isEmpty) {
+        _fetchSuggestions('');
+      }
+    }
+  }
+
   void _onFocusChanged() {
     if (!mounted) return;
     setState(() {
       _hasFocus = _focusNode.hasFocus;
     });
 
-    if (_hasFocus && widget.controller.text.trim().isNotEmpty) {
-      _onTextChanged();
+    if (_hasFocus) {
+      if (widget.controller.text.trim().isNotEmpty) {
+        _onTextChanged();
+      } else if (widget.fieldType == 'model' &&
+          (widget.brandValue ?? '').trim().isNotEmpty) {
+        _fetchSuggestions('');
+      }
     }
   }
 
   Future<void> _fetchSuggestions(String query) async {
     final normalizedQuery = query.trim();
-    if (normalizedQuery.isEmpty || !mounted) {
+    final shouldQueryByBrandOnly =
+        widget.fieldType == 'model' &&
+        normalizedQuery.isEmpty &&
+        (widget.brandValue ?? '').trim().isNotEmpty;
+
+    if ((!shouldQueryByBrandOnly && normalizedQuery.isEmpty) || !mounted) {
       setState(() {
         _suggestions = <String>[];
         _isLoading = false;
@@ -111,7 +137,9 @@ class _AssetSuggestFieldState extends State<AssetSuggestField> {
         brand: widget.fieldType == 'brand'
             ? normalizedQuery
             : widget.brandValue,
-        model: widget.fieldType == 'model' ? normalizedQuery : null,
+        model: widget.fieldType == 'model'
+            ? (normalizedQuery.isEmpty ? null : normalizedQuery)
+            : null,
         category: widget.categoryValue,
       );
       _cache[cacheKey] = result;
@@ -119,12 +147,15 @@ class _AssetSuggestFieldState extends State<AssetSuggestField> {
       if (!mounted) return;
       if (widget.fieldType == 'model') {
         final rawModels = List<String>.from(result['models'] ?? <String>[]);
-        final apiModels = rawModels
-            .where(
-              (model) =>
-                  model.toLowerCase().contains(normalizedQuery.toLowerCase()),
-            )
-            .toList();
+        final apiModels = normalizedQuery.isEmpty
+            ? rawModels
+            : rawModels
+                  .where(
+                    (model) => model.toLowerCase().contains(
+                      normalizedQuery.toLowerCase(),
+                    ),
+                  )
+                  .toList();
         setState(() {
           _suggestions = apiModels;
           _isLoading = false;
@@ -173,6 +204,7 @@ class _AssetSuggestFieldState extends State<AssetSuggestField> {
             TextFormField(
               controller: widget.controller,
               focusNode: _focusNode,
+              autovalidateMode: widget.autovalidateMode,
               validator: (value) {
                 if (widget.required &&
                     (value == null || value.trim().isEmpty)) {
@@ -262,9 +294,14 @@ class _AssetSuggestFieldState extends State<AssetSuggestField> {
 
   bool _shouldShowSuggestions() {
     final query = widget.controller.text.trim();
+    final allowBrandDrivenModelSuggestions =
+        widget.fieldType == 'model' &&
+        query.isEmpty &&
+        (widget.brandValue ?? '').trim().isNotEmpty;
+
     return _hasFocus &&
         !_isLoading &&
-        query.isNotEmpty &&
+        (query.isNotEmpty || allowBrandDrivenModelSuggestions) &&
         _suggestions.isNotEmpty;
   }
 }
