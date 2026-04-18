@@ -57,6 +57,8 @@ void handleNotificationData(Map<String, dynamic> data) {
 
 void handleMessage(RemoteMessage message) {
   handleNotificationData(Map<String, dynamic>.from(message.data));
+}
+
 class MyScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
