@@ -26,6 +26,7 @@ import '../services/soil_intelligence_service.dart';
 import '../widgets/metric_card.dart';
 import '../widgets/security_alert_overlay.dart';
 import '../widgets/unified_farm_status_card.dart';
+import 'asset_list_screen.dart';
 import 'soil/soil_measurements_list_screen.dart';
 import 'animals/animal_list_screen.dart';
 import 'animals/animal_dashboard_screen.dart';
@@ -77,16 +78,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Map<String, dynamic>? _animalStats;
   bool _isLoadingStats = true;
-  
+
   // Soil and crop data
   double? _soilPh;
   int _totalCrops = 0;
   bool _isLoadingSoilCrop = true;
-  
+
   // Farm mood data
   FarmMoodData? _farmMoodData;
   String? _plantMessage;
-  
+
   // Parcel management
   Parcel? _selectedParcel;
   String? _selectedFieldName;
@@ -118,7 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
     weatherInfo = null;
     alerts = [];
     animals = [];
-    
+
     _initSocket();
     _initFcmListener();
     _soilAlertPollTimer = Timer.periodic(
@@ -130,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final parcelProvider = context.read<ParcelProvider>();
       parcelProvider.addListener(_onParcelProviderChanged);
-      
+
       // Load initial data
       _syncWeatherWithAdviceField();
       _loadParcels();
@@ -139,20 +140,23 @@ class _HomeScreenState extends State<HomeScreen> {
       _fetchSoilAndCropData();
     });
   }
-  
+
   void _onParcelProviderChanged() {
     if (!mounted) return;
     final parcelProvider = context.read<ParcelProvider>();
     final parcels = parcelProvider.parcels;
-    
-    debugPrint('🔄 Parcel provider changed: ${parcels.length} parcels available');
-    
+
+    debugPrint(
+      '🔄 Parcel provider changed: ${parcels.length} parcels available',
+    );
+
     // Defer state updates to after the build phase
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
+
       // If selected parcel was deleted, clear it or select the first one
-      if (_selectedParcel != null && !parcels.any((p) => p.id == _selectedParcel!.id)) {
+      if (_selectedParcel != null &&
+          !parcels.any((p) => p.id == _selectedParcel!.id)) {
         debugPrint('⚠️ Selected parcel was deleted: ${_selectedParcel!.id}');
         setState(() {
           _selectedParcel = parcels.isNotEmpty ? parcels.first : null;
@@ -184,8 +188,10 @@ class _HomeScreenState extends State<HomeScreen> {
         _fetchSoilAndCropData();
         _refreshSoilAlertsForBell();
       }
-      
-      debugPrint('Parcel provider changed, selected: ${_selectedParcel?.location}');
+
+      debugPrint(
+        'Parcel provider changed, selected: ${_selectedParcel?.location}',
+      );
     });
   }
 
@@ -194,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _soilAlertPollTimer?.cancel();
     _socket.disconnect();
     _socket.dispose();
-    
+
     // Remove listener when disposing
     try {
       final parcelProvider = context.read<ParcelProvider>();
@@ -202,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       debugPrint('Error removing parcel listener: $e');
     }
-    
+
     super.dispose();
   }
 
@@ -365,7 +371,7 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint('Error syncing weather with advice field: $e');
     }
   }
-  
+
   Future<void> _fetchAnimals() async {
     try {
       final animalList = await _animalService.getAnimals();
@@ -378,7 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint('Error fetching animals: $e');
     }
   }
-  
+
   Future<void> _fetchAnimalsForField(String fieldId) async {
     try {
       final animalList = await _animalService.getAnimals(fieldId: fieldId);
@@ -459,17 +465,17 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         // Calculate soil health score and wilting risk from measurement
         final calculatedData = _calculateSoilMetrics(soilMeasurement);
-        
+
         // Calculate farm mood
         final farmScore = calculateFarmScore(
           soilHealthScore: calculatedData['healthScore'] as int,
           wiltingRisk: calculatedData['wiltingRisk'] as String,
         );
         final moodData = getMoodData(farmScore);
-        
+
         // Generate plant message based on mood
         final plantMessage = generatePlantMessage(moodData.mood);
-        
+
         setState(() {
           _soilPh = soilMeasurement?.ph;
           _totalCrops = totalCropsForField;
@@ -485,7 +491,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
   }
-  
+
   /// Calculate soil health score (0-100) and wilting risk from soil measurement
   /// Score is based on pH, moisture, and nutrient levels
   Map<String, dynamic> _calculateSoilMetrics(dynamic soilMeasurement) {
@@ -497,19 +503,19 @@ class _HomeScreenState extends State<HomeScreen> {
     final ph = (soilMeasurement.ph as num?)?.toDouble() ?? 6.5;
     final moisture = (soilMeasurement.soilMoisture as num?)?.toDouble() ?? 50.0;
     final temp = (soilMeasurement.temperature as num?)?.toDouble() ?? 20.0;
-    
+
     // Extract nutrients (handles both Map and JSON)
     int nitrogen = 0;
     int phosphorus = 0;
     int potassium = 0;
-    
+
     final nutrients = soilMeasurement.nutrients;
     if (nutrients is Map) {
       nitrogen = (nutrients['nitrogen'] as num?)?.toInt() ?? 0;
       phosphorus = (nutrients['phosphorus'] as num?)?.toInt() ?? 0;
       potassium = (nutrients['potassium'] as num?)?.toInt() ?? 0;
     }
-    
+
     // Calculate pH score (ideal range 6.0-7.5)
     int phScore = 50;
     if (ph >= 6.0 && ph <= 7.5) {
@@ -521,7 +527,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       phScore = 25;
     }
-    
+
     // Calculate moisture score (ideal range 30-80%)
     int moistureScore = 50;
     if (moisture >= 30 && moisture <= 80) {
@@ -533,7 +539,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       moistureScore = 25;
     }
-    
+
     // Determine wilting risk based on moisture
     String wiltingRisk = 'moderate';
     if (moisture < 20) {
@@ -543,7 +549,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       wiltingRisk = 'moderate'; // Too wet may cause root problems
     }
-    
+
     // Calculate nutrient score (ideally N>=20, P>=15, K>=20)
     int nutrientScore = 50;
     final avgNutrient = (nitrogen + phosphorus + potassium) / 3;
@@ -556,16 +562,19 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       nutrientScore = 25;
     }
-    
+
     // Calculate overall health score (weighted average)
-    final healthScore = ((phScore * 0.25) +
-            (moistureScore * 0.35) +
-            (nutrientScore * 0.25) +
-            ((temp >= 15 && temp <= 30 ? 100 : 50) * 0.15))
-        .toInt();
-    
-    debugPrint('📊 Soil Metrics: pH=$ph (score=$phScore), Moisture=$moisture% (score=$moistureScore), Nutrients=$avgNutrient (score=$nutrientScore), Health=$healthScore, Wilting=$wiltingRisk');
-    
+    final healthScore =
+        ((phScore * 0.25) +
+                (moistureScore * 0.35) +
+                (nutrientScore * 0.25) +
+                ((temp >= 15 && temp <= 30 ? 100 : 50) * 0.15))
+            .toInt();
+
+    debugPrint(
+      '📊 Soil Metrics: pH=$ph (score=$phScore), Moisture=$moisture% (score=$moistureScore), Nutrients=$avgNutrient (score=$nutrientScore), Health=$healthScore, Wilting=$wiltingRisk',
+    );
+
     return {
       'healthScore': healthScore.clamp(0, 100),
       'wiltingRisk': wiltingRisk,
@@ -584,8 +593,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _socket.onConnect((_) => debugPrint('[SOCKET] Connected to NestJS'));
     _socket.onDisconnect((_) => debugPrint('[SOCKET] Disconnected'));
   }
-
-
 
   void _initFcmListener() {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -620,8 +627,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     });
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -854,8 +859,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: 'Track soil health data',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(context,
-                          MaterialPageRoute(builder: (_) => const SoilMeasurementsListScreen()));
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SoilMeasurementsListScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -1141,8 +1150,10 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Stack(
           children: [
             // Background image from assets
-            _buildAssetBackgroundImage(_backgroundSlides[_selectedBackgroundIndex]),
-            
+            _buildAssetBackgroundImage(
+              _backgroundSlides[_selectedBackgroundIndex],
+            ),
+
             // Dark gradient overlay for readability
             Container(
               decoration: BoxDecoration(
@@ -1170,16 +1181,13 @@ class _HomeScreenState extends State<HomeScreen> {
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,
-      errorBuilder: (context, error, stackTrace) =>
-          Container(
-            color: slide.fallbackColor,
-            width: double.infinity,
-            height: double.infinity,
-          ),
+      errorBuilder: (context, error, stackTrace) => Container(
+        color: slide.fallbackColor,
+        width: double.infinity,
+        height: double.infinity,
+      ),
     );
   }
-
-
 
   // ─────────────────────────────────────────────
   // HEADER
@@ -1194,8 +1202,7 @@ class _HomeScreenState extends State<HomeScreen> {
       toolbarHeight: 80,
       leading: Builder(
         builder: (context) => IconButton(
-          icon: const Icon(Icons.menu_rounded,
-              color: AppColorPalette.white),
+          icon: const Icon(Icons.menu_rounded, color: AppColorPalette.white),
           onPressed: () => Scaffold.of(context).openDrawer(),
         ),
       ),
@@ -1283,7 +1290,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final responsivePadding = Responsive.horizontalPadding(context);
     final responsiveVertical = Responsive.verticalPadding(context);
     final isSmall = Responsive.isMobile(context);
-    
+
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: responsivePadding,
@@ -1300,7 +1307,10 @@ class _HomeScreenState extends State<HomeScreen> {
             color: AppColorPalette.white.withValues(alpha: 0.95),
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 8,
+              ),
             ],
           ),
           child: Row(
@@ -1319,9 +1329,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.bodyMedium(
                       color: AppColorPalette.charcoalGreen,
-                    ).copyWith(
-                      fontSize: isSmall ? 12 : 14,
-                    ),
+                    ).copyWith(fontSize: isSmall ? 12 : 14),
                   ),
                 ),
               SizedBox(width: isSmall ? 6 : 8),
@@ -1392,12 +1400,22 @@ class _HomeScreenState extends State<HomeScreen> {
                             _fetchSoilAndCropData();
                           },
                           child: Container(
-                            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                            margin: const EdgeInsets.symmetric(
+                              vertical: 8,
+                              horizontal: 16,
+                            ),
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: isSelected ? AppColorPalette.fieldFreshStart.withValues(alpha: 0.1) : Colors.grey.shade100,
+                              color: isSelected
+                                  ? AppColorPalette.fieldFreshStart.withValues(
+                                      alpha: 0.1,
+                                    )
+                                  : Colors.grey.shade100,
                               border: isSelected
-                                  ? Border.all(color: AppColorPalette.fieldFreshStart, width: 2)
+                                  ? Border.all(
+                                      color: AppColorPalette.fieldFreshStart,
+                                      width: 2,
+                                    )
                                   : null,
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -1407,15 +1425,20 @@ class _HomeScreenState extends State<HomeScreen> {
                                   width: 60,
                                   height: 60,
                                   decoration: BoxDecoration(
-                                    color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.2),
+                                    color: AppColorPalette.fieldFreshStart
+                                        .withValues(alpha: 0.2),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Icon(Icons.grass, color: AppColorPalette.fieldFreshStart),
+                                  child: const Icon(
+                                    Icons.grass,
+                                    color: AppColorPalette.fieldFreshStart,
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         field.name,
@@ -1429,7 +1452,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                                 if (isSelected)
-                                  const Icon(Icons.check_circle, color: AppColorPalette.fieldFreshStart),
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: AppColorPalette.fieldFreshStart,
+                                  ),
                               ],
                             ),
                           ),
@@ -1563,7 +1589,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final buttonPadding = isSmall ? 8.0 : 12.0;
     final fontSize = isSmall ? 12.0 : 14.0;
     final iconSize = isSmall ? 18.0 : 20.0;
-    
+
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: responsivePadding,
@@ -1576,12 +1602,21 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => const FieldsManagementScreen())),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const FieldsManagementScreen(),
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColorPalette.mistyBlue,
-                    padding: EdgeInsets.symmetric(vertical: buttonPadding, horizontal: 4),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: EdgeInsets.symmetric(
+                      vertical: buttonPadding,
+                      horizontal: 4,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   icon: Icon(Icons.landscape, size: iconSize),
                   label: Text('Fields', style: TextStyle(fontSize: fontSize)),
@@ -1590,12 +1625,21 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => const MissionListScreen())),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MissionListScreen(),
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColorPalette.mistyBlue,
-                    padding: EdgeInsets.symmetric(vertical: buttonPadding, horizontal: 4),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: EdgeInsets.symmetric(
+                      vertical: buttonPadding,
+                      horizontal: 4,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   icon: Icon(Icons.task, size: iconSize),
                   label: Text('Missions', style: TextStyle(fontSize: fontSize)),
@@ -1604,20 +1648,66 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => const ChatAssistantScreen())),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ChatAssistantScreen(),
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColorPalette.mistyBlue,
-                    padding: EdgeInsets.symmetric(vertical: buttonPadding, horizontal: 4),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: EdgeInsets.symmetric(
+                      vertical: buttonPadding,
+                      horizontal: 4,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   icon: Icon(Icons.chat_bubble_outline, size: iconSize),
-                  label: Text('Assistant', style: TextStyle(fontSize: fontSize)),
+                  label: Text(
+                    'Assistant',
+                    style: TextStyle(fontSize: fontSize),
+                  ),
                 ),
               ),
             ],
           ),
-          
+          const SizedBox(height: 10),
+
+          // Assets Button Row
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AssetListScreen(),
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColorPalette.success,
+                    padding: EdgeInsets.symmetric(
+                      vertical: buttonPadding,
+                      horizontal: 4,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: Icon(Icons.construction, size: iconSize),
+                  label: Text('Assets', style: TextStyle(fontSize: fontSize)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              // Empty space for balance
+              Expanded(child: SizedBox(height: buttonPadding * 2)),
+              const SizedBox(width: 10),
+              Expanded(child: SizedBox(height: buttonPadding * 2)),
+            ],
+          ),
+
           // Weather Strip
           if (displayedWeather != null)
             SingleChildScrollView(
@@ -1627,14 +1717,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildWeatherChip(
                     icon: Icons.air,
                     label: 'Wind',
-                    value: '${(displayedWeather.windSpeed).toStringAsFixed(1)} km/h',
+                    value:
+                        '${(displayedWeather.windSpeed).toStringAsFixed(1)} km/h',
                     color: const Color(0xFF2196F3),
                   ),
                   const SizedBox(width: 8),
                   _buildWeatherChip(
                     icon: Icons.thermostat,
                     label: 'Temp Δ',
-                    value: '+${(displayedWeather.temperature - 15).toStringAsFixed(1)}°',
+                    value:
+                        '+${(displayedWeather.temperature - 15).toStringAsFixed(1)}°',
                     color: const Color(0xFFFF6B35),
                   ),
                   const SizedBox(width: 8),
@@ -1648,7 +1740,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           const SizedBox(height: 12),
-          
+
           // Soil & Crop Health Cards Row
           Row(
             children: [
@@ -1658,24 +1750,33 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          
+
           // See Map Button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const FieldsManagementScreen()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const FieldsManagementScreen(),
+                  ),
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorPalette.fieldFreshStart,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               icon: const Icon(Icons.map, color: Colors.white),
               label: const Text(
                 'See Map',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -1706,12 +1807,15 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Text(
                 label,
-                style: AppTextStyles.caption(color: color).copyWith(fontSize: 11),
+                style: AppTextStyles.caption(
+                  color: color,
+                ).copyWith(fontSize: 11),
               ),
               Text(
                 value,
-                style: AppTextStyles.bodySmall(color: color)
-                    .copyWith(fontWeight: FontWeight.bold),
+                style: AppTextStyles.bodySmall(
+                  color: color,
+                ).copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -1728,7 +1832,10 @@ class _HomeScreenState extends State<HomeScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+            ),
           ],
         ),
         child: Center(
@@ -1754,7 +1861,10 @@ class _HomeScreenState extends State<HomeScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+            ),
           ],
         ),
         child: Column(
@@ -1762,19 +1872,26 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.grass, color: AppColorPalette.fieldFreshStart, size: 20),
+                Icon(
+                  Icons.grass,
+                  color: AppColorPalette.fieldFreshStart,
+                  size: 20,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   'Soil Health',
-                  style: AppTextStyles.bodyMedium(color: AppColorPalette.charcoalGreen),
+                  style: AppTextStyles.bodyMedium(
+                    color: AppColorPalette.charcoalGreen,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
               'pH: No data',
-              style: AppTextStyles.bodyLarge(color: Colors.grey.shade600)
-                  .copyWith(fontWeight: FontWeight.bold),
+              style: AppTextStyles.bodyLarge(
+                color: Colors.grey.shade600,
+              ).copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Container(
@@ -1785,8 +1902,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Text(
                 'Not recorded',
-                style: AppTextStyles.caption(color: Colors.grey.shade600)
-                    .copyWith(fontWeight: FontWeight.bold),
+                style: AppTextStyles.caption(
+                  color: Colors.grey.shade600,
+                ).copyWith(fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -1809,19 +1927,26 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.grass, color: AppColorPalette.fieldFreshStart, size: 20),
+              Icon(
+                Icons.grass,
+                color: AppColorPalette.fieldFreshStart,
+                size: 20,
+              ),
               const SizedBox(width: 6),
               Text(
                 'Soil Health',
-                style: AppTextStyles.bodyMedium(color: AppColorPalette.charcoalGreen),
+                style: AppTextStyles.bodyMedium(
+                  color: AppColorPalette.charcoalGreen,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             'pH: ${phValue.toStringAsFixed(1)}',
-            style: AppTextStyles.bodyLarge(color: AppColorPalette.charcoalGreen)
-                .copyWith(fontWeight: FontWeight.bold),
+            style: AppTextStyles.bodyLarge(
+              color: AppColorPalette.charcoalGreen,
+            ).copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           Container(
@@ -1832,8 +1957,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             child: Text(
               phValue >= 6.0 && phValue <= 7.5 ? 'Optimal' : 'Adjust',
-              style: AppTextStyles.caption(color: const Color(0xFF4ECDC4))
-                  .copyWith(fontWeight: FontWeight.bold),
+              style: AppTextStyles.caption(
+                color: const Color(0xFF4ECDC4),
+              ).copyWith(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -1849,7 +1975,10 @@ class _HomeScreenState extends State<HomeScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+            ),
           ],
         ),
         child: Center(
@@ -1885,15 +2014,18 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 6),
               Text(
                 'Crops Count',
-                style: AppTextStyles.bodyMedium(color: AppColorPalette.charcoalGreen),
+                style: AppTextStyles.bodyMedium(
+                  color: AppColorPalette.charcoalGreen,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             '$_totalCrops',
-            style: AppTextStyles.h2(color: Colors.green.shade700)
-                .copyWith(fontWeight: FontWeight.bold, fontSize: 32),
+            style: AppTextStyles.h2(
+              color: Colors.green.shade700,
+            ).copyWith(fontWeight: FontWeight.bold, fontSize: 32),
           ),
           const SizedBox(height: 6),
           Container(
@@ -1904,8 +2036,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             child: Text(
               _totalCrops > 0 ? 'Active' : 'No crops',
-              style: AppTextStyles.caption(color: Colors.green.shade700)
-                  .copyWith(fontWeight: FontWeight.bold),
+              style: AppTextStyles.caption(
+                color: Colors.green.shade700,
+              ).copyWith(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -1923,7 +2056,8 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, weatherProvider, _) {
         final forecast = weatherProvider.forecast;
         final current = forecast?.current ?? weatherInfo;
-        final fieldName = weatherProvider.selectedField?.name ??
+        final fieldName =
+            weatherProvider.selectedField?.name ??
             forecast?.fieldName ??
             'Selected field';
 
@@ -2042,8 +2176,9 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: _skyShadowColorForCondition(current.condition)
-                      .withValues(alpha: 0.30),
+                  color: _skyShadowColorForCondition(
+                    current.condition,
+                  ).withValues(alpha: 0.30),
                   blurRadius: 14,
                   offset: const Offset(0, 6),
                 ),
@@ -2054,8 +2189,9 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   fieldName.toUpperCase(),
-                  style: AppTextStyles.caption(color: Colors.white70)
-                      .copyWith(letterSpacing: 1.4, fontWeight: FontWeight.w600),
+                  style: AppTextStyles.caption(
+                    color: Colors.white70,
+                  ).copyWith(letterSpacing: 1.4, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -2068,35 +2204,51 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Text(
                             '${current.temperature.toStringAsFixed(0)}°',
-                            style: AppTextStyles.displayLarge(color: Colors.white)
-                                .copyWith(fontSize: 58, height: 1),
+                            style: AppTextStyles.displayLarge(
+                              color: Colors.white,
+                            ).copyWith(fontSize: 58, height: 1),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             current.condition,
-                            style: AppTextStyles.bodyLarge(color: Colors.white)
-                                .copyWith(fontWeight: FontWeight.w600),
+                            style: AppTextStyles.bodyLarge(
+                              color: Colors.white,
+                            ).copyWith(fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
                     ),
-                    Text(current.weatherIcon, style: const TextStyle(fontSize: 50)),
+                    Text(
+                      current.weatherIcon,
+                      style: const TextStyle(fontSize: 50),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.26)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.26),
+                    ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       _buildWeatherStat('Humidity', '${current.humidity}%'),
-                      _buildWeatherStat('Wind', '${current.windSpeed.toStringAsFixed(1)} km/h'),
-                      _buildWeatherStat('Rain', '${current.precipitation.toStringAsFixed(1)} mm'),
+                      _buildWeatherStat(
+                        'Wind',
+                        '${current.windSpeed.toStringAsFixed(1)} km/h',
+                      ),
+                      _buildWeatherStat(
+                        'Rain',
+                        '${current.precipitation.toStringAsFixed(1)} mm',
+                      ),
                     ],
                   ),
                 ),
@@ -2112,14 +2264,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: AppTextStyles.caption(color: Colors.white70),
-        ),
+        Text(label, style: AppTextStyles.caption(color: Colors.white70)),
         Text(
           value,
-          style: AppTextStyles.bodyMedium(color: Colors.white)
-              .copyWith(fontWeight: FontWeight.w700),
+          style: AppTextStyles.bodyMedium(
+            color: Colors.white,
+          ).copyWith(fontWeight: FontWeight.w700),
         ),
       ],
     );
@@ -2144,7 +2294,9 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    if (normalized.contains('cloud') || normalized.contains('overcast') || normalized.contains('fog')) {
+    if (normalized.contains('cloud') ||
+        normalized.contains('overcast') ||
+        normalized.contains('fog')) {
       return const LinearGradient(
         colors: [Color(0xFF86A4BA), Color(0xFF64839A)],
         begin: Alignment.topLeft,
@@ -2167,7 +2319,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (normalized.contains('rain') || normalized.contains('drizzle')) {
       return const Color(0xFF3A5F7D);
     }
-    if (normalized.contains('cloud') || normalized.contains('overcast') || normalized.contains('fog')) {
+    if (normalized.contains('cloud') ||
+        normalized.contains('overcast') ||
+        normalized.contains('fog')) {
       return const Color(0xFF64839A);
     }
     return const Color(0xFF57A0D3);
@@ -2296,14 +2450,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 Tooltip(
                   message: 'View Animal Dashboard',
                   child: IconButton(
-                    icon: Icon(Icons.dashboard_outlined,
-                      color: Colors.white),
+                    icon: Icon(Icons.dashboard_outlined, color: Colors.white),
                     iconSize: 28,
                     padding: const EdgeInsets.all(4),
                     onPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => const AnimalDashboardScreen()),
+                        builder: (context) => const AnimalDashboardScreen(),
+                      ),
                     ),
                   ),
                 ),
@@ -2315,10 +2469,15 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Expanded(
                 child: _buildDashboardStatCard(
-                  'Total Animals', '$totalAnimals', 'Across all types',
-                  Symbols.pets, const Color(0xFF10B981),
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const AnimalListScreen())),
+                  'Total Animals',
+                  '$totalAnimals',
+                  'Across all types',
+                  Symbols.pets,
+                  const Color(0xFF10B981),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AnimalListScreen()),
+                  ),
                 ),
               ),
               SizedBox(width: cardSpacing),
@@ -2339,10 +2498,17 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Expanded(
                 child: _buildDashboardStatCard(
-                  'Vaccines Due', '$vaccinesDue', 'Next 7 days',
-                  Symbols.vaccines, const Color(0xFF3B82F6),
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const VaccineDashboardScreen())),
+                  'Vaccines Due',
+                  '$vaccinesDue',
+                  'Next 7 days',
+                  Symbols.vaccines,
+                  const Color(0xFF3B82F6),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const VaccineDashboardScreen(),
+                    ),
+                  ),
                 ),
               ),
               SizedBox(width: cardSpacing),
@@ -2364,12 +2530,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildDashboardStatCard(
-    String title, String value, String subtitle,
-    IconData icon, Color color, {VoidCallback? onTap}
-  ) {
+    String title,
+    String value,
+    String subtitle,
+    IconData icon,
+    Color color, {
+    VoidCallback? onTap,
+  }) {
     final isSmall = Responsive.isMobile(context);
     final cardPadding = Responsive.cardPadding(context);
-    
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -2427,7 +2597,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
 
   // ─────────────────────────────────────────────
   // MILK PRODUCTION BANNER
@@ -2557,9 +2726,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
-
-// ─────────────────────────────────────────────
+  // ─────────────────────────────────────────────
   // LIVE HEALTH METRICS
   // DASHBOARD button → AnimalDashboardScreen
   // ─────────────────────────────────────────────
@@ -2568,7 +2735,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final responsiveVertical = Responsive.verticalPadding(context);
     final isMobile = Responsive.isMobile(context);
     final cardHeight = isMobile ? 340.0 : 360.0;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2647,8 +2814,5 @@ class BackgroundSlide {
   final String imageAsset;
   final Color fallbackColor;
 
-  BackgroundSlide({
-    required this.imageAsset,
-    required this.fallbackColor,
-  });
+  BackgroundSlide({required this.imageAsset, required this.fallbackColor});
 }

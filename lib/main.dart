@@ -13,8 +13,12 @@ import 'providers/vaccine_provider.dart';
 import 'providers/shorts_provider.dart';
 import 'providers/voice_access_mode_provider.dart';
 import 'providers/global_voice_controller.dart';
+import 'providers/asset_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/farmer_home_screen_v2.dart';
+import 'screens/asset_list_screen.dart';
 import 'screens/security/incident_detail_screen.dart';
 import 'screens/soil/soil_measurements_list_screen.dart';
 import 'screens/soil/soil_alert_notifications_screen.dart';
@@ -22,7 +26,7 @@ import 'services/local_notification_service.dart';
 import 'widgets/global_voice_fab.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-/// Global navigator key — used for navigating from notification callbacks 
+/// Global navigator key — used for navigating from notification callbacks
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 /// Background message handler — must be a top-level function
@@ -39,9 +43,7 @@ void handleNotificationData(Map<String, dynamic> data) {
 
   if (screen == 'SOIL_ALERTS' || type == 'SOIL_WEATHER_ALERT') {
     navigatorKey.currentState?.push(
-      MaterialPageRoute(
-        builder: (_) => const SoilAlertNotificationsScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const SoilAlertNotificationsScreen()),
     );
     return;
   }
@@ -62,11 +64,11 @@ void handleMessage(RemoteMessage message) {
 class MyScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
-        PointerDeviceKind.touch,
-        PointerDeviceKind.mouse,
-        PointerDeviceKind.trackpad,
-        PointerDeviceKind.stylus,
-      };
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+    PointerDeviceKind.stylus,
+  };
 }
 
 void main() async {
@@ -141,6 +143,7 @@ class _FieldlyAppState extends State<FieldlyApp> {
             accessModeProvider: context.read<VoiceAccessModeProvider>(),
           ),
         ),
+        ChangeNotifierProvider(create: (_) => AssetProvider()),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
@@ -158,6 +161,10 @@ class _FieldlyAppState extends State<FieldlyApp> {
           );
         },
         routes: {
+          '/owner_dashboard': (context) => const HomeScreen(),
+          '/worker_home': (context) => const FarmerHomeScreenV2(),
+          '/farmer_home': (context) => const FarmerHomeScreenV2(),
+          '/assets': (context) => const AssetListScreen(),
           '/incident-details': (context) {
             final incidentId =
                 ModalRoute.of(context)!.settings.arguments as String;

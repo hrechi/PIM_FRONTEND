@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:frontend_pim/screens/animals/animal_dashboard_screen.dart';
 import '../screens/agricultural_news_screen.dart';
 import '../screens/harvest_analytics_screen.dart';
 import '../screens/aerotwin_screen.dart';
 import '../screens/crop_calendar_screen.dart';
+import '../providers/auth_provider.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../screens/home_screen.dart';
+import '../screens/farmer_home_screen_v2.dart';
 import '../screens/animals/animal_list_screen.dart';
 import '../screens/animals/add_animal_screen.dart';
 import '../screens/animals/milk_production_screen.dart';
@@ -24,12 +27,117 @@ import '../screens/soil/soil_measurements_list_screen.dart';
 import '../screens/security/incident_history_screen.dart';
 import '../screens/shorts_screen.dart';
 import '../screens/community_feed_screen.dart';
+import '../screens/signin_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final role = auth.user?.role.toUpperCase() ?? 'OWNER';
+    final isWorker = role == 'WORKER';
+
+    if (isWorker) {
+      return Drawer(
+        backgroundColor: Colors.white,
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: const BoxDecoration(
+                  gradient: AppColorPalette.fieldFreshGradient,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.asset(
+                        'assets/images/agricole_icon2.gif',
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Fieldly Worker',
+                      style: AppTextStyles.h2(color: AppColorPalette.white),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Material operations',
+                      style: AppTextStyles.bodySmall(
+                        color: AppColorPalette.white.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  children: [
+                    _buildDrawerSection('Worker'),
+                    _buildDrawerItem(
+                      icon: Icons.home_rounded,
+                      title: 'Home',
+                      subtitle: 'Worker Dashboard',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const FarmerHomeScreenV2(),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.person_outline_rounded,
+                      title: 'Profile',
+                      subtitle: 'My account',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ProfileScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    const Divider(height: 1),
+                    _buildDrawerItem(
+                      icon: Icons.logout_rounded,
+                      iconColor: AppColorPalette.alertError,
+                      title: 'Sign Out',
+                      subtitle: 'End worker session',
+                      onTap: () async {
+                        Navigator.pop(context);
+                        await context.read<AuthProvider>().signOut();
+                        if (!context.mounted) return;
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (_) => const SignInScreen(),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Drawer(
       backgroundColor: Colors.white,
       child: SafeArea(
@@ -80,11 +188,17 @@ class AppDrawer extends StatelessWidget {
                     title: 'Home',
                     subtitle: 'Main Dashboard',
                     onTap: () {
+                      final role = context.read<AuthProvider>().user?.role.toUpperCase();
                       Navigator.pop(context);
-                      // Navigate to HomeScreen (usually already the root, but for safety)
+                      // Navigate to the role-specific dashboard.
                       Navigator.pushAndRemoveUntil(
                         context,
-                        MaterialPageRoute(builder: (_) => const HomeScreen()),
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              role == 'WORKER'
+                                  ? const FarmerHomeScreenV2()
+                                  : const HomeScreen(),
+                        ),
                         (route) => false,
                       );
                     },
@@ -223,36 +337,6 @@ class AppDrawer extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (_) => AgriculturalNewsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.cloud,
-                    iconColor: const Color(0xFF57A0D3),
-                    title: 'Weather & Advice',
-                    subtitle: 'Forecast & recommendations',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const WeatherScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.water_drop,
-                    iconColor: const Color(0xFF2196F3),
-                    title: 'Irrigation Scheduler',
-                    subtitle: 'Smart 7-day irrigation plan',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const IrrigationSchedulerScreen(),
                         ),
                       );
                     },
@@ -436,19 +520,6 @@ class AppDrawer extends StatelessWidget {
                         MaterialPageRoute(
                           builder: (_) => const LiveFeedScreen(),
                         ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.videocam_rounded,
-                    iconColor: AppColorPalette.emeraldGreen,
-                    title: 'Live Feed',
-                    subtitle: 'View live camera',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LiveFeedScreen()),
                       );
                     },
                   ),

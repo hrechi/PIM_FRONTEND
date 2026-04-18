@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../utils/constants.dart';
 import 'signin_screen.dart';
-import 'home_screen.dart';
 import 'welcome_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -59,9 +58,12 @@ class _SplashScreenState extends State<SplashScreen>
         MaterialPageRoute(builder: (_) => const WelcomeScreen()),
       );
     } else if (authProvider.isAuthenticated) {
-      // Already logged in: go to home
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      // Already logged in: go to the correct dashboard
+      final role = authProvider.user?.role.toUpperCase();
+      Navigator.of(context).pushReplacementNamed(
+        role == 'WORKER'
+            ? '/worker_home'
+            : '/owner_dashboard',
       );
     } else {
       // Not logged in: go to sign in
