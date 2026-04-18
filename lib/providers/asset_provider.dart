@@ -101,7 +101,10 @@ class AssetProvider with ChangeNotifier {
           .toList();
       _brandSuggestions = suggestions;
       notifyListeners();
-      return suggestions.map((item) => item['brand']?.toString() ?? '').where((value) => value.isNotEmpty).toList();
+      return suggestions
+          .map((item) => item['brand']?.toString() ?? '')
+          .where((value) => value.isNotEmpty)
+          .toList();
     } on ApiException catch (e) {
       _error = e.message;
       notifyListeners();
@@ -214,18 +217,16 @@ class AssetProvider with ChangeNotifier {
     DateTime? startTime,
     String? notes,
   }) async {
-    final response = await ApiService.post(
-      '/assets/session/start',
-      {
-        'assetId': assetId,
-        'startMileage': startMileage,
-        if (startOperatingHours != null) 'startOperatingHours': startOperatingHours,
-        if (taskType != null && taskType.trim().isNotEmpty) 'taskType': taskType.trim(),
-        if (startTime != null) 'startTime': startTime.toIso8601String(),
-        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
-      },
-      withAuth: true,
-    );
+    final response = await ApiService.post('/assets/session/start', {
+      'assetId': assetId,
+      'startMileage': startMileage,
+      if (startOperatingHours != null)
+        'startOperatingHours': startOperatingHours,
+      if (taskType != null && taskType.trim().isNotEmpty)
+        'taskType': taskType.trim(),
+      if (startTime != null) 'startTime': startTime.toIso8601String(),
+      if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+    }, withAuth: true);
 
     _activeUsageSession = Map<String, dynamic>.from(response as Map);
     _activeAssetId = _activeUsageSession?['assetId']?.toString();
@@ -244,22 +245,18 @@ class AssetProvider with ChangeNotifier {
     String? issues,
     String? notes,
   }) async {
-    final response = await ApiService.post(
-      '/assets/session/end',
-      {
-        'usageLogId': usageLogId,
-        'endMileage': endMileage,
-        if (endOperatingHours != null) 'endOperatingHours': endOperatingHours,
-        if (fuelLevel != null) 'fuelLevel': fuelLevel,
-        if (conditionNote != null && conditionNote.trim().isNotEmpty)
-          'conditionNote': conditionNote.trim(),
-        if (endTime != null) 'endTime': endTime.toIso8601String(),
-        'returnConfirmation': returnConfirmation,
-        if (issues != null && issues.trim().isNotEmpty) 'issues': issues.trim(),
-        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
-      },
-      withAuth: true,
-    );
+    final response = await ApiService.post('/assets/session/end', {
+      'usageLogId': usageLogId,
+      'endMileage': endMileage,
+      if (endOperatingHours != null) 'endOperatingHours': endOperatingHours,
+      if (fuelLevel != null) 'fuelLevel': fuelLevel,
+      if (conditionNote != null && conditionNote.trim().isNotEmpty)
+        'conditionNote': conditionNote.trim(),
+      if (endTime != null) 'endTime': endTime.toIso8601String(),
+      'returnConfirmation': returnConfirmation,
+      if (issues != null && issues.trim().isNotEmpty) 'issues': issues.trim(),
+      if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+    }, withAuth: true);
 
     final responseMap = Map<String, dynamic>.from(response as Map);
     final updatedAssetId = responseMap['assetId']?.toString();
@@ -280,14 +277,20 @@ class AssetProvider with ChangeNotifier {
   }
 
   Future<List<Map<String, dynamic>>> fetchWeeklyUsageIntensity() async {
-    final response = await ApiService.get('/assets/session/weekly', withAuth: true);
+    final response = await ApiService.get(
+      '/assets/session/weekly',
+      withAuth: true,
+    );
     _weeklyUsageIntensity = List<Map<String, dynamic>>.from(response as List);
     notifyListeners();
     return _weeklyUsageIntensity;
   }
 
   Future<Map<String, dynamic>> fetchAssetHistory(String assetId) async {
-    final response = await ApiService.get('/assets/$assetId/history', withAuth: true);
+    final response = await ApiService.get(
+      '/assets/$assetId/history',
+      withAuth: true,
+    );
     final result = Map<String, dynamic>.from(response as Map);
     _assetHistoryById[assetId] = result;
     notifyListeners();
@@ -295,7 +298,10 @@ class AssetProvider with ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> fetchAssetDiagnostics(String assetId) async {
-    final response = await ApiService.get('/assets/$assetId/diagnostics', withAuth: true);
+    final response = await ApiService.get(
+      '/assets/$assetId/diagnostics',
+      withAuth: true,
+    );
     final result = Map<String, dynamic>.from(response as Map);
     _assetDiagnosticsById[assetId] = result;
     notifyListeners();
@@ -310,8 +316,13 @@ class AssetProvider with ChangeNotifier {
 
     // First, try to find locally by serial number
     try {
-      final response = await ApiService.get('/assets/scan/$qrData', withAuth: true);
-      final asset = AssetItem.fromJson(response['asset'] as Map<String, dynamic>);
+      final response = await ApiService.get(
+        '/assets/scan/$qrData',
+        withAuth: true,
+      );
+      final asset = AssetItem.fromJson(
+        response['asset'] as Map<String, dynamic>,
+      );
 
       final index = _assets.indexWhere((item) => item.id == asset.id);
       if (index == -1) {
