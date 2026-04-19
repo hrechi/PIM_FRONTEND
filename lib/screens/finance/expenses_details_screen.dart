@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import '../../models/expense_detail_model.dart';
 import '../../services/finance_details_service.dart';
 import '../../utils/constants.dart';
-import '../../utils/animal_utils.dart';
 
 class ExpensesDetailsScreen extends StatefulWidget {
   final String fieldId;
@@ -126,6 +125,7 @@ class _ExpensesDetailsScreenState extends State<ExpensesDetailsScreen> {
       appBar: AppBar(
         title: Text('Dépenses - ${widget.fieldName}'),
         backgroundColor: AppColors.mistyBlue,
+        foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
       ),
@@ -135,7 +135,7 @@ class _ExpensesDetailsScreenState extends State<ExpensesDetailsScreen> {
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.mistyBlue, AppColors.mistyBlue.withOpacity(0.8)],
+                colors: [AppColors.mistyBlue, AppColors.mistyBlue.withValues(alpha: 0.8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -170,10 +170,20 @@ class _ExpensesDetailsScreenState extends State<ExpensesDetailsScreen> {
                             _loadExpensesData();
                           },
                           label: Text(labels[period] ?? period),
-                          backgroundColor: Colors.white.withOpacity(0.15),
-                          selectedColor: Colors.white,
+                          backgroundColor: Colors.white.withValues(alpha: 0.2),
+                          selectedColor: AppColors.mistyBlue,
+                          checkmarkColor: Colors.white,
                           labelStyle: TextStyle(
-                            color: isSelected ? AppColors.mistyBlue : Colors.white,
+                            color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.9),
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                              color: isSelected ? AppColors.mistyBlue : Colors.white.withValues(alpha: 0.3),
+                              width: 1,
+                            ),
                           ),
                         ),
                       );
@@ -206,10 +216,20 @@ class _ExpensesDetailsScreenState extends State<ExpensesDetailsScreen> {
                             _loadExpensesData();
                           },
                           label: Text(_categoryLabels[cat] ?? cat),
-                          backgroundColor: Colors.white.withOpacity(0.15),
-                          selectedColor: Colors.white,
+                          backgroundColor: Colors.white.withValues(alpha: 0.2),
+                          selectedColor: AppColors.mistyBlue,
+                          checkmarkColor: Colors.white,
                           labelStyle: TextStyle(
-                            color: isSelected ? AppColors.mistyBlue : Colors.white,
+                            color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.9),
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                              color: isSelected ? AppColors.mistyBlue : Colors.white.withValues(alpha: 0.3),
+                              width: 1,
+                            ),
                           ),
                         ),
                       );
@@ -237,7 +257,7 @@ class _ExpensesDetailsScreenState extends State<ExpensesDetailsScreen> {
                       borderSide: const BorderSide(color: Colors.white24),
                     ),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.1),
+                    fillColor: Colors.white.withValues(alpha: 0.1),
                   ),
                   style: const TextStyle(color: Colors.white),
                 ),
@@ -299,100 +319,136 @@ class _ExpensesDetailsScreenState extends State<ExpensesDetailsScreen> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
           border: Border(left: BorderSide(color: categoryColor, width: 4)),
+          gradient: LinearGradient(
+            colors: [Colors.white, categoryColor.withValues(alpha: 0.05)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header with animal name and amount
-              Flex(
-                direction: Axis.horizontal,
+              Row(
                 children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: categoryColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _getCategoryIcon(expense.category),
+                      style: const TextStyle(fontSize: 20),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _getCategoryIcon(expense.category),
-                          style: const TextStyle(fontSize: 24),
+                          expense.animalName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Color(0xFF1F2937),
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                expense.animalName,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Container(
-                                margin: const EdgeInsets.only(top: 4),
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: categoryColor.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  categoryLabel,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: categoryColor,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
+                        Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: categoryColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            categoryLabel,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: categoryColor,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  SizedBox(
-                    width: 100,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '-${expense.amount.toStringAsFixed(2)} DT',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Color(0xFFEF4444),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade500,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '-${expense.amount.toStringAsFixed(2)} DT',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              // Details row
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildDetailRow(
-                      'Date',
-                      formatter.format(expense.date),
-                      Icons.calendar_today,
+              const SizedBox(height: 16),
+              // Details
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildDetailRow(
+                        'Date',
+                        formatter.format(expense.date),
+                        Icons.calendar_today,
+                        Colors.blue.shade600,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               // Description/Notes if available
               if (expense.description != null && expense.description!.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    'Description: ${expense.description}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.amber.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.note, size: 16, color: Colors.amber.shade700),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            expense.description!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.amber.shade800,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
             ],
@@ -402,10 +458,10 @@ class _ExpensesDetailsScreenState extends State<ExpensesDetailsScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value, IconData icon) {
+  Widget _buildDetailRow(String label, String value, IconData icon, Color iconColor) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: AppColors.mistyBlue),
+        Icon(icon, size: 16, color: iconColor),
         const SizedBox(width: 6),
         Expanded(
           child: Column(
@@ -430,8 +486,7 @@ class _ExpensesDetailsScreenState extends State<ExpensesDetailsScreen> {
   Widget _buildPagination() {
     if (_currentData == null) return const SizedBox.shrink();
 
-    final filteredData = _getFilteredData();
-    final totalPages = (filteredData.length / _pageSize).ceil();
+    final totalPages = (_currentData!.total / _pageSize).ceil();
     final canGoPrevious = _currentPage > 0;
     final canGoNext = _currentPage < totalPages - 1;
 
@@ -449,9 +504,26 @@ class _ExpensesDetailsScreenState extends State<ExpensesDetailsScreen> {
                     _loadExpensesData();
                   }
                 : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: canGoPrevious ? AppColors.mistyBlue : Colors.grey,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('← Précédent'),
           ),
-          Text('Page ${_currentPage + 1} / $totalPages'),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Page ${_currentPage + 1} / $totalPages',
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+          ),
           ElevatedButton(
             onPressed: canGoNext
                 ? () {
@@ -461,6 +533,10 @@ class _ExpensesDetailsScreenState extends State<ExpensesDetailsScreen> {
                     _loadExpensesData();
                   }
                 : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: canGoNext ? AppColors.mistyBlue : Colors.grey,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Suivant →'),
           ),
         ],

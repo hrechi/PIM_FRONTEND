@@ -129,6 +129,21 @@ class AnimalService {
     return Animal.fromJson(response);
   }
 
+  Future<Animal> markAnimalAsFattening(String nodeId, Map<String, dynamic> fatteningData) async {
+    final response = await ApiService.patch('/animals/$nodeId/set-fattening', fatteningData, withAuth: true);
+    return Animal.fromJson(response);
+  }
+
+  Future<List<Animal>> getAnimalsForSale({String? fieldId}) async {
+    String endpoint = '/animals/for-sale';
+    if (fieldId != null) {
+      endpoint += '?fieldId=$fieldId';
+    }
+    final response = await ApiService.get(endpoint, withAuth: true);
+    final List<dynamic> data = response is List ? response : (response['data'] ?? []);
+    return data.map((json) => Animal.fromJson(json)).toList();
+  }
+
   Future<Animal> cancelSale(String nodeId) async {
     final response = await ApiService.patch('/animals/$nodeId/cancel-sale', {}, withAuth: true);
     return Animal.fromJson(response);

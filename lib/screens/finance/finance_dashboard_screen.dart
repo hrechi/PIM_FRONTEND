@@ -5,6 +5,7 @@ import '../../providers/finance_provider.dart';
 import '../../providers/field_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/constants.dart';
+import '../expenses/add_expense_screen.dart';
 import 'revenues_details_screen.dart';
 import 'expenses_details_screen.dart';
 
@@ -79,6 +80,7 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
       appBar: AppBar(
         title: const Text('Tableau de Bord Financier'),
         backgroundColor: AppColors.mistyBlue,
+        foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
       ),
@@ -236,6 +238,22 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
           );
         },
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          if (_selectedFieldId != null) {
+            final fieldProvider = Provider.of<FieldProvider>(context, listen: false);
+            final field = fieldProvider.fields.firstWhere((f) => f.id == _selectedFieldId);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AddExpenseScreen(field: field),
+              ),
+            ).then((_) => _loadDashboard());
+          }
+        },
+        backgroundColor: AppColors.mistyBlue,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
     );
   }
 
@@ -270,14 +288,14 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
             children: [
               Icon(
                 icon,
-                color: Colors.white,
+                color: isSelected ? AppColors.mistyBlue : Colors.white,
                 size: 20,
               ),
               const SizedBox(height: 4),
               Text(
                 label,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: isSelected ? AppColors.mistyBlue : Colors.white,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   fontSize: 12,
                 ),
@@ -372,26 +390,31 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Icon(
+                            Symbols.trending_up,
+                            color: Color(0xFF10B981),
+                            size: 16,
+                          ),
                         ),
-                        child: const Icon(
-                          Symbols.trending_up,
-                          color: Color(0xFF10B981),
-                          size: 20,
+                        const SizedBox(width: 4),
+                        const Expanded(
+                          child: Text(
+                            'Revenus',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF059669)),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Revenus',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF059669)),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   GestureDetector(
                     onTap: () {
@@ -406,14 +429,21 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
                       );
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                       decoration: BoxDecoration(
                         color: const Color(0xFF10B981).withOpacity(0.2),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Text(
-                        'Voir plus →',
-                        style: TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.w600),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                           Text(
+                            'Plus',
+                            style: TextStyle(fontSize: 10, color: Color(0xFF059669), fontWeight: FontWeight.w600),
+                           ),
+                           SizedBox(width: 2),
+                           Icon(Icons.arrow_forward_ios, size: 10, color: Color(0xFF059669)),
+                        ],
                       ),
                     ),
                   ),
@@ -467,26 +497,31 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEF4444).withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Icon(
+                            Symbols.trending_down,
+                            color: Color(0xFFEF4444),
+                            size: 16,
+                          ),
                         ),
-                        child: const Icon(
-                          Symbols.trending_down,
-                          color: Color(0xFFEF4444),
-                          size: 20,
+                        const SizedBox(width: 4),
+                        const Expanded(
+                          child: Text(
+                            'Dépenses',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFDC2626)),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Dépenses',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFFDC2626)),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   GestureDetector(
                     onTap: () {
@@ -501,14 +536,21 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
                       );
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                       decoration: BoxDecoration(
                         color: const Color(0xFFEF4444).withOpacity(0.2),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Text(
-                        'Voir plus →',
-                        style: TextStyle(fontSize: 11, color: Color(0xFFDC2626), fontWeight: FontWeight.w600),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                           Text(
+                            'Plus',
+                            style: TextStyle(fontSize: 10, color: Color(0xFFDC2626), fontWeight: FontWeight.w600),
+                           ),
+                           SizedBox(width: 2),
+                           Icon(Icons.arrow_forward_ios, size: 10, color: Color(0xFFDC2626)),
+                        ],
                       ),
                     ),
                   ),

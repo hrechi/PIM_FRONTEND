@@ -64,6 +64,9 @@ class Animal {
   final double? estimatedValue;
   final double? salePrice;
   final DateTime? saleDate;
+  final bool? isFattening;
+  final DateTime? fatteningStartDate;
+  final DateTime? targetSaleDate;
 
   // New Genealogy & Financial Fields (Financial Module)
   final String origin; // purchased | born
@@ -130,6 +133,9 @@ class Animal {
     this.estimatedValue,
     this.salePrice,
     this.saleDate,
+    this.isFattening,
+    this.fatteningStartDate,
+    this.targetSaleDate,
     required this.createdAt,
     required this.updatedAt,
     this.origin = 'purchased',
@@ -218,6 +224,9 @@ class Animal {
       estimatedValue: _toDouble(json['estimatedValue']),
       salePrice: _toDouble(json['salePrice']),
       saleDate: json['saleDate'] != null ? DateTime.parse(json['saleDate']) : null,
+      isFattening: json['isFattening'] ?? false,
+      fatteningStartDate: json['fatteningStartDate'] != null ? DateTime.parse(json['fatteningStartDate']) : null,
+      targetSaleDate: json['targetSaleDate'] != null ? DateTime.parse(json['targetSaleDate']) : null,
       origin: json['origin'] ?? 'purchased',
       motherId: json['motherId'],
       fatherId: json['fatherId'],

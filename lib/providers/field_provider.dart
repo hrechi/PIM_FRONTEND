@@ -43,7 +43,6 @@ class FieldProvider with ChangeNotifier {
         name: name,
         areaCoordinates: areaCoordinates,
         areaSize: areaSize,
-        currency: currency,
       );
       _fields.add(newField);
     } catch (e) {
@@ -74,7 +73,6 @@ class FieldProvider with ChangeNotifier {
         cropType: cropType,
         areaCoordinates: areaCoordinates,
         areaSize: areaSize,
-        currency: currency,
       );
       final index = _fields.indexWhere((field) => field.id == id);
       if (index != -1) {

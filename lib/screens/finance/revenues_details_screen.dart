@@ -82,6 +82,7 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
       appBar: AppBar(
         title: Text('Revenus - ${widget.fieldName}'),
         backgroundColor: AppColors.mistyBlue,
+        foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
       ),
@@ -91,7 +92,7 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.mistyBlue, AppColors.mistyBlue.withOpacity(0.8)],
+                colors: [AppColors.mistyBlue, AppColors.mistyBlue.withValues(alpha: 0.8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -126,10 +127,20 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
                             _loadRevenuesData();
                           },
                           label: Text(labels[period] ?? period),
-                          backgroundColor: Colors.white.withOpacity(0.15),
-                          selectedColor: Colors.white,
+                          backgroundColor: Colors.white.withValues(alpha: 0.2),
+                          selectedColor: AppColors.mistyBlue,
+                          checkmarkColor: Colors.white,
                           labelStyle: TextStyle(
-                            color: isSelected ? AppColors.mistyBlue : Colors.white,
+                            color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.9),
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                              color: isSelected ? AppColors.mistyBlue : Colors.white.withValues(alpha: 0.3),
+                              width: 1,
+                            ),
                           ),
                         ),
                       );
@@ -157,7 +168,7 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
                       borderSide: const BorderSide(color: Colors.white24),
                     ),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.1),
+                    fillColor: Colors.white.withValues(alpha: 0.1),
                   ),
                   style: const TextStyle(color: Colors.white),
                 ),
@@ -216,103 +227,132 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
     final formatter = DateFormat('dd/MM/yyyy HH:mm');
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with animal name and price
-            Flex(
-              direction: Axis.horizontal,
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Text(
-                        AnimalUtils.getAnimalEmoji(revenue.type),
-                        style: const TextStyle(fontSize: 24),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              revenue.animalName,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              revenue.type,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey[600],
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  width: 100,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '+${revenue.salePrice.toStringAsFixed(2)} DT',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Color(0xFF10B981),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (revenue.saleWeightKg != null)
-                        Text(
-                          '${revenue.saleWeightKg!.toStringAsFixed(1)} kg',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // Details
-            Row(
-              children: [
-                Expanded(
-                  child: _buildDetailRow(
-                    'Date',
-                    formatter.format(revenue.saleDate),
-                    Icons.calendar_today,
-                  ),
-                ),
-                if (revenue.buyerName != null)
-                  Expanded(
-                    child: _buildDetailRow(
-                      'Acheteur',
-                      revenue.buyerName ?? '',
-                      Icons.person,
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [Colors.white, Colors.green.shade50.withValues(alpha: 0.3)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with animal name and price
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      AnimalUtils.getAnimalEmoji(revenue.type),
+                      style: const TextStyle(fontSize: 20),
                     ),
                   ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          revenue.animalName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Color(0xFF1F2937),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          revenue.type,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade500,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '+${revenue.salePrice.toStringAsFixed(2)} DT',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                        if (revenue.saleWeightKg != null)
+                          Text(
+                            '${revenue.saleWeightKg!.toStringAsFixed(1)} kg',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.white70,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Details
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildDetailRow(
+                        'Date',
+                        formatter.format(revenue.saleDate),
+                        Icons.calendar_today,
+                        Colors.blue.shade600,
+                      ),
+                    ),
+                    if (revenue.buyerName != null)
+                      Expanded(
+                        child: _buildDetailRow(
+                          'Acheteur',
+                          revenue.buyerName ?? '',
+                          Icons.person,
+                          Colors.purple.shade600,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value, IconData icon) {
+  Widget _buildDetailRow(String label, String value, IconData icon, Color iconColor) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: AppColors.mistyBlue),
+        Icon(icon, size: 16, color: iconColor),
         const SizedBox(width: 6),
         Expanded(
           child: Column(
@@ -355,9 +395,26 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
                     _loadRevenuesData();
                   }
                 : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: canGoPrevious ? AppColors.mistyBlue : Colors.grey,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('← Précédent'),
           ),
-          Text('Page ${_currentPage + 1} / $totalPages'),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Page ${_currentPage + 1} / $totalPages',
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+          ),
           ElevatedButton(
             onPressed: canGoNext
                 ? () {
@@ -367,6 +424,10 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
                     _loadRevenuesData();
                   }
                 : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: canGoNext ? AppColors.mistyBlue : Colors.grey,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Suivant →'),
           ),
         ],

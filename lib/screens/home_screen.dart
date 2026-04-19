@@ -21,8 +21,11 @@ import '../providers/notification_provider.dart';
 import '../services/animal_service.dart';
 import '../services/soil_repository.dart';
 import '../widgets/metric_card.dart';
+import '../widgets/alert_tile.dart';
 import '../widgets/security_alert_overlay.dart';
 import '../widgets/unified_farm_status_card.dart';
+import '../widgets/dashboard_card.dart';
+import '../widgets/status_chip.dart';
 import 'soil/soil_measurements_list_screen.dart';
 import 'animals/animal_list_screen.dart';
 import 'animals/animal_dashboard_screen.dart';
@@ -2250,139 +2253,142 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: GestureDetector(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const MilkProductionScreen()),
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [AppColors.mistBlue, AppColors.mistBlue.withOpacity(0.8)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MilkProductionScreen()),
             ),
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.mistBlue.withOpacity(0.3),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.mistBlue, AppColors.mistBlue.withOpacity(0.8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.mistBlue.withOpacity(0.3),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
                 children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Icon(
-                        Symbols.water_drop,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        "Today's Yield",
-                        style: AppTextStyles.h4().copyWith(color: Colors.white),
-                      ),
-                    ],
-                  ),
-                  if (yesterday > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
+                      Row(
                         children: [
-                          Icon(
-                            trendPercent >= 0
-                                ? Symbols.trending_up
-                                : Symbols.trending_down,
+                          const Icon(
+                            Symbols.water_drop,
                             color: Colors.white,
-                            size: 14,
+                            size: 24,
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 8),
                           Text(
-                            '${trendPercent.abs().toStringAsFixed(1)}%',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            "Today's Yield",
+                            style: AppTextStyles.h4().copyWith(color: Colors.white),
                           ),
                         ],
                       ),
-                    ),
+                      if (yesterday > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                trendPercent >= 0
+                                    ? Symbols.trending_up
+                                    : Symbols.trending_down,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${trendPercent.abs().toStringAsFixed(1)}%',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        today.toStringAsFixed(1),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 40,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'Liters',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        'vs ${yesterday.toStringAsFixed(0)}L yesterday',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(
-                    today.toStringAsFixed(1),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 40,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    'Liters',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    'vs ${yesterday.toStringAsFixed(0)}L yesterday',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        DashboardCard(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Field Alerts
-              ...attentionAlerts.take(2).map(
-                    (alert) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: AlertTile.compact(alert: alert, onTap: () {}),
+          const SizedBox(height: 8),
+          DashboardCard(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                // Field Alerts
+                ...alerts.take(2).map(
+                      (alert) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: AlertTile.compact(alert: alert, onTap: () {}),
+                      ),
                     ),
-                  ),
-              // Animal Alerts
-              ...animalAlerts.take(2).map((aRaw) {
-                final animal = Animal.fromJson(aRaw);
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildAnimalAlertTile(animal),
-                );
-              }),
-            ],
+                // Animal Alerts
+                ...animals.take(2).map((animal) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildAnimalAlertTile(animal),
+                  );
+                }),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

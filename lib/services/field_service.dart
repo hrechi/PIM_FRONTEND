@@ -54,14 +54,12 @@ class FieldService {
     required String name,
     required List<List<double>> areaCoordinates,
     double? areaSize,
-    String? currency,
   }) async {
     try {
       final body = jsonEncode({
         'name': name,
         'areaCoordinates': areaCoordinates,
         'areaSize': areaSize,
-        'currency': currency,
       });
 
       final response = await http.post(
@@ -79,7 +77,6 @@ class FieldService {
           name: name,
           areaCoordinates: areaCoordinates,
           areaSize: areaSize,
-          currency: currency,
         );
       } else {
         throw Exception('Failed to create field: ${response.statusCode}');
@@ -95,7 +92,6 @@ class FieldService {
     String? cropType,
     List<List<double>>? areaCoordinates,
     double? areaSize,
-    String? currency,
   }) async {
     try {
       final Map<String, dynamic> body = {};
@@ -103,7 +99,6 @@ class FieldService {
       if (cropType != null) body['cropType'] = cropType;
       if (areaCoordinates != null) body['areaCoordinates'] = areaCoordinates;
       if (areaSize != null) body['areaSize'] = areaSize;
-      if (currency != null) body['currency'] = currency;
 
       final response = await http.patch(
         Uri.parse('${ApiService.baseUrl}/$endpointBase/$id'),
@@ -122,7 +117,6 @@ class FieldService {
           cropType: cropType,
           areaCoordinates: areaCoordinates,
           areaSize: areaSize,
-          currency: currency,
         );
       } else {
         throw Exception('Failed to update field: ${response.statusCode}');

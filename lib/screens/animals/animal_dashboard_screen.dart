@@ -248,7 +248,7 @@ class _AnimalDashboardScreenState extends State<AnimalDashboardScreen> {
               '',
               const Color(0xFFF59E0B),
               const Color(0xFFFFFBEB),
-              subtitle: 'Forecasted: ${_defaultField?.currencySymbol ?? "\$"}3,200',
+              subtitle: 'Forecasted: \$3,200',
               onTap: _defaultField == null ? null : () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => AddExpenseScreen(field: _defaultField!)),

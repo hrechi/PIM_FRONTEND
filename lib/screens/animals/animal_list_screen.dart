@@ -17,7 +17,7 @@ class AnimalListScreen extends StatefulWidget {
   State<AnimalListScreen> createState() => _AnimalListScreenState();
 }
 
-class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerProviderStateMixin {
+class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final AnimalService _animalService = AnimalService();
   final FieldService _fieldService = FieldService();
   late Future<List<Animal>> _animalsFuture;
@@ -25,6 +25,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
   late TabController _tabController;
   String? _selectedType;
   String? _selectedFieldId;
+  bool _showFatteningOnly = false;
   List<FieldModel> _fields = [];
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -33,8 +34,26 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addObserver(this);
     _fetchFields();
     _refreshData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _searchController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Refresh when app resumes (in case a sale was made from planned sales page)
+    if (state == AppLifecycleState.resumed && mounted) {
+      debugPrint('📱 App resumed - refreshing animal list');
+      _refreshData();
+    }
   }
 
   Future<void> _fetchFields() async {
@@ -63,6 +82,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
       );
       _statsFuture = _animalService.getStatistics(fieldId: _selectedFieldId);
     });
+    debugPrint('🔄 Animal list refreshed - ActiveTab, FieldId: $_selectedFieldId, Type: $_selectedType, Fattening: $_showFatteningOnly');
   }
 
   void _showCancelSaleDialog(Animal animal) {
@@ -320,12 +340,19 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 24),
-        itemCount: AppConstants.animalTypes.length + 1,
+        itemCount: AppConstants.animalTypes.length + 2,
         itemBuilder: (context, index) {
           final isAll = index == 0;
-          final type = isAll ? null : AppConstants.animalTypes[index - 1];
-          final label = isAll ? 'All' : type![0].toUpperCase() + type.substring(1).toLowerCase();
-          final isSelected = _selectedType == type;
+          final isFatteningFilter = index == AppConstants.animalTypes.length + 1;
+          final type = isAll ? null : !isFatteningFilter ? AppConstants.animalTypes[index - 1] : null;
+          final label = isAll
+              ? 'All'
+              : isFatteningFilter
+                  ? 'Vente planifiée'
+                  : type![0].toUpperCase() + type.substring(1).toLowerCase();
+          final isSelected = isFatteningFilter
+              ? _showFatteningOnly
+              : _selectedType == type;
 
           return Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -334,7 +361,11 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
               selected: isSelected,
               onSelected: (bool selected) {
                 setState(() {
-                  _selectedType = selected ? type : null;
+                  if (isFatteningFilter) {
+                    _showFatteningOnly = selected;
+                  } else {
+                    _selectedType = selected ? type : null;
+                  }
                   _refreshData();
                 });
               },
@@ -438,6 +469,9 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
           if (_selectedType != null) {
             if (a.animalType.toUpperCase() != _selectedType!.toUpperCase()) return false;
           }
+
+          // Filter by fattening / planned sale view
+          if (_showFatteningOnly && a.isFattening != true) return false;
 
           return true;
         }).toList();
@@ -560,6 +594,24 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
                                 size: 16,
                                 color: Color(0xFF94A3B8),
                               ),
+                              if (animal.isFattening == true) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE0F2FE),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text(
+                                    'En engraissement',
+                                    style: TextStyle(
+                                      color: Color(0xFF0369A1),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                           if (animal.status.toLowerCase() == 'sold')

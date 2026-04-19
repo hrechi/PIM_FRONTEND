@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../models/animal.dart';
 import '../../models/field_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/animal_service.dart';
 import '../../services/expense_service.dart';
 import '../../services/field_service.dart';
@@ -30,6 +33,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   bool _isLoadingAnimals = false;
   String? _animalsError;
   List<Animal> _animals = [];
+  String _currencySymbol = '\$'; // Default to USD
 
   final List<Map<String, dynamic>> _categories = [
     {'id': 'Alimentation', 'label': 'Alimentation', 'icon': Symbols.grass},
@@ -45,6 +49,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     super.initState();
     _fetchAnimals();
     _loadLastCategory();
+    _loadUserCurrency();
   }
 
   Future<void> _loadLastCategory() async {
@@ -52,6 +57,22 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     final lastCat = prefs.getString('last_expense_category');
     if (lastCat != null && mounted) {
       setState(() => _selectedCategory = lastCat);
+    }
+  }
+
+  Future<void> _loadUserCurrency() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userData = prefs.getString('user');
+    if (userData != null) {
+      try {
+        final userJson = jsonDecode(userData) as Map<String, dynamic>;
+        final currencySymbol = userJson['currencySymbol'] as String?;
+        if (currencySymbol != null && mounted) {
+          setState(() => _currencySymbol = currencySymbol);
+        }
+      } catch (e) {
+        // Keep default currency symbol
+      }
     }
   }
 
@@ -188,7 +209,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           textBaseline: TextBaseline.alphabetic,
           children: [
             Text(
-              widget.field.currencySymbol,
+              _currencySymbol,
               style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Color(0xFF1F2937)),
             ),
             const SizedBox(width: 12),

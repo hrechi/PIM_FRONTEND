@@ -75,6 +75,137 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
     }
   }
 
+  void _showMarkFatteningDialog() {
+    DateTime? selectedStartDate = _animal.fatteningStartDate ?? DateTime.now();
+    DateTime? selectedTargetDate = _animal.targetSaleDate;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Marquer comme en engraissement'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Date de début d\'engraissement:', style: TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedStartDate ?? DateTime.now(),
+                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                      lastDate: DateTime.now(),
+                    );
+                    if (picked != null) {
+                      setDialogState(() => selectedStartDate = picked);
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.mistBlue),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      selectedStartDate != null
+                          ? DateFormat('dd MMM yyyy').format(selectedStartDate!)
+                          : 'Sélectionner',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text('Date de vente prévue (optionnel):', style: TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedTargetDate ?? DateTime.now().add(const Duration(days: 30)),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) {
+                      setDialogState(() => selectedTargetDate = picked);
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      selectedTargetDate != null
+                          ? DateFormat('dd MMM yyyy').format(selectedTargetDate!)
+                          : 'Sélectionner',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                await _markAnimalAsFattening(selectedStartDate, selectedTargetDate);
+              },
+              child: const Text('Confirmer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _markAnimalAsFattening(DateTime? startDate, DateTime? targetDate) async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final fatteningData = {
+        'fatteningStartDate': startDate?.toIso8601String(),
+        'targetSaleDate': targetDate?.toIso8601String(),
+        'notes': 'Animal marked as fattening',
+      };
+
+      final updated = await _animalService.markAnimalAsFattening(_animal.nodeId, fatteningData);
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        setState(() => _animal = updated);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Animal marqué comme en engraissement'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,6 +231,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
                         _buildStatusAndAgeTiles(),
                         _buildGenealogySection(),
                         _buildSpeciesSpecificInfo(),
+                        if (_animal.isFattening == true) _buildFatteningSection(),
                         _buildFinanceSection(),
                         _buildMedicalSection(),
                         _buildNotesSection(),
@@ -399,6 +531,38 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
     );
   }
 
+  Widget _buildFatteningSection() {
+    final daysInFat = _animal.fatteningStartDate != null
+        ? DateTime.now().difference(_animal.fatteningStartDate!).inDays
+        : 0;
+    final daysUntilSale = _animal.targetSaleDate != null
+        ? _animal.targetSaleDate!.difference(DateTime.now()).inDays
+        : null;
+
+    return Container(
+      margin: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F9FF),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: const Color(0xFFBAE6FD), width: 2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle('Engraissement / Préparation Vente'),
+          const SizedBox(height: 8),
+          _buildDetailRow('Début d\'engraissement', _animal.fatteningStartDate != null ? _df.format(_animal.fatteningStartDate!) : 'N/A'),
+          _buildDetailRow('Jours en engraissement', '$daysInFat jours'),
+          if (_animal.targetSaleDate != null) ...[
+            _buildDetailRow('Date de vente prévue', _df.format(_animal.targetSaleDate!)),
+            _buildDetailRow('Jours avant vente', daysUntilSale != null ? '$daysUntilSale jours' : 'N/A'),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildFinanceSection() {
     return GestureDetector(
       onTap: () {
@@ -541,71 +705,130 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
     return Positioned(
       bottom: 0, left: 0, right: 0,
       child: Container(
-        height: 120,
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.9),
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5))],
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              flex: 1,
-              child: GestureDetector(
-                onTap: _isDeleting ? null : _deleteAnimal,
+            if (_animal.status == 'active' && _animal.isFattening == true)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
                 child: Container(
-                  height: 56,
-                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFE2E8F0), width: 2)),
-                  child: const Center(child: Icon(Symbols.delete, color: Color(0xFF64748B))),
-                ),
-              ),
-            ),
-            if (_animal.status == 'active') ...[
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 1,
-                child: GestureDetector(
-                  onTap: () async {
-                    final updated = await Navigator.push(context, MaterialPageRoute(builder: (context) => SellAnimalScreen(animal: _animal)));
-                    if (updated == true && mounted) Navigator.pop(context, true);
-                  },
-                  child: Container(
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [BoxShadow(color: Colors.green.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 5))],
-                    ),
-                    child: const Center(child: Text('Sell', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white))),
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 2,
-              child: GestureDetector(
-                onTap: () async {
-                  final updated = await Navigator.push(context, MaterialPageRoute(builder: (context) => AddAnimalScreen(animal: _animal)));
-                  if (updated == true && mounted) Navigator.pop(context, true);
-                },
-                child: Container(
-                  height: 56,
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [AppColors.mistBlue, const Color(0xFF32ADE6)]),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [BoxShadow(color: AppColors.mistBlue.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 8))],
+                    color: const Color(0xFFE0F2FE),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFBAE6FD), width: 1),
                   ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Symbols.edit, color: Colors.white, size: 20),
-                      SizedBox(width: 8),
-                      Text('Edit', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
+                      const Text(
+                        'Statut: En engraissement',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF0369A1),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      if (_animal.targetSaleDate != null)
+                        Text(
+                          'Date de vente prévue: ${DateFormat('dd MMM yyyy').format(_animal.targetSaleDate!)}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF0369A1),
+                          ),
+                        ),
                     ],
                   ),
                 ),
               ),
+            Row(
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: GestureDetector(
+                    onTap: _isDeleting ? null : _deleteAnimal,
+                    child: Container(
+                      height: 56,
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFE2E8F0), width: 2)),
+                      child: const Center(child: Icon(Symbols.delete, color: Color(0xFF64748B))),
+                    ),
+                  ),
+                ),
+                if (_animal.status == 'active' && _animal.isFattening != true) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 1,
+                    child: GestureDetector(
+                      onTap: _showMarkFatteningDialog,
+                      child: Container(
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFCD34D),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [BoxShadow(color: const Color(0xFFFCD34D).withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 5))],
+                        ),
+                        child: const Center(
+                          child: Icon(Symbols.trending_up, color: Color(0xFF78350F), size: 22),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                if (_animal.status == 'active') ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 1,
+                    child: GestureDetector(
+                      onTap: () async {
+                        final updated = await Navigator.push(context, MaterialPageRoute(builder: (context) => SellAnimalScreen(animal: _animal)));
+                        if (updated == true && mounted) Navigator.pop(context, true);
+                      },
+                      child: Container(
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [BoxShadow(color: Colors.green.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 5))],
+                        ),
+                        child: const Center(child: Text('Sell', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white))),
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: GestureDetector(
+                    onTap: () async {
+                      final updated = await Navigator.push(context, MaterialPageRoute(builder: (context) => AddAnimalScreen(animal: _animal)));
+                      if (updated == true && mounted) Navigator.pop(context, true);
+                    },
+                    child: Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: [AppColors.mistBlue, const Color(0xFF32ADE6)]),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [BoxShadow(color: AppColors.mistBlue.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 8))],
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Symbols.edit, color: Colors.white, size: 20),
+                          SizedBox(width: 8),
+                          Text('Edit', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
