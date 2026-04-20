@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../theme/color_palette.dart';
@@ -9,6 +8,9 @@ import '../../utils/responsive.dart';
 import '../../models/soil_measurement.dart';
 import '../../models/field_model.dart';
 import '../../services/field_service.dart';
+import '../../services/voice_number_parser.dart';
+import '../../services/voice_page_action_registry.dart';
+import '../../services/weather_service.dart';
 import 'location_picker_screen.dart';
 import 'soil_measurements_list_screen.dart';
 
@@ -28,6 +30,8 @@ class SoilMeasurementFormScreen extends StatefulWidget {
 }
 
 class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
+  static const String _voicePageKey = 'soil_measurement_form';
+
   final _formKey = GlobalKey<FormState>();
   final _phController = TextEditingController();
   final _moistureController = TextEditingController();
@@ -44,6 +48,7 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
   bool _isLoadingFields = false;
   bool isEditing = false;
   bool isSaving = false;
+  bool _awaitingVoiceSubmitConfirmation = false;
 
   // Photo upload state
   File? _selectedImage;
@@ -51,6 +56,7 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
   double? _detectionConfidence;
 
   final FieldService _fieldService = FieldService();
+  final WeatherService _weatherService = WeatherService();
   final ImagePicker _imagePicker = ImagePicker();
 
   @override
@@ -63,6 +69,10 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
     }
     
     _loadFields();
+    VoicePageActionRegistry.register(
+      pageKey: _voicePageKey,
+      executor: _handleVoiceAction,
+    );
   }
 
   /// Load available fields from backend
@@ -105,6 +115,7 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
 
   @override
   void dispose() {
+    VoicePageActionRegistry.unregister(_voicePageKey);
     _phController.dispose();
     _moistureController.dispose();
     _sunlightController.dispose();
@@ -113,6 +124,256 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
     _phosphorusController.dispose();
     _potassiumController.dispose();
     super.dispose();
+  }
+
+  String _normalizeVoiceText(String input) {
+    return input
+        .toLowerCase()
+        .replaceAll(RegExp(r'["`]+'), ' ')
+        .replaceAll(RegExp(r'[،,;:!?؟!.]+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  double? _extractNumber(String text) {
+    return VoiceNumberParser.parseNumberFromText(text);
+  }
+
+  bool _containsAny(String text, List<String> phrases) {
+    for (final phrase in phrases) {
+      if (text.contains(phrase)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<VoicePageActionResult> _handleVoiceAction(String transcript) async {
+    final normalized = _normalizeVoiceText(transcript);
+    if (normalized.isEmpty) {
+      return const VoicePageActionResult.notHandled();
+    }
+
+    if (_awaitingVoiceSubmitConfirmation) {
+      if (_containsAny(normalized, <String>[
+        'confirm add',
+        'yes confirm',
+        'confirm',
+        'confirm submission',
+      ])) {
+        _awaitingVoiceSubmitConfirmation = false;
+        await _saveMeasurement();
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'Submitting your soil measurement now.',
+        );
+      }
+
+      if (_containsAny(normalized, <String>[
+        'cancel add',
+        'cancel submission',
+        'no cancel',
+        'cancel',
+      ])) {
+        _awaitingVoiceSubmitConfirmation = false;
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'Submission canceled. Your values are still on the form.',
+        );
+      }
+    }
+
+    if (_containsAny(normalized, <String>[
+      'add now',
+    ])) {
+      _awaitingVoiceSubmitConfirmation = true;
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Ready to submit. Say confirm add to continue, or cancel add.',
+      );
+    }
+
+    if (_containsAny(normalized, <String>[
+      'pick location',
+      'set location',
+      'choose location',
+      'open location',
+      'select location',
+    ])) {
+      await _pickLocation();
+      if (!mounted) {
+        return const VoicePageActionResult.notHandled();
+      }
+
+      if (_latitude != null && _longitude != null) {
+        return VoicePageActionResult(
+          handled: true,
+          message:
+              'Location selected. Latitude ${_latitude!.toStringAsFixed(4)}, longitude ${_longitude!.toStringAsFixed(4)}.',
+        );
+      }
+
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Location picker closed. No location selected yet.',
+      );
+    }
+
+    final selectedFieldCommandPrefixes = <String>[
+      'select field ',
+      'set field ',
+      'field ',
+      'choose field ',
+    ];
+
+    for (final prefix in selectedFieldCommandPrefixes) {
+      if (!normalized.startsWith(prefix)) {
+        continue;
+      }
+
+      final wantedField = normalized.substring(prefix.length).trim();
+      if (wantedField.isEmpty) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'Tell me the field name after select field.',
+        );
+      }
+
+      if (_isLoadingFields) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'Fields are still loading. Please try again in a moment.',
+        );
+      }
+
+      if (_fields.isEmpty) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'No fields are available yet.',
+        );
+      }
+
+      FieldModel? exact;
+      FieldModel? partial;
+      final wantedNormalized = _normalizeVoiceText(wantedField);
+
+      for (final field in _fields) {
+        final normalizedName = _normalizeVoiceText(field.name);
+        if (normalizedName == wantedNormalized) {
+          exact = field;
+          break;
+        }
+        if (normalizedName.contains(wantedNormalized) ||
+            wantedNormalized.contains(normalizedName)) {
+          partial ??= field;
+        }
+      }
+
+      final selected = exact ?? partial;
+      if (selected == null) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'I could not find that field name.',
+        );
+      }
+
+      setState(() {
+        _selectedFieldId = selected.id;
+      });
+      await _applyWeatherAutofillForField(selected.id);
+
+      return VoicePageActionResult(
+        handled: true,
+        message: 'Field set to ${selected.name}.',
+      );
+    }
+
+    final numericFieldAliases = <String, List<String>>{
+      'ph': <String>[' ph ', 'ph value', 'acidity'],
+      'moisture': <String>['moisture', 'soil moisture'],
+      'sunlight': <String>['sunlight', 'light'],
+      'temperature': <String>['temperature', 'temp'],
+      'nitrogen': <String>['nitrogen'],
+      'phosphorus': <String>['phosphorus'],
+      'potassium': <String>['potassium'],
+    };
+
+    final voiceCommandPadded = ' $normalized ';
+    String? matchedField;
+    for (final entry in numericFieldAliases.entries) {
+      final aliases = entry.value;
+      bool matched = false;
+      for (final alias in aliases) {
+        if (voiceCommandPadded.contains(' ${alias.trim()} ')) {
+          matched = true;
+          break;
+        }
+      }
+      if (matched) {
+        matchedField = entry.key;
+        break;
+      }
+    }
+
+    if (matchedField == null) {
+      return const VoicePageActionResult.notHandled();
+    }
+
+    final value = _extractNumber(normalized);
+    if (value == null) {
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'I heard the field name, but not the value. Please repeat with a number.',
+      );
+    }
+
+    if (matchedField == 'ph' && (value < 0 || value > 14)) {
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'pH should be between zero and fourteen.',
+      );
+    }
+    if (matchedField == 'moisture' && (value < 0 || value > 100)) {
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Moisture should be between zero and one hundred percent.',
+      );
+    }
+
+    void setField(TextEditingController controller, {int decimals = 2}) {
+      controller.text = value.toStringAsFixed(decimals).replaceFirst(RegExp(r'\.00$'), '');
+    }
+
+    setState(() {
+      switch (matchedField) {
+        case 'ph':
+          setField(_phController, decimals: 2);
+          break;
+        case 'moisture':
+          setField(_moistureController, decimals: 2);
+          break;
+        case 'sunlight':
+          setField(_sunlightController, decimals: 0);
+          break;
+        case 'temperature':
+          setField(_temperatureController, decimals: 1);
+          break;
+        case 'nitrogen':
+          setField(_nitrogenController, decimals: 2);
+          break;
+        case 'phosphorus':
+          setField(_phosphorusController, decimals: 2);
+          break;
+        case 'potassium':
+          setField(_potassiumController, decimals: 2);
+          break;
+      }
+    });
+
+    return VoicePageActionResult(
+      handled: true,
+      message: '${matchedField[0].toUpperCase()}${matchedField.substring(1)} set to ${value.toStringAsFixed(2).replaceFirst(RegExp(r'\.00$'), '')}.',
+    );
   }
 
   /// Open map to pick location
@@ -255,6 +516,60 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
     }
   }
 
+  double _estimateSunlightFromWeather({
+    required int uvIndex,
+    required String condition,
+  }) {
+    // Approximate lux proxy for UI auto-fill when direct sunlight sensor is unavailable.
+    final baseLux = uvIndex * 150.0;
+    final lower = condition.toLowerCase();
+
+    double multiplier = 1.0;
+    if (lower.contains('overcast') || lower.contains('cloudy')) {
+      multiplier = 0.55;
+    } else if (lower.contains('partly')) {
+      multiplier = 0.8;
+    } else if (lower.contains('rain') || lower.contains('storm')) {
+      multiplier = 0.45;
+    }
+
+    final estimated = baseLux * multiplier;
+    return estimated < 50 ? 50 : estimated;
+  }
+
+  Future<void> _applyWeatherAutofillForField(String? fieldId) async {
+    if (fieldId == null || fieldId.isEmpty) {
+      return;
+    }
+
+    try {
+      final forecast = await _weatherService.getWeatherForField(fieldId);
+      final temperature = forecast.current.temperature;
+      final sunlight = _estimateSunlightFromWeather(
+        uvIndex: forecast.current.uvIndex,
+        condition: forecast.current.condition,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _temperatureController.text = temperature.toStringAsFixed(1);
+        _sunlightController.text = sunlight.toStringAsFixed(0);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Auto-filled from weather (${forecast.current.condition}): ${temperature.toStringAsFixed(1)}°C, sunlight ${sunlight.toStringAsFixed(0)} lux',
+          ),
+          backgroundColor: AppColorPalette.info,
+        ),
+      );
+    } catch (_) {
+      // Silent fail: user can still enter values manually.
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -335,58 +650,6 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
                 }
                 if (moisture < 0 || moisture > 100) {
                   return 'Moisture must be between 0 and 100';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // Sunlight Section
-            _SectionHeader(
-              icon: Icons.wb_sunny,
-              title: 'Sunlight',
-              color: AppColorPalette.warning,
-            ),
-            const SizedBox(height: 12),
-            _FormField(
-              controller: _sunlightController,
-              label: 'Sunlight Level',
-              hint: 'Enter sunlight in lux',
-              icon: Icons.wb_sunny,
-              suffix: 'lux',
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter sunlight level';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter a valid number';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // Temperature Section
-            _SectionHeader(
-              icon: Icons.thermostat,
-              title: 'Temperature',
-              color: AppColorPalette.alertError,
-            ),
-            const SizedBox(height: 12),
-            _FormField(
-              controller: _temperatureController,
-              label: 'Temperature',
-              hint: 'Enter temperature',
-              icon: Icons.thermostat,
-              suffix: '°C',
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter temperature';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter a valid number';
                 }
                 return null;
               },
@@ -533,9 +796,59 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
                           setState(() {
                             _selectedFieldId = value;
                           });
+                          _applyWeatherAutofillForField(value);
                         },
                       ),
                     ),
+            ),
+            const SizedBox(height: 24),
+
+            // Weather-driven Inputs Section
+            _SectionHeader(
+              icon: Icons.wb_sunny,
+              title: 'Sunlight & Temperature',
+              color: AppColorPalette.warning,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Auto-filled from Weather AI when you select a field. You can still edit manually.',
+              style: AppTextStyles.caption(color: AppColorPalette.softSlate),
+            ),
+            const SizedBox(height: 12),
+            _FormField(
+              controller: _sunlightController,
+              label: 'Sunlight Level',
+              hint: 'Auto from weather or enter in lux',
+              icon: Icons.wb_sunny,
+              suffix: 'lux',
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter sunlight level';
+                }
+                if (double.tryParse(value) == null) {
+                  return 'Please enter a valid number';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            _FormField(
+              controller: _temperatureController,
+              label: 'Temperature',
+              hint: 'Auto from weather or enter temperature',
+              icon: Icons.thermostat,
+              suffix: '°C',
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter temperature';
+                }
+                if (double.tryParse(value) == null) {
+                  return 'Please enter a valid number';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 24),
 

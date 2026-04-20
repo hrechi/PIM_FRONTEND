@@ -13,13 +13,25 @@ class ParcelProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  List<Parcel> _dedupeById(List<Parcel> items) {
+    final seen = <String>{};
+    final unique = <Parcel>[];
+    for (final parcel in items) {
+      if (seen.add(parcel.id)) {
+        unique.add(parcel);
+      }
+    }
+    return unique;
+  }
+
   Future<void> fetchParcels() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      _parcels = await _service.getParcels();
+      final fetched = await _service.getParcels();
+      _parcels = _dedupeById(fetched);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -35,7 +47,13 @@ class ParcelProvider with ChangeNotifier {
 
     try {
       final newParcel = await _service.createParcel(parcelData);
-      _parcels.add(newParcel);
+      final existingIndex = _parcels.indexWhere((p) => p.id == newParcel.id);
+      if (existingIndex == -1) {
+        _parcels.add(newParcel);
+      } else {
+        _parcels[existingIndex] = newParcel;
+      }
+      _parcels = _dedupeById(_parcels);
     } catch (e) {
       _error = e.toString();
       rethrow;

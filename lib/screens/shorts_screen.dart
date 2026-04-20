@@ -8,7 +8,18 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 import '../models/short_video.dart';
 import '../providers/shorts_provider.dart';
 import '../services/shorts_service.dart';
+import '../services/voice_number_parser.dart';
+import '../services/voice_page_action_registry.dart';
 import '../theme/color_palette.dart';
+
+String _normalizeVoiceInput(String input) {
+  return input
+      .toLowerCase()
+      .replaceAll(RegExp(r'[",`]+'), ' ')
+      .replaceAll(RegExp(r'[،,;:!?؟!.]+'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+}
 
 /// Full-screen vertical-swipe YouTube Shorts feed for agriculture content.
 /// Uses WebView to load actual YouTube Shorts URLs (bypasses embed restrictions).
@@ -20,13 +31,21 @@ class ShortsScreen extends StatefulWidget {
 }
 
 class _ShortsScreenState extends State<ShortsScreen> {
+  static const String _voicePageKey = 'shorts_feed_main';
+
   final PageController _pageController = PageController(
     viewportFraction: 1.0,
   );
+  final Map<String, GlobalKey<_ShortVideoPageState>> _videoPageKeys =
+      <String, GlobalKey<_ShortVideoPageState>>{};
   int _currentPage = 0;
   bool _isMuted = false; // Videos play with sound by default
+  bool _isAutoScrollEnabled = false;
+  int _autoScrollIntervalSeconds = 5;
+  Timer? _autoScrollTimer;
+  bool _isAutoScrollTicking = false;
 
-  // Pull-to-refresh state
+  // Pull-to-refresh state 
   double _pullDistance = 0.0;
   bool _isRefreshTriggered = false;
   static const double _refreshThreshold = 120.0;
@@ -41,13 +60,344 @@ class _ShortsScreenState extends State<ShortsScreen> {
       provider.loadShorts();
       provider.loadCategories();
     }
+
+    VoicePageActionRegistry.register(
+      pageKey: _voicePageKey,
+      executor: _handleVoiceAction,
+    );
   }
 
   @override
   void dispose() {
+    _autoScrollTimer?.cancel();
+    VoicePageActionRegistry.unregister(_voicePageKey);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<VoicePageActionResult> _handleVoiceAction(String transcript) async {
+    final normalized = _normalizeVoiceInput(transcript);
+    if (normalized.isEmpty) {
+      return const VoicePageActionResult.notHandled();
+    }
+
+    if (_isStopAutoScrollCommand(normalized)) {
+      if (!_isAutoScrollEnabled) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'Auto-scroll is already stopped.',
+        );
+      }
+
+      _stopAutoScroll();
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Auto-scroll stopped.',
+      );
+    }
+
+    if (_isAutoScrollCommand(normalized)) {
+      final requestedSeconds = _extractAutoScrollSeconds(transcript);
+      if (requestedSeconds != null) {
+        _startAutoScroll(requestedSeconds);
+        return VoicePageActionResult(
+          handled: true,
+          message: 'Auto-scroll enabled every $requestedSeconds seconds.',
+        );
+      }
+
+      _startAutoScroll(_autoScrollIntervalSeconds);
+      return VoicePageActionResult(
+        handled: true,
+        message:
+            'Auto-scroll enabled every $_autoScrollIntervalSeconds seconds.',
+      );
+    }
+
+    if (_isLikeCurrentReelCommand(normalized)) {
+      final provider = context.read<ShortsProvider>();
+      final liked = _likeCurrentReel(provider);
+      return VoicePageActionResult(
+        handled: true,
+        message: liked ? 'Current reel liked.' : 'No active reel to like.',
+      );
+    }
+
+    if (_isOpenCommentsCurrentReelCommand(normalized)) {
+      final provider = context.read<ShortsProvider>();
+      final opened = await _openCommentsForCurrentReel(provider);
+      return VoicePageActionResult(
+        handled: true,
+        message: opened
+            ? 'Opening comments for current reel.'
+            : 'No active reel comments to open.',
+      );
+    }
+
+    if (_isNextReelCommand(normalized)) {
+      final moved = await _goToNextReel();
+      return VoicePageActionResult(
+        handled: true,
+        message: moved ? 'Opening next reel.' : 'No next reel available.',
+      );
+    }
+
+    if (_isPreviousReelCommand(normalized)) {
+      final moved = await _goToPreviousReel();
+      return VoicePageActionResult(
+        handled: true,
+        message:
+            moved ? 'Opening previous reel.' : 'No previous reel available.',
+      );
+    }
+
+    return const VoicePageActionResult.notHandled();
+  }
+
+  bool _isAutoScrollCommand(String normalized) {
+    return normalized.contains('auto scroll') ||
+        normalized.contains('automatic scroll') ||
+        normalized.contains('scroll automatically') ||
+        normalized.contains('auto next') ||
+        normalized.contains('scroll every');
+  }
+
+  bool _isStopAutoScrollCommand(String normalized) {
+    return normalized.contains('stop auto scroll') ||
+        normalized.contains('stop autoscroll') ||
+        normalized.contains('disable auto scroll') ||
+        normalized.contains('disable autoscroll') ||
+        normalized.contains('pause auto scroll') ||
+        normalized.contains('pause autoscroll') ||
+        normalized.contains('cancel auto scroll') ||
+        normalized.contains('cancel autoscroll') ||
+        normalized.contains('turn off autoscroll') ||
+        normalized.contains('turn off auto scroll');
+  }
+
+  bool _isLikeCurrentReelCommand(String normalized) {
+    final likeOnly = RegExp(r'^like$').hasMatch(normalized);
+    final hasLike = RegExp(r'\blike\b').hasMatch(normalized);
+    final hasCurrentReel = RegExp(
+      r'\b(this|current)?\s*(reel|reels|real|reals|video|short|shorts)\b',
+    ).hasMatch(normalized);
+
+    return likeOnly || (hasLike && hasCurrentReel);
+  }
+
+  bool _isOpenCommentsCurrentReelCommand(String normalized) {
+    return normalized == 'open comments' ||
+        normalized == 'open comment section' ||
+        normalized == 'open comment' ||
+        normalized.contains('open comments') ||
+        normalized.contains('open comment section') ||
+        normalized.contains('show comments') ||
+        normalized.contains('show comment section');
+  }
+
+  bool _isNextReelCommand(String normalized) {
+    final hasNextWord = RegExp(r'\bnext\b').hasMatch(normalized);
+    final hasReelOrRealWord = RegExp(r'\b(reel|reels|real|reals)\b').hasMatch(
+      normalized,
+    );
+
+    return normalized.contains('next reel') ||
+        normalized.contains('next real') ||
+        normalized.contains('next video') ||
+        normalized.contains('scroll next') ||
+        normalized.contains('go next') ||
+        (normalized == 'next') ||
+        (hasNextWord && hasReelOrRealWord);
+  }
+
+  bool _isPreviousReelCommand(String normalized) {
+    final hasPreviousWord = RegExp(r'\b(previous|prev)\b').hasMatch(normalized);
+    final hasReelOrRealWord = RegExp(r'\b(reel|reels|real|reals)\b').hasMatch(
+      normalized,
+    );
+
+    return normalized.contains('previous reel') ||
+        normalized.contains('previous real') ||
+        normalized.contains('previous video') ||
+        normalized.contains('scroll back') ||
+        normalized.contains('go back reel') ||
+        normalized.contains('go back real') ||
+        normalized.contains('go previous') ||
+        (normalized == 'previous') ||
+        (hasPreviousWord && hasReelOrRealWord);
+  }
+
+  int? _extractAutoScrollSeconds(String transcript) {
+    final parsed = VoiceNumberParser.parseNumberFromText(transcript);
+    if (parsed == null) {
+      return null;
+    }
+
+    final rounded = parsed.round();
+    if ((parsed - rounded).abs() > 0.001 || rounded < 1) {
+      return null;
+    }
+
+    return rounded.clamp(1, 600);
+  }
+
+  void _startAutoScroll(int seconds) {
+    _autoScrollIntervalSeconds = seconds;
+    _isAutoScrollEnabled = true;
+    _autoScrollTimer?.cancel();
+
+    _autoScrollTimer = Timer.periodic(
+      Duration(seconds: _autoScrollIntervalSeconds),
+      (_) => unawaited(_onAutoScrollTick()),
+    );
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _stopAutoScroll() {
+    _autoScrollTimer?.cancel();
+    _autoScrollTimer = null;
+    _isAutoScrollEnabled = false;
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _onAutoScrollTick() async {
+    if (!_isAutoScrollEnabled || _isAutoScrollTicking || !mounted) {
+      return;
+    }
+
+    _isAutoScrollTicking = true;
+    try {
+      final moved = await _goToNextReel();
+      if (!moved) {
+        _stopAutoScroll();
+        _showSnack('Auto-scroll stopped: no more reels available.');
+      }
+    } finally {
+      _isAutoScrollTicking = false;
+    }
+  }
+
+  Future<bool> _goToNextReel() async {
+    if (!_pageController.hasClients || !mounted) {
+      return false;
+    }
+
+    final provider = context.read<ShortsProvider>();
+    if (provider.videos.isEmpty) {
+      return false;
+    }
+
+    if (_currentPage < provider.videos.length - 1) {
+      await _pageController.nextPage(
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeInOut,
+      );
+      return true;
+    }
+
+    if (provider.hasMore) {
+      if (!provider.isLoadingMore) {
+        await provider.loadMore();
+      }
+
+      if (!mounted || !_pageController.hasClients) {
+        return false;
+      }
+
+      if (_currentPage < provider.videos.length - 1) {
+        await _pageController.nextPage(
+          duration: const Duration(milliseconds: 320),
+          curve: Curves.easeInOut,
+        );
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  Future<bool> _goToPreviousReel() async {
+    if (!_pageController.hasClients || !mounted || _currentPage <= 0) {
+      return false;
+    }
+
+    await _pageController.previousPage(
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeInOut,
+    );
+    return true;
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  GlobalKey<_ShortVideoPageState> _keyForVideo(String videoId) {
+    return _videoPageKeys.putIfAbsent(
+      videoId,
+      () => GlobalKey<_ShortVideoPageState>(),
+    );
+  }
+
+  ShortVideo? _currentVideo(ShortsProvider provider) {
+    if (provider.videos.isEmpty ||
+        _currentPage < 0 ||
+        _currentPage >= provider.videos.length) {
+      return null;
+    }
+
+    return provider.videos[_currentPage];
+  }
+
+  bool _likeCurrentReel(ShortsProvider provider) {
+    final current = _currentVideo(provider);
+    if (current == null) {
+      return false;
+    }
+
+    final state = _videoPageKeys[current.videoId]?.currentState;
+    if (state == null) {
+      return false;
+    }
+
+    state.likeFromVoice();
+    return true;
+  }
+
+  Future<bool> _openCommentsForCurrentReel(ShortsProvider provider) async {
+    final current = _currentVideo(provider);
+    if (current == null) {
+      return false;
+    }
+
+    final state = _videoPageKeys[current.videoId]?.currentState;
+    if (state != null) {
+      state.openCommentsFromVoice();
+      return true;
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _CommentsSheet(videoId: current.videoId),
+    );
+    return true;
   }
 
   void _onPageChanged(int index) {
@@ -129,7 +479,7 @@ class _ShortsScreenState extends State<ShortsScreen> {
                     itemBuilder: (context, index) {
                       final video = provider.videos[index];
                       return _ShortVideoPage(
-                        key: ValueKey(video.videoId),
+                        key: _keyForVideo(video.videoId),
                         video: video,
                         isActive: index == _currentPage,
                         isMuted: _isMuted,
@@ -240,6 +590,26 @@ class _ShortsScreenState extends State<ShortsScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                if (_isAutoScrollEnabled) ...[
+                  const SizedBox(width: 10),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.38),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: Colors.white24),
+                    ),
+                    child: Text(
+                      'Auto ${_autoScrollIntervalSeconds}s',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
                 const Spacer(),
                 // Mute / Unmute toggle
                 GestureDetector(
@@ -668,6 +1038,14 @@ class _ShortVideoPageState extends State<_ShortVideoPage> {
       backgroundColor: Colors.transparent,
       builder: (_) => _CommentsSheet(videoId: widget.video.videoId),
     );
+  }
+
+  void likeFromVoice() {
+    _handleDoubleTap();
+  }
+
+  void openCommentsFromVoice() {
+    _showComments();
   }
 
   @override

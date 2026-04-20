@@ -14,12 +14,14 @@ class SoilApiService {
 
   /// Create and configure Dio instance
   static Dio _createDio() {
-    final dio = Dio(BaseOptions(
-      baseUrl: ApiConfig.soilEndpoint,
-      connectTimeout: ApiConfig.connectTimeout,
-      receiveTimeout: ApiConfig.receiveTimeout,
-      headers: ApiConfig.defaultHeaders,
-    ));
+    final dio = Dio(
+      BaseOptions(
+        baseUrl: ApiConfig.soilEndpoint,
+        connectTimeout: ApiConfig.connectTimeout,
+        receiveTimeout: ApiConfig.receiveTimeout,
+        headers: ApiConfig.defaultHeaders,
+      ),
+    );
 
     // Add logger in debug mode
     dio.interceptors.add(
@@ -37,7 +39,7 @@ class SoilApiService {
   }
 
   /// Get paginated list of soil measurements
-  /// 
+  ///
   /// Parameters:
   /// - [page]: Page number (default: 1)
   /// - [limit]: Items per page (default: 10)
@@ -73,10 +75,7 @@ class SoilApiService {
         'order': ?order,
       };
 
-      final response = await _dio.get(
-        '',
-        queryParameters: queryParams,
-      );
+      final response = await _dio.get('', queryParameters: queryParams);
 
       return PaginatedSoilResponse.fromJson(response.data);
     } on DioException catch (e) {
@@ -94,15 +93,39 @@ class SoilApiService {
     }
   }
 
+  /// Get all soil measurements for a specific parcel
+  /// Loads all measurements and filters them by parcelId on the frontend
+  Future<List<SoilMeasurement>> getMeasurementsByParcelId(
+    String parcelId, {
+    int limit = 100,
+  }) async {
+    try {
+      // Backend doesn't support parcelId filtering, so we fetch all and filter on frontend
+      final queryParams = <String, dynamic>{
+        'limit': limit,
+        'sortBy': 'createdAt',
+        'order': 'DESC',
+      };
+
+      final response = await _dio.get(
+        '',
+        queryParameters: queryParams,
+      );
+
+      final paginatedResponse = PaginatedSoilResponse.fromJson(response.data);
+      // Filter measurements to only include those assigned to this parcel
+      return paginatedResponse.data.where((m) => m.parcelId == parcelId).toList();
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   /// Create a new soil measurement
   Future<SoilMeasurement> createMeasurement(
     CreateSoilMeasurementDto dto,
   ) async {
     try {
-      final response = await _dio.post(
-        '',
-        data: dto.toJson(),
-      );
+      final response = await _dio.post('', data: dto.toJson());
       return SoilMeasurement.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -110,7 +133,7 @@ class SoilApiService {
   }
 
   /// Create a new soil measurement with image upload
-  /// 
+  ///
   /// Uploads a soil photo for AI type detection and creates measurement
   Future<SoilMeasurement> createMeasurementWithImage(
     CreateSoilMeasurementDto dto,
@@ -137,13 +160,9 @@ class SoilApiService {
       final response = await _dio.post(
         '/with-image',
         data: formData,
-        options: Options(
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        ),
+        options: Options(headers: {'Content-Type': 'multipart/form-data'}),
       );
-      
+
       return SoilMeasurement.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -156,10 +175,7 @@ class SoilApiService {
     UpdateSoilMeasurementDto dto,
   ) async {
     try {
-      final response = await _dio.patch(
-        '/$id',
-        data: dto.toJson(),
-      );
+      final response = await _dio.patch('/$id', data: dto.toJson());
       return SoilMeasurement.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -178,7 +194,7 @@ class SoilApiService {
   // ==================== AI PREDICTION METHODS ====================
 
   /// Get AI prediction for a soil measurement
-  /// 
+  ///
   /// Calls the backend which forwards to the AI microservice
   Future<AiPrediction> getPrediction(String measurementId) async {
     try {
@@ -204,7 +220,7 @@ class SoilApiService {
         '/predict/batch',
         data: {'measurementIds': measurementIds},
       );
-      
+
       return (response.data as List)
           .map((json) => AiPrediction.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -236,9 +252,10 @@ class SoilApiService {
 
       case DioExceptionType.badResponse:
         final statusCode = error.response?.statusCode;
-        final message = error.response?.data?['message'] ?? 
-                       error.response?.data?['error'] ?? 
-                       'An error occurred';
+        final message =
+            error.response?.data?['message'] ??
+            error.response?.data?['error'] ??
+            'An error occurred';
 
         if (statusCode == 404) {
           return SoilApiException(
@@ -297,6 +314,7 @@ class CreateSoilMeasurementDto {
   final double latitude;
   final double longitude;
   final String? fieldId;
+  final String? parcelId;
 
   const CreateSoilMeasurementDto({
     required this.ph,
@@ -307,6 +325,7 @@ class CreateSoilMeasurementDto {
     required this.latitude,
     required this.longitude,
     this.fieldId,
+    this.parcelId,
   });
 
   Map<String, dynamic> toJson() {
@@ -319,6 +338,7 @@ class CreateSoilMeasurementDto {
       'latitude': latitude,
       'longitude': longitude,
       if (fieldId != null) 'fieldId': fieldId,
+      if (parcelId != null) 'parcelId': parcelId,
     };
   }
 }
@@ -333,6 +353,7 @@ class UpdateSoilMeasurementDto {
   final double? latitude;
   final double? longitude;
   final String? fieldId;
+  final String? parcelId;
 
   const UpdateSoilMeasurementDto({
     this.ph,
@@ -343,6 +364,7 @@ class UpdateSoilMeasurementDto {
     this.latitude,
     this.longitude,
     this.fieldId,
+    this.parcelId,
   });
 
   Map<String, dynamic> toJson() {
@@ -355,6 +377,7 @@ class UpdateSoilMeasurementDto {
     if (latitude != null) json['latitude'] = latitude;
     if (longitude != null) json['longitude'] = longitude;
     if (fieldId != null) json['fieldId'] = fieldId;
+    if (parcelId != null) json['parcelId'] = parcelId;
     return json;
   }
 }
@@ -364,10 +387,7 @@ class PaginatedSoilResponse {
   final List<SoilMeasurement> data;
   final PaginationMeta meta;
 
-  const PaginatedSoilResponse({
-    required this.data,
-    required this.meta,
-  });
+  const PaginatedSoilResponse({required this.data, required this.meta});
 
   factory PaginatedSoilResponse.fromJson(Map<String, dynamic> json) {
     return PaginatedSoilResponse(
@@ -423,11 +443,7 @@ class SoilApiException implements Exception {
   final SoilApiExceptionType type;
   final int? statusCode;
 
-  const SoilApiException(
-    this.message, {
-    required this.type,
-    this.statusCode,
-  });
+  const SoilApiException(this.message, {required this.type, this.statusCode});
 
   @override
   String toString() => message;
@@ -436,7 +452,7 @@ class SoilApiException implements Exception {
   String get userMessage {
     switch (type) {
       case SoilApiExceptionType.network:
-        return 'Cannot connect to server. Please check your internet connection and ensure the backend is running at http://localhost:3000';
+        return 'Cannot connect to server. Please check your internet connection and ensure the backend is running at http://192.168.1.18:3000';
       case SoilApiExceptionType.timeout:
         return 'Request timed out. Please try again.';
       case SoilApiExceptionType.notFound:

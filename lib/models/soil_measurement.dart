@@ -26,6 +26,7 @@ class SoilMeasurement {
   final double latitude;
   final double longitude;
   final String? fieldId; // Optional field ID this measurement belongs to
+  final String? parcelId; // Optional parcel ID this measurement belongs to
   final String? imagePath; // Path to uploaded soil image
   final String? soilType; // AI-detected soil type (Clay, Sandy, Loam, etc.)
   final double? detectionConfidence; // Confidence of soil type detection (0-1)
@@ -42,6 +43,7 @@ class SoilMeasurement {
     required this.latitude,
     required this.longitude,
     this.fieldId,
+    this.parcelId,
     this.imagePath,
     this.soilType,
     this.detectionConfidence,
@@ -283,6 +285,7 @@ class SoilMeasurement {
       'latitude': latitude,
       'longitude': longitude,
       if (fieldId != null) 'fieldId': fieldId,
+      if (parcelId != null) 'parcelId': parcelId,
       if (imagePath != null) 'imagePath': imagePath,
       if (soilType != null) 'soilType': soilType,
       if (detectionConfidence != null) 'detectionConfidence': detectionConfidence,
@@ -303,6 +306,7 @@ class SoilMeasurement {
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
       fieldId: json['fieldId'] as String?,
+      parcelId: json['parcelId'] as String?,
       imagePath: json['imagePath'] as String?,
       soilType: json['soilType'] as String?,
       detectionConfidence: json['detectionConfidence'] != null

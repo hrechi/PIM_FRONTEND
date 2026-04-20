@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -11,15 +12,24 @@ import 'providers/irrigation_provider.dart';
 import 'providers/vaccine_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/shorts_provider.dart';
+import 'providers/voice_access_mode_provider.dart';
+import 'providers/global_voice_controller.dart';
+import 'providers/asset_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/farmer_home_screen_v2.dart';
+import 'screens/asset_list_screen.dart';
 import 'screens/security/incident_detail_screen.dart';
 import 'screens/notification_center_screen.dart';
 import 'screens/vaccines/vaccine_dashboard_screen.dart';
 import 'screens/soil/soil_measurements_list_screen.dart';
+import 'screens/soil/soil_alert_notifications_screen.dart';
+import 'services/local_notification_service.dart';
+import 'widgets/global_voice_fab.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-/// Global navigator key — used for navigating from notification callbacks 
+/// Global navigator key — used for navigating from notification callbacks
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 /// Background message handler — must be a top-level function
@@ -30,14 +40,38 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 /// Handle incoming FCM message — extract incidentId and navigate
-void handleMessage(RemoteMessage message) {
-  final incidentId = message.data['incidentId'];
+void handleNotificationData(Map<String, dynamic> data) {
+  final screen = (data['screen'] ?? '').toString().toUpperCase();
+  final type = (data['type'] ?? '').toString().toUpperCase();
+
+  if (screen == 'SOIL_ALERTS' || type == 'SOIL_WEATHER_ALERT') {
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(builder: (_) => const SoilAlertNotificationsScreen()),
+    );
+    return;
+  }
+
+  final incidentId = data['incidentId'];
   if (incidentId != null && incidentId.toString().isNotEmpty) {
     navigatorKey.currentState?.pushNamed(
       '/incident-details',
       arguments: incidentId,
     );
   }
+}
+
+void handleMessage(RemoteMessage message) {
+  handleNotificationData(Map<String, dynamic>.from(message.data));
+}
+
+class MyScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+    PointerDeviceKind.stylus,
+  };
 }
 
 void main() async {
@@ -48,6 +82,7 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    await LocalNotificationService.initialize(onTap: handleNotificationData);
   }
 
   await initializeDateFormatting('fr_FR', null);
@@ -85,6 +120,11 @@ class _FieldlyAppState extends State<FieldlyApp> {
 
     // App was in background → user tapped notification
     FirebaseMessaging.onMessageOpenedApp.listen(handleMessage);
+
+    // App is in foreground → show local notification so it appears in the phone tray.
+    FirebaseMessaging.onMessage.listen((message) {
+      LocalNotificationService.showFromRemoteMessage(message);
+    });
   }
 
   @override
@@ -99,14 +139,36 @@ class _FieldlyAppState extends State<FieldlyApp> {
         ChangeNotifierProvider(create: (_) => VaccineProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => ShortsProvider()),
+        ChangeNotifierProvider(
+          create: (_) => VoiceAccessModeProvider()..load(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => GlobalVoiceController(
+            accessModeProvider: context.read<VoiceAccessModeProvider>(),
+          ),
+        ),
+        ChangeNotifierProvider(create: (_) => AssetProvider()),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
         title: 'Fieldly',
+        scrollBehavior: MyScrollBehavior(),
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         home: const SplashScreen(),
+        builder: (context, child) {
+          return Stack(
+            children: [
+              child ?? const SizedBox.shrink(),
+              const GlobalVoiceFab(),
+            ],
+          );
+        },
         routes: {
+          '/owner_dashboard': (context) => const HomeScreen(),
+          '/worker_home': (context) => const FarmerHomeScreenV2(),
+          '/farmer_home': (context) => const FarmerHomeScreenV2(),
+          '/assets': (context) => const AssetListScreen(),
           '/incident-details': (context) {
             final incidentId =
                 ModalRoute.of(context)!.settings.arguments as String;

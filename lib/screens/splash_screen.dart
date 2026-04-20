@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../utils/constants.dart';
 import 'signin_screen.dart';
-import 'home_screen.dart';
+import 'welcome_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -40,16 +41,32 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 2000));
     if (!mounted) return;
 
+    // Check if user has already viewed welcome screen
+    final prefs = await SharedPreferences.getInstance();
+    final hasViewedWelcome = prefs.getBool('hasViewedWelcome') ?? false;
+
+    // Initialize auth provider
     final authProvider = context.read<AuthProvider>();
     await authProvider.initialize();
 
     if (!mounted) return;
 
-    if (authProvider.isAuthenticated) {
+    // Route based on welcome status and auth
+    if (!hasViewedWelcome && !authProvider.isAuthenticated) {
+      // First time: show welcome
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+      );
+    } else if (authProvider.isAuthenticated) {
+      // Already logged in: go to the correct dashboard
+      final role = authProvider.user?.role.toUpperCase();
+      Navigator.of(context).pushReplacementNamed(
+        role == 'WORKER'
+            ? '/worker_home'
+            : '/owner_dashboard',
       );
     } else {
+      // Not logged in: go to sign in
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const SignInScreen()),
       );

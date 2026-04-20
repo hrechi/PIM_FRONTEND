@@ -1635,7 +1635,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                               Text(
                                 isLastStep
                                   ? (isEditMode ? 'Mettre à jour' : 'Enregistrer l\'animal')
-                                  : 'Continuer',
+                                  : 'Continuer', 
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 18,

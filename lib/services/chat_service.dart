@@ -9,7 +9,8 @@ class ChatService {
   }) async {
     final body = {
       'message': message,
-      'conversationId': ?conversationId,
+      if (conversationId?.isNotEmpty ?? false)
+        'conversationId': conversationId,
     };
 
     final response = await http.post(
@@ -42,6 +43,58 @@ class ChatService {
     } catch (_) {
       // Ignore parsing errors and keep default details.
     }
+    throw Exception(details);
+  }
+
+  static Future<Map<String, dynamic>> sendVoiceMessage(
+    String message, {
+    String? conversationId,
+    String? languageCode,
+  }) async {
+    final body = {
+      'message': message,
+      if (conversationId?.isNotEmpty ?? false)
+        'conversationId': conversationId,
+      if (languageCode?.isNotEmpty ?? false)
+        'languageCode': languageCode,
+    };
+
+    final response = await http.post(
+      Uri.parse('${ApiService.baseUrl}/chat/voice'),
+      headers: await ApiService.getAuthHeaders(),
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return {
+        'reply': (data['reply'] as String?) ?? '',
+        'conversationId': (data['conversationId'] as String?) ?? '',
+        'languageCode': (data['languageCode'] as String?) ?? '',
+      };
+    }
+
+    if (response.statusCode == 401) {
+      await ApiService.refreshToken();
+      return sendVoiceMessage(
+        message,
+        conversationId: conversationId,
+        languageCode: languageCode,
+      );
+    }
+
+    String details = 'Failed to send voice message: ${response.statusCode}';
+    try {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (data['message'] is String) {
+        details = data['message'] as String;
+      } else if (data['error'] is String) {
+        details = data['error'] as String;
+      }
+    } catch (_) {
+      // Ignore parsing errors and keep default details.
+    }
+
     throw Exception(details);
   }
 }

@@ -21,8 +21,8 @@ class _AiAgronomistScreenState extends State<AiAgronomistScreen> {
     });
 
     try {
-      // Replace with your NestJS IP/Port. Use 10.0.2.2 for Android Emulator.
-      final url = Uri.parse('http://10.0.2.2:3000/agronomist/advice/${widget.parcelId}');
+      // Uses the project WiFi IP for backend access from physical devices.
+      final url = Uri.parse('http://192.168.1.18:3000/agronomist/advice/${widget.parcelId}');
       final response = await http.get(url);
 
       if (response.statusCode == 200) {

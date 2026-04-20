@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../providers/parcel_provider.dart';
 import '../models/parcel.dart';
+import '../models/soil_measurement.dart';
+import '../models/field_model.dart';
+import '../services/field_service.dart';
+import '../services/soil_repository.dart';
 
 class AddParcelScreen extends StatefulWidget {
   final Parcel? existingParcel;
@@ -14,17 +20,26 @@ class AddParcelScreen extends StatefulWidget {
 
 class _AddParcelScreenState extends State<AddParcelScreen> {
   final _formKey = GlobalKey<FormState>();
+  final FieldService _fieldService = FieldService();
+  final SoilRepository _soilRepository = SoilRepository();
 
-  final _locationController = TextEditingController();
-  final _areaSizeController = TextEditingController();
-  final _boundariesController = TextEditingController();
-  final _soilPhController = TextEditingController();
-  final _nitrogenController = TextEditingController();
-  final _phosphorusController = TextEditingController();
-  final _potassiumController = TextEditingController();
-  final _irrigationFrequencyController = TextEditingController();
+  // Map and soil measurement data
+  MapController? _mapController;
+  List<SoilMeasurement> _allSoilMeasurements = [];
+  SoilMeasurement? _selectedSoilMeasurement;
+  bool _isLoadingMeasurements = false;
 
-  String _soilType = 'loam';
+  // Camera position for map
+  late LatLng _mapCenter;
+  final double _mapZoom = 13;
+
+  // Field selection
+  String? _selectedFieldId;
+  List<FieldModel> _fields = [];
+  bool _isLoadingFields = false;
+
+  // Manual entries
+  late TextEditingController _irrigationFrequencyController;
   String _waterSource = 'rain-fed';
   String _irrigationMethod = 'drip';
   bool _isSubmitting = false;
@@ -32,50 +47,205 @@ class _AddParcelScreenState extends State<AddParcelScreen> {
   @override
   void initState() {
     super.initState();
+    _mapController = MapController();
+    _irrigationFrequencyController = TextEditingController();
+    
+    // Set default map center
+    _mapCenter = const LatLng(11.8, 79.7); // Default to India
+    
+    _loadFields();
+    _loadSoilMeasurements();
+
     if (widget.existingParcel != null) {
       final p = widget.existingParcel!;
-      _locationController.text = p.location;
-      _areaSizeController.text = p.areaSize.toString();
-      _boundariesController.text = p.boundariesDescription;
-      _soilType = ['clay', 'sandy', 'loam', 'other'].contains(p.soilType) ? p.soilType : 'other';
-      if (p.soilPh != null) _soilPhController.text = p.soilPh.toString();
-      if (p.nitrogenLevel != null) _nitrogenController.text = p.nitrogenLevel.toString();
-      if (p.phosphorusLevel != null) _phosphorusController.text = p.phosphorusLevel.toString();
-      if (p.potassiumLevel != null) _potassiumController.text = p.potassiumLevel.toString();
       _waterSource = ['well', 'rain-fed', 'river', 'drip system'].contains(p.waterSource) ? p.waterSource : 'rain-fed';
       _irrigationMethod = ['drip', 'sprinkler', 'flood'].contains(p.irrigationMethod) ? p.irrigationMethod : 'drip';
       _irrigationFrequencyController.text = p.irrigationFrequency;
     }
   }
 
+  Future<void> _loadSoilMeasurements() async {
+    setState(() => _isLoadingMeasurements = true);
+    try {
+      final response = await _soilRepository.getMeasurements(limit: 100);
+      setState(() {
+        // Filter out soil measurements that are already assigned to parcels (have parcelId)
+        _allSoilMeasurements = response.data.where((m) => m.parcelId == null).toList();
+        _isLoadingMeasurements = false;
+        
+        // Center map on first measurement if available
+        if (_allSoilMeasurements.isNotEmpty) {
+          final first = _allSoilMeasurements.first;
+          _mapCenter = LatLng(first.latitude, first.longitude);
+        }
+      });
+    } catch (e) {
+      setState(() => _isLoadingMeasurements = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load soil measurements: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _loadFields() async {
+    setState(() => _isLoadingFields = true);
+    try {
+      final fields = await _fieldService.getFields();
+      setState(() {
+        _fields = fields;
+        _isLoadingFields = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingFields = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load fields: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  void _selectField(String? fieldId) {
+    setState(() => _selectedFieldId = fieldId);
+    
+    if (fieldId != null) {
+      try {
+        final selectedField = _fields.firstWhere((f) => f.id == fieldId);
+        if (selectedField.areaCoordinates.isNotEmpty) {
+          // Calculate center of field
+          double avgLat = selectedField.areaCoordinates.map((c) => c[0]).reduce((a, b) => a + b) / selectedField.areaCoordinates.length;
+          double avgLng = selectedField.areaCoordinates.map((c) => c[1]).reduce((a, b) => a + b) / selectedField.areaCoordinates.length;
+          
+          setState(() {
+            _mapCenter = LatLng(avgLat, avgLng);
+          });
+          
+          // Animate map to field center
+          Future.delayed(const Duration(milliseconds: 300), () {
+            _mapController?.move(_mapCenter, 15);
+          });
+        }
+      } catch (e) {
+        // Field not found
+      }
+    }
+  }
+
+  void _selectSoilMeasurement(SoilMeasurement measurement) {
+    setState(() {
+      _selectedSoilMeasurement = measurement;
+      _mapCenter = LatLng(measurement.latitude, measurement.longitude);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('✅ Soil data loaded: pH ${measurement.ph.toStringAsFixed(1)}, Moisture ${measurement.soilMoisture.toStringAsFixed(0)}%'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  List<Marker> _buildMapMarkers() {
+    return _allSoilMeasurements.map((measurement) {
+      final isSelected = _selectedSoilMeasurement?.id == measurement.id;
+      return Marker(
+        point: LatLng(measurement.latitude, measurement.longitude),
+        width: 40,
+        height: 40,
+        child: GestureDetector(
+          onTap: () => _selectSoilMeasurement(measurement),
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isSelected ? const Color(0xFF2ECC71) : Colors.blue,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(color: Colors.black26, blurRadius: 4),
+              ],
+            ),
+            child: Center(
+              child: Icon(
+                isSelected ? Icons.check : Icons.location_on,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  List<Polygon> _buildFieldPolygon() {
+    if (_selectedFieldId == null) return [];
+    
+    try {
+      final selectedField = _fields.firstWhere((f) => f.id == _selectedFieldId);
+      if (selectedField.areaCoordinates.isEmpty) return [];
+      
+      final polygonPoints = selectedField.areaCoordinates
+          .map((coord) => LatLng(coord[0], coord[1]))
+          .toList();
+      
+      return [
+        Polygon(
+          points: polygonPoints,
+          color: const Color(0xFF2ECC71).withValues(alpha: 0.3),
+          borderColor: const Color(0xFF2ECC71),
+          borderStrokeWidth: 2,
+          isFilled: true,
+        ),
+      ];
+    } catch (e) {
+      return [];
+    }
+  }
+
   @override
   void dispose() {
-    _locationController.dispose();
-    _areaSizeController.dispose();
-    _boundariesController.dispose();
-    _soilPhController.dispose();
-    _nitrogenController.dispose();
-    _phosphorusController.dispose();
-    _potassiumController.dispose();
+    _mapController?.dispose();
     _irrigationFrequencyController.dispose();
     super.dispose();
   }
 
   void _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedSoilMeasurement == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a soil measurement on the map first'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSubmitting = true);
 
     try {
+      final soilData = _selectedSoilMeasurement!;
+      final nValue = (soilData.nutrients['N'] ?? soilData.nutrients['nitrogen'] ?? 0) as num;
+      final pValue = (soilData.nutrients['P'] ?? soilData.nutrients['phosphorus'] ?? 0) as num;
+      final kValue = (soilData.nutrients['K'] ?? soilData.nutrients['potassium'] ?? 0) as num;
+      
+      // Get the selected field name
+      final fieldName = _selectedFieldId != null 
+        ? _fields.firstWhere((f) => f.id == _selectedFieldId, orElse: () => FieldModel(
+            id: '', userId: '', name: 'Unknown Field', areaCoordinates: [], 
+            createdAt: DateTime.now(), updatedAt: DateTime.now())).name
+        : 'Unmapped Location';
+      
       final parcelData = {
-        'location': _locationController.text,
-        'areaSize': double.parse(_areaSizeController.text),
-        'boundariesDescription': _boundariesController.text,
-        'soilType': _soilType,
-        'soilPh': _soilPhController.text.isNotEmpty ? double.parse(_soilPhController.text) : null,
-        'nitrogenLevel': _nitrogenController.text.isNotEmpty ? double.parse(_nitrogenController.text) : null,
-        'phosphorusLevel': _phosphorusController.text.isNotEmpty ? double.parse(_phosphorusController.text) : null,
-        'potassiumLevel': _potassiumController.text.isNotEmpty ? double.parse(_potassiumController.text) : null,
+        'location': fieldName,
+        'areaSize': 1.0,
+        'boundariesDescription': 'From soil measurement',
+        'soilType': soilData.soilType ?? 'unknown',
+        'soilPh': soilData.ph,
+        'nitrogenLevel': nValue.toDouble(),
+        'phosphorusLevel': pValue.toDouble(),
+        'potassiumLevel': kValue.toDouble(),
         'waterSource': _waterSource,
         'irrigationMethod': _irrigationMethod,
         'irrigationFrequency': _irrigationFrequencyController.text,
@@ -113,12 +283,15 @@ class _AddParcelScreenState extends State<AddParcelScreen> {
   Widget build(BuildContext context) {
     const primaryGreen = Color(0xFF1A4731);
     const accentGreen = Color(0xFF2ECC71);
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
+    final isMobile = screenSize.height < screenSize.width; // Landscape detection
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6F0),
       appBar: AppBar(
         title: Text(
-          widget.existingParcel != null ? 'Edit Parcel' : 'New Parcel',
+          widget.existingParcel != null ? 'Edit Parcel' : 'Select Soil Measurement',
           style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         centerTitle: true,
@@ -131,186 +304,230 @@ class _AddParcelScreenState extends State<AddParcelScreen> {
       ),
       body: Stack(
         children: [
-          // Background Header
-          Container(height: 100, color: primaryGreen),
-          
-          SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildFormCard(
-                    title: 'Location & Area',
-                    icon: Icons.map_rounded,
-                    children: [
-                      _buildField(
-                        controller: _locationController,
-                        label: 'Location Name',
-                        hint: 'e.g. North Ridge Section',
-                        icon: Icons.location_on_rounded,
-                        isRequired: true,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildField(
-                        controller: _areaSizeController,
-                        label: 'Area Size (ha)',
-                        hint: 'e.g. 2.5',
-                        icon: Icons.square_foot_rounded,
-                        isRequired: true,
-                        isNumber: true,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildField(
-                        controller: _boundariesController,
-                        label: 'Boundaries Description',
-                        hint: 'e.g. Near the main road access',
-                        icon: Icons.border_outer_rounded,
-                        isMultiline: true,
-                        isRequired: true,
-                      ),
-                    ],
-                  ),
-                  
-                  _buildFormCard(
-                    title: 'Soil Composition',
-                    icon: Icons.grass_rounded,
-                    children: [
-                      _buildDropdown(
-                        label: 'Soil Type',
-                        value: _soilType,
-                        items: ['clay', 'sandy', 'loam', 'other'],
-                        icon: Icons.terrain_rounded,
-                        onChanged: (val) => setState(() => _soilType = val!),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildField(
-                              controller: _soilPhController,
-                              label: 'Soil pH',
-                              hint: 'e.g. 6.5',
-                              icon: Icons.science_rounded,
-                              isNumber: true,
-                            ),
+          Column(
+            children: [
+              // Map View (responsive)
+              Expanded(
+                flex: isSmallScreen ? 1 : (isMobile ? 2 : 3),
+                child: _isLoadingMeasurements
+                    ? const Center(
+                        child: CircularProgressIndicator(color: accentGreen),
+                      )
+                    : FlutterMap(
+                        mapController: _mapController,
+                        options: MapOptions(
+                          initialCenter: _mapCenter,
+                          initialZoom: _mapZoom,
+                          interactionOptions: const InteractionOptions(
+                            flags: InteractiveFlag.all,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildField(
-                              controller: _nitrogenController,
-                              label: 'Nitrogen (N)',
-                              hint: 'e.g. 40',
-                              icon: Icons.opacity_rounded,
-                              isNumber: true,
-                            ),
+                        ),
+                        children: [
+                          TileLayer(
+                            urlTemplate: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
+                            subdomains: const ['a', 'b', 'c', 'd'],
+                            userAgentPackageName: 'frontend_pim',
+                          ),
+                          PolygonLayer(
+                            polygons: _buildFieldPolygon(),
+                          ),
+                          MarkerLayer(
+                            markers: _buildMapMarkers(),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildField(
-                              controller: _phosphorusController,
-                              label: 'Phosphorus (P)',
-                              hint: 'e.g. 25',
-                              icon: Icons.opacity_rounded,
-                              isNumber: true,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildField(
-                              controller: _potassiumController,
-                              label: 'Potassium (K)',
-                              hint: 'e.g. 30',
-                              icon: Icons.opacity_rounded,
-                              isNumber: true,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  
-                  _buildFormCard(
-                    title: 'Water & Irrigation',
-                    icon: Icons.water_drop_rounded,
-                    children: [
-                      _buildDropdown(
-                        label: 'Water Source',
-                        value: _waterSource,
-                        items: ['well', 'rain-fed', 'river', 'drip system'],
-                        icon: Icons.waves_rounded,
-                        onChanged: (val) => setState(() => _waterSource = val!),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdown(
-                        label: 'Irrigation Method',
-                        value: _irrigationMethod,
-                        items: ['drip', 'sprinkler', 'flood'],
-                        icon: Icons.shower_rounded,
-                        onChanged: (val) => setState(() => _irrigationMethod = val!),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildField(
-                        controller: _irrigationFrequencyController,
-                        label: 'Irrigation Frequency',
-                        hint: 'e.g. Twice weekly',
-                        icon: Icons.update_rounded,
-                        isRequired: true,
-                      ),
-                    ],
-                  ),
-                ],
               ),
-            ),
+
+              // Form Section (responsive) - show more prominently on mobile when soil is selected
+              Expanded(
+                flex: isSmallScreen ? (_selectedSoilMeasurement != null ? 2 : 1) : (isMobile ? 1 : 2),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Field Selector Card
+                        _buildResponsiveCard(
+                          title: 'Field Selection',
+                          icon: Icons.landscape,
+                          isSmallScreen: isSmallScreen,
+                          children: [
+                            if (_isLoadingFields)
+                              const Padding(
+                                padding: EdgeInsets.all(12.0),
+                                child: CircularProgressIndicator(color: accentGreen),
+                              )
+                            else
+                              DropdownButtonFormField<String>(
+                                value: _selectedFieldId,
+                                hint: const Text('Select field (optional)'),
+                                items: [
+                                  const DropdownMenuItem(value: null, child: Text('No field selected')),
+                                  ..._fields.map((f) => DropdownMenuItem(
+                                    value: f.id,
+                                    child: Text(f.name),
+                                  )),
+                                ],
+                                onChanged: _selectField,
+                                decoration: InputDecoration(
+                                  prefixIcon: const Icon(Icons.landscape, color: accentGreen),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: isSmallScreen ? 8 : 12),
+                                ),
+                              ),
+                          ],
+                        ),
+
+                        SizedBox(height: isSmallScreen ? 8 : 12),
+
+                        // Selected Soil Data Display
+                        if (_selectedSoilMeasurement != null)
+                          _buildResponsiveCard(
+                            title: 'Selected Soil Data',
+                            icon: Icons.grass_rounded,
+                            isSmallScreen: isSmallScreen,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+                                decoration: BoxDecoration(
+                                  color: accentGreen.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: accentGreen, width: 1.5),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      '✅ Soil Data Loaded',
+                                      style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF27AE60), fontSize: 14),
+                                    ),
+                                    SizedBox(height: isSmallScreen ? 6 : 8),
+                                    Wrap(
+                                      spacing: isSmallScreen ? 8 : 12,
+                                      runSpacing: isSmallScreen ? 6 : 8,
+                                      children: [
+                                        _buildSoilInfoChip('pH', _selectedSoilMeasurement!.ph.toStringAsFixed(1), isSmallScreen),
+                                        _buildSoilInfoChip('Moisture', '${_selectedSoilMeasurement!.soilMoisture.toStringAsFixed(0)}%', isSmallScreen),
+                                        _buildSoilInfoChip('Temp', '${_selectedSoilMeasurement!.temperature.toStringAsFixed(0)}°C', isSmallScreen),
+                                        _buildSoilInfoChip('Type', _selectedSoilMeasurement!.soilType ?? 'Unknown', isSmallScreen),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                        if (_selectedSoilMeasurement != null) SizedBox(height: isSmallScreen ? 8 : 12),
+
+                        // Water & Irrigation Section
+                        _buildResponsiveCard(
+                          title: 'Water & Irrigation',
+                          icon: Icons.water_drop_rounded,
+                          isSmallScreen: isSmallScreen,
+                          children: [
+                            _buildResponsiveField(
+                              label: 'Water Source',
+                              value: _waterSource,
+                              items: ['well', 'rain-fed', 'river', 'drip system'],
+                              icon: Icons.waves_rounded,
+                              onChanged: (val) => setState(() => _waterSource = val!),
+                              isSmallScreen: isSmallScreen,
+                              isDropdown: true,
+                            ),
+                            SizedBox(height: isSmallScreen ? 8 : 12),
+                            _buildResponsiveField(
+                              label: 'Irrigation Method',
+                              value: _irrigationMethod,
+                              items: ['drip', 'sprinkler', 'flood'],
+                              icon: Icons.shower_rounded,
+                              onChanged: (val) => setState(() => _irrigationMethod = val!),
+                              isSmallScreen: isSmallScreen,
+                              isDropdown: true,
+                            ),
+                            SizedBox(height: isSmallScreen ? 8 : 12),
+                            _buildResponsiveField(
+                              label: 'Irrigation Frequency',
+                              hint: 'e.g. Twice weekly',
+                              icon: Icons.update_rounded,
+                              controller: _irrigationFrequencyController,
+                              isSmallScreen: isSmallScreen,
+                              isRequired: true,
+                            ),
+                          ],
+                        ),
+
+                        SizedBox(height: isSmallScreen ? 60 : 80),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-          
+
+          // Loading overlay
           if (_isSubmitting)
             Container(
               color: Colors.black26,
-              child: const Center(child: CircularProgressIndicator(color: accentGreen)),
+              child: const Center(
+                child: CircularProgressIndicator(color: accentGreen),
+              ),
             ),
         ],
       ),
       bottomSheet: Container(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
             BoxShadow(color: Colors.black12, blurRadius: 10, offset: const Offset(0, -4)),
           ],
         ),
-        child: ElevatedButton(
-          onPressed: _isSubmitting ? null : _submit,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primaryGreen,
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 56),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 0,
-          ),
-          child: Text(
-            widget.existingParcel != null ? 'Update Changes' : 'Create Parcel',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        child: SizedBox(
+          width: double.infinity,
+          height: isSmallScreen ? 48 : 56,
+          child: ElevatedButton(
+            onPressed: _isSubmitting || _selectedSoilMeasurement == null ? null : _submit,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1A4731),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            child: Text(
+              _selectedSoilMeasurement == null ? 'Select Soil on Map' : 'Create Parcel',
+              style: TextStyle(
+                fontSize: isSmallScreen ? 14 : 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildFormCard({required String title, required IconData icon, required List<Widget> children}) {
+  Widget _buildResponsiveCard({
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+    required bool isSmallScreen,
+  }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 5)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3)),
         ],
       ),
       child: Column(
@@ -318,61 +535,45 @@ class _AddParcelScreenState extends State<AddParcelScreen> {
         children: [
           Row(
             children: [
-              Icon(icon, color: const Color(0xFF2ECC71), size: 24),
-              const SizedBox(width: 12),
-              Text(
-                title,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A4731)),
+              Icon(icon, color: const Color(0xFF2ECC71), size: isSmallScreen ? 20 : 24),
+              SizedBox(width: isSmallScreen ? 8 : 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(fontSize: isSmallScreen ? 14 : 16, fontWeight: FontWeight.bold, color: const Color(0xFF1A4731)),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: isSmallScreen ? 10 : 14),
           ...children,
         ],
       ),
     );
   }
 
-  Widget _buildField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    bool isNumber = false,
-    bool isRequired = false,
-    bool isMultiline = false,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : (isMultiline ? TextInputType.multiline : TextInputType.text),
-      maxLines: isMultiline ? 3 : 1,
-      style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF1A4731)),
-      decoration: InputDecoration(
-        labelText: isRequired ? '$label *' : label,
-        hintText: hint,
-        prefixIcon: Icon(icon, color: Colors.grey.shade400, size: 20),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF2ECC71), width: 1.5),
-        ),
-        labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+  Widget _buildSoilInfoChip(String label, String value, bool isSmallScreen) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 8 : 10, vertical: isSmallScreen ? 4 : 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF2ECC71), width: 1),
       ),
-      validator: (value) {
-        if (isRequired && (value == null || value.isEmpty)) return 'This field is required';
-        if (isNumber && value != null && value.isNotEmpty && double.tryParse(value) == null) return 'Enter a valid number';
-        return null;
-      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: TextStyle(fontSize: isSmallScreen ? 10 : 11, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+          Text(value, style: TextStyle(fontSize: isSmallScreen ? 12 : 13, fontWeight: FontWeight.bold, color: const Color(0xFF1A4731))),
+        ],
+      ),
     );
   }
 
-  Widget _buildDropdown({
+  Widget _buildResponsiveField({
     required String label,
-    required String value,
-    required List<String> items,
+    String? hint,
     required IconData icon,
     required ValueChanged<String?> onChanged,
   }) {

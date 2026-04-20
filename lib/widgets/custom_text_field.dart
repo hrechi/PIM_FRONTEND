@@ -12,6 +12,7 @@ class CustomTextField extends StatefulWidget {
   final String? Function(String?)? validator;
   final int maxLines;
   final bool enabled;
+  final AutovalidateMode? autovalidateMode;
 
   const CustomTextField({
     super.key,
@@ -25,6 +26,7 @@ class CustomTextField extends StatefulWidget {
     this.validator,
     this.maxLines = 1,
     this.enabled = true,
+    this.autovalidateMode,
   }) : label = label ?? labelText;
 
   @override
@@ -55,6 +57,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           obscureText: widget.isPassword ? _obscureText : false,
           keyboardType: widget.keyboardType,
           validator: widget.validator,
+          autovalidateMode: widget.autovalidateMode,
           maxLines: widget.isPassword ? 1 : widget.maxLines,
           enabled: widget.enabled,
           style: GoogleFonts.inter(
