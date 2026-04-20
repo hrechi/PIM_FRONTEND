@@ -107,14 +107,13 @@ class SoilApiService {
         'order': 'DESC',
       };
 
-      final response = await _dio.get(
-        '',
-        queryParameters: queryParams,
-      );
+      final response = await _dio.get('', queryParameters: queryParams);
 
       final paginatedResponse = PaginatedSoilResponse.fromJson(response.data);
       // Filter measurements to only include those assigned to this parcel
-      return paginatedResponse.data.where((m) => m.parcelId == parcelId).toList();
+      return paginatedResponse.data
+          .where((m) => m.parcelId == parcelId)
+          .toList();
     } on DioException catch (e) {
       throw _handleError(e);
     }

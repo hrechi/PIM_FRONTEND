@@ -22,7 +22,13 @@ class _AiAgronomistScreenState extends State<AiAgronomistScreen> {
 
     try {
       // Uses the project WiFi IP for backend access from physical devices.
+<<<<<<< HEAD
       final url = Uri.parse('http://192.168.1.162:3000/agronomist/advice/${widget.parcelId}');
+=======
+      final url = Uri.parse(
+        'http://192.168.1.182:3000/agronomist/advice/${widget.parcelId}',
+      );
+>>>>>>> AmelSecurity
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -58,7 +64,11 @@ class _AiAgronomistScreenState extends State<AiAgronomistScreen> {
             ElevatedButton.icon(
               onPressed: _isLoading ? null : fetchAiAdvice,
               icon: _isLoading
-                  ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : Icon(Icons.auto_awesome),
               label: Text('Ask AI Agronomist'),
             ),
