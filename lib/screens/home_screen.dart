@@ -138,6 +138,10 @@ class _HomeScreenState extends State<HomeScreen> {
       (_) => _refreshSoilAlertsForBell(),
     );
 
+<<<<<<< HEAD
+=======
+    // Listen to parcel provider changes
+>>>>>>> autonomy
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final parcelProvider = context.read<ParcelProvider>();
       parcelProvider.addListener(_onParcelProviderChanged);
@@ -293,7 +297,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _notifyNewSoilAlertsLocally(
+<<<<<<< HEAD
       List<SoilWeatherAlert> alertsList) async {
+=======
+    List<SoilWeatherAlert> alertsList,
+  ) async {
+>>>>>>> autonomy
     if (!_soilAlertsPrimed) {
       _soilAlertsPrimed = true;
 
@@ -892,10 +901,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => FarmQuizScreen(
-                                  parcelId: _selectedParcel?.id)));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              FarmQuizScreen(parcelId: _selectedParcel?.id),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.workspace_premium_rounded,
+                    iconColor: const Color(0xFF0A7E52),
+                    title: 'Skill Certification',
+                    subtitle: 'Micro-lessons & competency checks',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/skill_certification');
                     },
                   ),
 
@@ -978,6 +999,21 @@ class _HomeScreenState extends State<HomeScreen> {
                           MaterialPageRoute(
                               builder: (_) =>
                                   const AcousticMonitorScreen()));
+                    },
+                  ),
+
+                  const Divider(height: 1),
+
+                  // ── Operations ────────────────────────
+                  _buildDrawerSection('Operations'),
+                  _buildDrawerItem(
+                    icon: Icons.videogame_asset_rounded,
+                    iconColor: AppColorPalette.robotTechStart,
+                    title: 'Control Room',
+                    subtitle: 'Control robot and monitor view',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/control_room');
                     },
                   ),
 
@@ -1222,14 +1258,19 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Hi, Good Morning',
-                    style: AppTextStyles.h3()
-                        .copyWith(color: AppColorPalette.white)),
+                Text(
+                  'Hi, Good Morning',
+                  style: AppTextStyles.h3().copyWith(
+                    color: AppColorPalette.white,
+                  ),
+                ),
                 if (_selectedFieldName != null)
-                  Text(_selectedFieldName!,
-                      style: AppTextStyles.bodySmall(
-                          color:
-                              AppColorPalette.white.withValues(alpha: 0.9))),
+                  Text(
+                    _selectedFieldName!,
+                    style: AppTextStyles.bodySmall(
+                      color: AppColorPalette.white.withValues(alpha: 0.9),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -1239,8 +1280,10 @@ class _HomeScreenState extends State<HomeScreen> {
         Stack(
           children: [
             IconButton(
-              icon: const Icon(Icons.notifications_outlined,
-                  color: AppColorPalette.white),
+              icon: const Icon(
+                Icons.notifications_outlined,
+                color: AppColorPalette.white,
+              ),
               onPressed: () async {
                 await Navigator.of(context).push(
                   MaterialPageRoute(
@@ -1366,9 +1409,12 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Text('Select Field',
-                      style: AppTextStyles.h3(
-                          color: AppColorPalette.charcoalGreen)),
+                  child: Text(
+                    'Select Field',
+                    style: AppTextStyles.h3(
+                      color: AppColorPalette.charcoalGreen,
+                    ),
+                  ),
                 ),
                 if (fields.isEmpty)
                   Center(
@@ -1440,12 +1486,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                               color: AppColorPalette
                                                   .charcoalGreen)),
                                       Text(
-                                          field.areaSize != null
-                                              ? '${field.areaSize} ha'
-                                              : 'Area not set',
-                                          style: AppTextStyles.bodySmall(
-                                              color: AppColorPalette
-                                                  .softSlate)),
+                                        field.name,
+                                        style: AppTextStyles.bodyLarge(
+                                          color: AppColorPalette.charcoalGreen,
+                                        ),
+                                      ),
+                                      Text(
+                                        field.areaSize != null
+                                            ? '${field.areaSize} ha'
+                                            : 'Area not set',
+                                        style: AppTextStyles.bodySmall(
+                                          color: AppColorPalette.softSlate,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -1668,9 +1721,49 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              Expanded(child: SizedBox(height: buttonPadding * 2)),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () =>
+                      Navigator.pushNamed(context, '/skill_certification'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0A7E52),
+                    padding: EdgeInsets.symmetric(
+                      vertical: buttonPadding,
+                      horizontal: 4,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: Icon(Icons.workspace_premium_rounded, size: iconSize),
+                  label: Text(
+                    'Skill Path',
+                    style: TextStyle(fontSize: fontSize),
+                  ),
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: SizedBox(height: buttonPadding * 2)),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () =>
+                      Navigator.pushNamed(context, '/control_room'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColorPalette.robotTechStart,
+                    padding: EdgeInsets.symmetric(
+                      vertical: buttonPadding,
+                      horizontal: 4,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: Icon(Icons.videogame_asset_rounded, size: iconSize),
+                  label: Text(
+                    'Control Room',
+                    style: TextStyle(fontSize: fontSize),
+                  ),
+                ),
+              ),
             ],
           ),
 
