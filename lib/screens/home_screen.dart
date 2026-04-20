@@ -55,7 +55,7 @@ import 'plant_doctor_screen.dart';
 import 'shorts_screen.dart';
 import 'community_feed_screen.dart';
 import 'farm_quiz_screen.dart';
- 
+
 /// Main home screen displaying the farm dashboard
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -71,7 +71,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final AnimalService _animalService = AnimalService();
   final SoilRepository _soilRepository = SoilRepository();
-  final SoilIntelligenceService _soilIntelligenceService = SoilIntelligenceService();
+  final SoilIntelligenceService _soilIntelligenceService =
+      SoilIntelligenceService();
   Timer? _soilAlertPollTimer;
   final Set<String> _notifiedSoilAlertIds = <String>{};
   bool _soilAlertsPrimed = false;
@@ -91,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // Parcel management
   Parcel? _selectedParcel;
   String? _selectedFieldName;
-  
+
   // Background images from assets
   late int _selectedBackgroundIndex;
   final List<BackgroundSlide> _backgroundSlides = [
@@ -126,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
       const Duration(minutes: 2),
       (_) => _refreshSoilAlertsForBell(),
     );
-    
+
     // Listen to parcel provider changes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final parcelProvider = context.read<ParcelProvider>();
@@ -291,7 +292,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _notifyNewSoilAlertsLocally(List<SoilWeatherAlert> alertsList) async {
+  Future<void> _notifyNewSoilAlertsLocally(
+    List<SoilWeatherAlert> alertsList,
+  ) async {
     if (!_soilAlertsPrimed) {
       _soilAlertsPrimed = true;
 
@@ -344,7 +347,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return AlertSeverity.info;
     }
   }
-  
+
   Future<void> _syncWeatherWithAdviceField() async {
     if (!mounted) return;
 
@@ -431,7 +434,7 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint('⚠️ No field selected, clearing soil/crop data');
       return;
     }
-    
+
     debugPrint('🔄 Fetching soil and crop data for field: $selectedFieldId');
     setState(() => _isLoadingSoilCrop = true);
     try {
@@ -439,15 +442,24 @@ class _HomeScreenState extends State<HomeScreen> {
       final parcels = parcelProvider.parcels;
 
       final namedParcels = parcels
-          .where((p) => p.location.trim().toLowerCase() == selectedField.name.trim().toLowerCase())
+          .where(
+            (p) =>
+                p.location.trim().toLowerCase() ==
+                selectedField.name.trim().toLowerCase(),
+          )
           .toList();
-      final fieldParcels = parcels.where((p) => p.fieldId == selectedFieldId).toList();
+      final fieldParcels = parcels
+          .where((p) => p.fieldId == selectedFieldId)
+          .toList();
 
       final parcelsForField = namedParcels.isNotEmpty
           ? namedParcels
           : (fieldParcels.isNotEmpty ? fieldParcels : <Parcel>[]);
 
-      final totalCropsForField = parcelsForField.fold<int>(0, (sum, p) => sum + p.crops.length);
+      final totalCropsForField = parcelsForField.fold<int>(
+        0,
+        (sum, p) => sum + p.crops.length,
+      );
 
       final measurementsResponse = await _soilRepository.getMeasurements(
         page: 1,
@@ -455,13 +467,17 @@ class _HomeScreenState extends State<HomeScreen> {
         sortBy: 'createdAt',
         order: 'DESC',
       );
-        final matchingMeasurements =
-          measurementsResponse.data.where((m) => m.fieldId == selectedFieldId).toList();
-        final soilMeasurement =
-          matchingMeasurements.isNotEmpty ? matchingMeasurements.first : null;
+      final matchingMeasurements = measurementsResponse.data
+          .where((m) => m.fieldId == selectedFieldId)
+          .toList();
+      final soilMeasurement = matchingMeasurements.isNotEmpty
+          ? matchingMeasurements.first
+          : null;
 
-      debugPrint('✅ Data fetched: soilPh=${soilMeasurement?.ph}, crops count=$totalCropsForField');
-      
+      debugPrint(
+        '✅ Data fetched: soilPh=${soilMeasurement?.ph}, crops count=$totalCropsForField',
+      );
+
       if (mounted) {
         // Calculate soil health score and wilting risk from measurement
         final calculatedData = _calculateSoilMetrics(soilMeasurement);
@@ -600,7 +616,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final screen = (data['screen'] ?? '').toString().toUpperCase();
       final type = (data['type'] ?? 'intruder').toString();
 
-      if (screen == 'SOIL_ALERTS' || type.toUpperCase() == 'SOIL_WEATHER_ALERT') {
+      if (screen == 'SOIL_ALERTS' ||
+          type.toUpperCase() == 'SOIL_WEATHER_ALERT') {
         _refreshSoilAlertsForBell();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -877,14 +894,24 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => FarmQuizScreen(parcelId: _selectedParcel?.id),
+                          builder: (_) =>
+                              FarmQuizScreen(parcelId: _selectedParcel?.id),
                         ),
                       );
                     },
                   ),
+                  _buildDrawerItem(
+                    icon: Icons.workspace_premium_rounded,
+                    iconColor: const Color(0xFF0A7E52),
+                    title: 'Skill Certification',
+                    subtitle: 'Micro-lessons & competency checks',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/skill_certification');
+                    },
+                  ),
 
                   const Divider(height: 1),
-
 
                   // ── Security ──────────────────────────
                   _buildDrawerSection('Security'),
@@ -974,6 +1001,21 @@ class _HomeScreenState extends State<HomeScreen> {
                           builder: (_) => const AcousticMonitorScreen(),
                         ),
                       );
+                    },
+                  ),
+
+                  const Divider(height: 1),
+
+                  // ── Operations ────────────────────────
+                  _buildDrawerSection('Operations'),
+                  _buildDrawerItem(
+                    icon: Icons.videogame_asset_rounded,
+                    iconColor: AppColorPalette.robotTechStart,
+                    title: 'Control Room',
+                    subtitle: 'Control robot and monitor view',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/control_room');
                     },
                   ),
 
@@ -1222,13 +1264,19 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Hi, Good Morning',
-                    style: AppTextStyles.h3()
-                        .copyWith(color: AppColorPalette.white)),
+                Text(
+                  'Hi, Good Morning',
+                  style: AppTextStyles.h3().copyWith(
+                    color: AppColorPalette.white,
+                  ),
+                ),
                 if (_selectedFieldName != null)
-                  Text(_selectedFieldName!,
-                      style: AppTextStyles.bodySmall(
-                          color: AppColorPalette.white.withValues(alpha: 0.9))),
+                  Text(
+                    _selectedFieldName!,
+                    style: AppTextStyles.bodySmall(
+                      color: AppColorPalette.white.withValues(alpha: 0.9),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -1238,7 +1286,10 @@ class _HomeScreenState extends State<HomeScreen> {
         Stack(
           children: [
             IconButton(
-              icon: const Icon(Icons.notifications_outlined, color: AppColorPalette.white),
+              icon: const Icon(
+                Icons.notifications_outlined,
+                color: AppColorPalette.white,
+              ),
               onPressed: () async {
                 await Navigator.of(context).push(
                   MaterialPageRoute(
@@ -1354,7 +1405,7 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context) => Consumer<WeatherProvider>(
         builder: (context, weatherProvider, _) {
           final fields = weatherProvider.fields;
-          
+
           return Container(
             padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
@@ -1369,7 +1420,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.all(16.0),
                   child: Text(
                     'Select Field',
-                    style: AppTextStyles.h3(color: AppColorPalette.charcoalGreen),
+                    style: AppTextStyles.h3(
+                      color: AppColorPalette.charcoalGreen,
+                    ),
                   ),
                 ),
                 if (fields.isEmpty)
@@ -1388,7 +1441,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemCount: fields.length,
                       itemBuilder: (context, index) {
                         final field = fields[index];
-                        final isSelected = weatherProvider.selectedFieldId == field.id;
+                        final isSelected =
+                            weatherProvider.selectedFieldId == field.id;
                         return GestureDetector(
                           onTap: () async {
                             await weatherProvider.selectField(field.id);
@@ -1442,11 +1496,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                     children: [
                                       Text(
                                         field.name,
-                                        style: AppTextStyles.bodyLarge(color: AppColorPalette.charcoalGreen),
+                                        style: AppTextStyles.bodyLarge(
+                                          color: AppColorPalette.charcoalGreen,
+                                        ),
                                       ),
                                       Text(
-                                        field.areaSize != null ? '${field.areaSize} ha' : 'Area not set',
-                                        style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate),
+                                        field.areaSize != null
+                                            ? '${field.areaSize} ha'
+                                            : 'Area not set',
+                                        style: AppTextStyles.bodySmall(
+                                          color: AppColorPalette.softSlate,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -1701,10 +1761,49 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              // Empty space for balance
-              Expanded(child: SizedBox(height: buttonPadding * 2)),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () =>
+                      Navigator.pushNamed(context, '/skill_certification'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0A7E52),
+                    padding: EdgeInsets.symmetric(
+                      vertical: buttonPadding,
+                      horizontal: 4,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: Icon(Icons.workspace_premium_rounded, size: iconSize),
+                  label: Text(
+                    'Skill Path',
+                    style: TextStyle(fontSize: fontSize),
+                  ),
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: SizedBox(height: buttonPadding * 2)),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () =>
+                      Navigator.pushNamed(context, '/control_room'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColorPalette.robotTechStart,
+                    padding: EdgeInsets.symmetric(
+                      vertical: buttonPadding,
+                      horizontal: 4,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: Icon(Icons.videogame_asset_rounded, size: iconSize),
+                  label: Text(
+                    'Control Room',
+                    style: TextStyle(fontSize: fontSize),
+                  ),
+                ),
+              ),
             ],
           ),
 

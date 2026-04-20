@@ -11,6 +11,7 @@ import '../services/animal_service.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../utils/constants.dart';
+import '../widgets/app_drawer.dart';
 import 'profile_screen.dart';
 import 'signin_screen.dart';
 
@@ -183,6 +184,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
 
     return Scaffold(
       backgroundColor: AppColorPalette.wheatWarmClay,
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: Text(
           'My Materials & Equipment',
@@ -230,6 +232,107 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
 
                   // Quick Stats
                   _buildQuickStatsRow(),
+                  const SizedBox(height: 20),
+
+                  // Operations quick actions
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final compact = constraints.maxWidth < 430;
+
+                      if (compact) {
+                        return Column(
+                          children: [
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () => Navigator.pushNamed(
+                                  context,
+                                  '/control_room',
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      AppColorPalette.robotTechStart,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.videogame_asset_rounded),
+                                label: const Text('Control Room'),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () => Navigator.pushNamed(
+                                  context,
+                                  '/skill_certification',
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0A7E52),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                icon: const Icon(
+                                  Icons.workspace_premium_rounded,
+                                ),
+                                label: const Text('Skill Certification'),
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () =>
+                                  Navigator.pushNamed(context, '/control_room'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColorPalette.robotTechStart,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.videogame_asset_rounded),
+                              label: const Text('Control Room'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => Navigator.pushNamed(
+                                context,
+                                '/skill_certification',
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0A7E52),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.workspace_premium_rounded),
+                              label: const Text('Skill Path'),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                   const SizedBox(height: 20),
 
                   // Material Selection & Management
