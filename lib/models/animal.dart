@@ -64,6 +64,8 @@ class Animal {
   final double? estimatedValue;
   final double? salePrice;
   final DateTime? saleDate;
+  final String? buyerName;
+  final double? saleWeightKg;
   final bool? isFattening;
   final DateTime? fatteningStartDate;
   final DateTime? targetSaleDate;
@@ -133,6 +135,8 @@ class Animal {
     this.estimatedValue,
     this.salePrice,
     this.saleDate,
+    this.buyerName,
+    this.saleWeightKg,
     this.isFattening,
     this.fatteningStartDate,
     this.targetSaleDate,
@@ -224,6 +228,8 @@ class Animal {
       estimatedValue: _toDouble(json['estimatedValue']),
       salePrice: _toDouble(json['salePrice']),
       saleDate: json['saleDate'] != null ? DateTime.parse(json['saleDate']) : null,
+      buyerName: json['buyerName'],
+      saleWeightKg: _toDouble(json['saleWeightKg']),
       isFattening: json['isFattening'] ?? false,
       fatteningStartDate: json['fatteningStartDate'] != null ? DateTime.parse(json['fatteningStartDate']) : null,
       targetSaleDate: json['targetSaleDate'] != null ? DateTime.parse(json['targetSaleDate']) : null,
@@ -287,6 +293,8 @@ class Animal {
       'estimatedValue': estimatedValue,
       'salePrice': salePrice,
       'saleDate': saleDate?.toIso8601String(),
+      'buyerName': buyerName,
+      'saleWeightKg': saleWeightKg,
       'origin': origin,
       'motherId': motherId,
       'fatherId': fatherId,

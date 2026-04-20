@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import '../../main.dart';
 import '../../models/animal.dart';
 import '../../services/animal_service.dart';
 import '../../utils/constants.dart';
@@ -17,7 +18,7 @@ class AnimalListScreen extends StatefulWidget {
   State<AnimalListScreen> createState() => _AnimalListScreenState();
 }
 
-class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver, RouteAware {
   final AnimalService _animalService = AnimalService();
   final FieldService _fieldService = FieldService();
   late Future<List<Animal>> _animalsFuture;
@@ -40,11 +41,29 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();
     WidgetsBinding.instance.removeObserver(this);
+    routeObserver.unsubscribe(this);
     super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    if (mounted) {
+      debugPrint('↩️ Returned to AnimalListScreen - refreshing animal list');
+      _refreshData();
+    }
   }
 
   @override
@@ -65,13 +84,6 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
     } catch (e) {
       debugPrint('Error fetching fields: $e');
     }
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _searchController.dispose();
-    super.dispose();
   }
 
   void _refreshData() {

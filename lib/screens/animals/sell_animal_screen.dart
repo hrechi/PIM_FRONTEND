@@ -28,30 +28,28 @@ class _SellAnimalScreenState extends State<SellAnimalScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
+    final messenger = ScaffoldMessenger.of(context);
 
     try {
-      final payload = {
+      final payload = <String, dynamic>{
         'salePrice': double.parse(_priceController.text),
         'saleDate': _saleDate.toIso8601String(),
-        'buyerName': _buyerController.text.isNotEmpty ? _buyerController.text : undefined,
-        'saleWeightKg': _weightController.text.isNotEmpty ? double.parse(_weightController.text) : undefined,
-        'notes': _notesController.text.isNotEmpty ? _notesController.text : undefined,
+        if (_buyerController.text.isNotEmpty) 'buyerName': _buyerController.text,
+        if (_weightController.text.isNotEmpty) 'saleWeightKg': double.parse(_weightController.text),
+        if (_notesController.text.isNotEmpty) 'notes': _notesController.text,
       };
-      
-      // Clean undefined
-      payload.removeWhere((key, value) => value == undefined);
 
       await AnimalService().sellAnimal(widget.animal.nodeId, payload);
-      
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(content: Text('Animal sold successfully!')),
         );
         Navigator.pop(context, true); // Returns true to trigger refresh
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(content: Text('Error: $e')),
         );
       }
@@ -61,8 +59,6 @@ class _SellAnimalScreenState extends State<SellAnimalScreen> {
       }
     }
   }
-  
-  static const undefined = 'UNDEFINED_MARKER';
 
   @override
   Widget build(BuildContext context) {

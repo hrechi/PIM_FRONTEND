@@ -72,6 +72,7 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
   }
 
   Future<void> _sellAnimal(Animal animal) async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final updated = await Navigator.push(
         context,
@@ -83,18 +84,16 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
         _refreshData();
         // Delay slightly to ensure backend has updated
         await Future.delayed(const Duration(milliseconds: 500));
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text('${animal.name} a été vendu avec succès'),
             backgroundColor: Colors.green,
           ),
         );
-        // Return to parent with success flag
-        if (mounted) Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text('Erreur: $e'),
             backgroundColor: Colors.red,
@@ -236,9 +235,7 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
   }
 
   Widget _buildAnimalCard(Animal animal) {
-    final daysUntilSale = animal.targetSaleDate != null
-        ? animal.targetSaleDate!.difference(DateTime.now()).inDays
-        : null;
+    final daysUntilSale = animal.targetSaleDate?.difference(DateTime.now()).inDays;
     final daysInFat = animal.fatteningStartDate != null
         ? DateTime.now().difference(animal.fatteningStartDate!).inDays
         : 0;

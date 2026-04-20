@@ -29,6 +29,8 @@ import '../screens/community_feed_screen.dart';
 import '../screens/expenses/add_expense_screen.dart';
 import '../services/field_service.dart';
 import '../screens/finance/finance_dashboard_screen.dart';
+import '../screens/catalogue_list_screen.dart';
+import '../screens/catalogue_wizard_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -227,6 +229,21 @@ class AppDrawer extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (_) => const FinanceDashboardScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.attach_money,
+                    iconColor: const Color(0xFFF59E0B),
+                    title: 'catalogues',
+                    subtitle: 'catalogues',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CatalogueListScreen(),
                         ),
                       );
                     },

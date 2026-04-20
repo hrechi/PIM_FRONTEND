@@ -13,6 +13,7 @@ import 'providers/notification_provider.dart';
 import 'providers/shorts_provider.dart';
 import 'providers/field_provider.dart';
 import 'providers/finance_provider.dart';
+import 'providers/catalogue_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'screens/security/incident_detail_screen.dart';
@@ -23,6 +24,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 /// Global navigator key — used for navigating from notification callbacks 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
 /// Background message handler — must be a top-level function
 @pragma('vm:entry-point')
@@ -103,9 +105,11 @@ class _FieldlyAppState extends State<FieldlyApp> {
         ChangeNotifierProvider(create: (_) => ShortsProvider()),
         ChangeNotifierProvider(create: (_) => FieldProvider()),
         ChangeNotifierProvider(create: (_) => FinanceProvider()),
+        ChangeNotifierProvider(create: (_) => CatalogueProvider()),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
+        navigatorObservers: [routeObserver],
         title: 'Fieldly',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
