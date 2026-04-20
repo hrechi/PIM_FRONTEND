@@ -790,7 +790,7 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
                                 ],
                               ),
                             );
-                          }),
+                          }).toList(),
                         ],
                         onChanged: (value) {
                           setState(() {

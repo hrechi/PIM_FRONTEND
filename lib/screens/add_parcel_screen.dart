@@ -575,21 +575,58 @@ class _AddParcelScreenState extends State<AddParcelScreen> {
     required String label,
     String? hint,
     required IconData icon,
-    required ValueChanged<String?> onChanged,
+    TextEditingController? controller,
+    String? value,
+    List<String>? items,
+    bool isDropdown = false,
+    ValueChanged<String?>? onChanged,
+    bool isSmallScreen = false,
+    bool isRequired = false,
   }) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      items: items.map((i) => DropdownMenuItem(value: i, child: Text(i))).toList(),
-      onChanged: onChanged,
-      icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey.shade400),
-      decoration: InputDecoration(
-        labelText: '$label *',
-        prefixIcon: Icon(icon, color: Colors.grey.shade400, size: 20),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-      ),
-    );
+    if (isDropdown && items != null) {
+      return DropdownButtonFormField<String>(
+        value: value,
+        items: items.map((i) => DropdownMenuItem(value: i, child: Text(i))).toList(),
+        onChanged: onChanged,
+        icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey.shade400, size: isSmallScreen ? 18 : 20),
+        decoration: InputDecoration(
+          labelText: '$label${isRequired ? ' *' : ''}',
+          prefixIcon: Icon(icon, color: Colors.grey.shade400, size: isSmallScreen ? 18 : 20),
+          filled: true,
+          fillColor: Colors.grey.shade50,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: isSmallScreen ? 8 : 12),
+          labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: isSmallScreen ? 12 : 13),
+        ),
+      );
+    } else {
+      return TextFormField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: '$label${isRequired ? ' *' : ''}',
+          hintText: hint,
+          prefixIcon: Icon(icon, color: Colors.grey.shade400, size: isSmallScreen ? 18 : 20),
+          filled: true,
+          fillColor: Colors.grey.shade50,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFF2ECC71), width: 1.5),
+          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: isSmallScreen ? 8 : 12),
+          labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: isSmallScreen ? 12 : 13),
+        ),
+        validator: (val) {
+          if (isRequired && (val == null || val.isEmpty)) return 'This field is required';
+          return null;
+        },
+      );
+    }
   }
 }

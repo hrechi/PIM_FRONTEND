@@ -19,7 +19,6 @@ import '../models/parcel.dart';
 
 import '../providers/parcel_provider.dart';
 import '../providers/weather_provider.dart';
-import '../providers/notification_provider.dart';
 import '../services/animal_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/soil_repository.dart';
@@ -42,7 +41,6 @@ import 'chat_assistant_screen.dart';
 import 'add_staff_screen.dart';
 import 'staff_list_screen.dart';
 import 'security/incident_history_screen.dart';
-import 'notification_center_screen.dart';
 import 'security/live_feed_screen.dart';
 import 'security/daily_report_screen.dart';
 import 'security/acoustic_monitor_screen.dart';
@@ -1244,7 +1242,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () async {
                 await Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const NotificationCenterScreen(),
+                    builder: (_) => const SoilAlertNotificationsScreen(),
                   ),
                 );
                 _refreshSoilAlertsForBell();
@@ -1260,12 +1258,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: AppColorPalette.alertError,
                     shape: BoxShape.circle,
                   ),
-                  child: Consumer<NotificationProvider>(
-                    builder: (context, notificationProvider, _) => Text(
-                      '${notificationProvider.unreadCount}',
-                      style: AppTextStyles.caption(color: AppColorPalette.white)
-                          .copyWith(fontSize: 10),
-                    ),
+                  child: Text(
+                    '${alerts.where((a) => !a.isRead).length}',
+                    style: AppTextStyles.caption(
+                      color: AppColorPalette.white,
+                    ).copyWith(fontSize: 10),
                   ),
                 ),
               ),
@@ -2696,7 +2693,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 textBaseline: TextBaseline.alphabetic,
                 children: [
                   Text(
-                    today.toStringAsFixed(1),
+                    '${today.toStringAsFixed(1)}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 40,
@@ -2725,210 +2722,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 8),
-        DashboardCard(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Field Alerts
-              ...attentionAlerts.take(2).map(
-                    (alert) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: AlertTile.compact(alert: alert, onTap: () {}),
-                    ),
-                  ),
-              // Animal Alerts
-              ...animalAlerts.take(2).map((aRaw) {
-                final animal = Animal.fromJson(aRaw);
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildAnimalAlertTile(animal),
-                );
-              }),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAnimalAlertTile(Animal animal) {
-    return InkWell(
-      onTap: () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const AnimalListScreen())),
-      borderRadius: BorderRadius.circular(12.0),
-      child: Container(
-        padding: const EdgeInsets.all(12.0),
-        decoration: BoxDecoration(
-          color: AppColorPalette.warning.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(12.0),
-          border: Border.all(
-              color: AppColorPalette.warning.withOpacity(0.2), width: 1),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8.0),
-              decoration: BoxDecoration(
-                color: AppColorPalette.warning.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: const Icon(Symbols.pets,
-                  size: 18.0, color: AppColorPalette.warning),
-            ),
-            const SizedBox(width: 12.0),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${animal.name} needs attention',
-                    style: AppTextStyles.bodySmall(
-                            color: AppColorPalette.charcoalGreen)
-                        .copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    'Status: ${animal.healthStatus} • Score: ${animal.vitalityScore}%',
-                    style: AppTextStyles.bodySmall(
-                        color: AppColorPalette.softSlate),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right,
-                size: 20, color: AppColorPalette.softSlate),
-          ],
-        ),
       ),
-    );
-  }
-
-  // ─────────────────────────────────────────────
-  // LIVESTOCK LOCATION
-  // ─────────────────────────────────────────────
-  Widget _buildLivestockLocationSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColorPalette.info.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.location_on,
-                        color: AppColorPalette.info, size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  Text('Livestock Location', style: AppTextStyles.h3()),
-                ],
-              ),
-              StatusChip.info(
-                  label: '${animals.length} animals', icon: Icons.pets),
-            ],
-          ),
-        ),
-        DashboardCard(
-          padding: const EdgeInsets.all(0),
-          child: Column(
-            children: [
-              Container(
-                height: 200,
-                decoration: BoxDecoration(
-                  color: AppColorPalette.lightGrey,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                  ),
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColorPalette.emeraldGreen.withOpacity(0.1),
-                      AppColorPalette.mistyBlue.withOpacity(0.1),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.map,
-                              size: 48,
-                              color:
-                                  AppColorPalette.softSlate.withOpacity(0.5)),
-                          const SizedBox(height: 8),
-                          Text('Interactive Map View',
-                              style: AppTextStyles.bodyMedium(
-                                  color: AppColorPalette.softSlate)),
-                        ],
-                      ),
-                    ),
-                    ...animals.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final animal = entry.value;
-                      return Positioned(
-                        left: 50.0 + (index * 40.0),
-                        top: 80.0 + (index % 2 == 0 ? 20.0 : 0.0),
-                        child: _buildAnimalPin(animal),
-                      );
-                    }),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(16),
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColorPalette.mistyBlue,
-                    minimumSize: const Size(double.infinity, 50),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.fullscreen),
-                      const SizedBox(width: 8),
-                      Text('VIEW FULL MAP',
-                          style: AppTextStyles.buttonMedium()),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAnimalPin(Animal animal) {
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: animal.isHealthy
-            ? AppColorPalette.success
-            : AppColorPalette.alertError,
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColorPalette.white, width: 3),
-        boxShadow: [
-          BoxShadow(
-            color: AppColorPalette.charcoalGreen.withOpacity(0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: const Icon(Icons.pets, size: 16, color: AppColorPalette.white),
     );
   }
 

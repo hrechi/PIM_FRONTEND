@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:frontend_pim/screens/animals/animal_dashboard_screen.dart';
 import '../screens/agricultural_news_screen.dart';
 import '../screens/harvest_analytics_screen.dart';
 import '../screens/aerotwin_screen.dart';
@@ -10,10 +9,6 @@ import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../screens/home_screen.dart';
 import '../screens/farmer_home_screen_v2.dart';
-import '../screens/animals/animal_list_screen.dart';
-import '../screens/animals/add_animal_screen.dart';
-import '../screens/animals/milk_production_screen.dart';
-import '../screens/animals/milk_analytics_screen.dart';
 import '../screens/vaccines/vaccine_dashboard_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/parcel_list_screen.dart';
@@ -372,93 +367,43 @@ class AppDrawer extends StatelessWidget {
 
                   const Divider(height: 1),
 
-                  // Livestock
-                  _buildDrawerSection('Livestock'),
-                  _buildExpansionDrawerItem(
-                    context: context,
-                    icon: Icons.pets_rounded,
-                    title: 'Animal Management',
-                    subtitle: 'Dashboard & Records',
-                    children: [
-                      _buildDrawerSubItem(
-                        icon: Icons.dashboard_rounded,
-                        title: 'Livestock Dashboard',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const AnimalDashboardScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      _buildDrawerSubItem(
-                        icon: Icons.list_alt_rounded,
-                        title: 'Livestock List',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const AnimalListScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      _buildDrawerSubItem(
-                        icon: Icons.add_circle_outline_rounded,
-                        title: 'Add New Animal',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => AddAnimalScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      _buildDrawerSubItem(
-                        icon: Icons.analytics_rounded,
-                        title: 'Milk Analytics',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const MilkAnalyticsScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      _buildDrawerSubItem(
-                        icon: Icons.opacity_rounded,
-                        title: 'Milk Production',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const MilkProductionScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+                  // Finance
+                  _buildDrawerSection('Finance'),
                   _buildDrawerItem(
-                    icon: Icons.vaccines_rounded,
-                    title: 'Vaccination',
-                    subtitle: 'Herd Health & Planning',
+                    icon: Icons.attach_money_rounded,
+                    iconColor: const Color(0xFF2E7D32),
+                    title: 'Finance Dashboard',
+                    subtitle: 'Financial overview & reports',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const VaccineDashboardScreen(),
-                        ),
-                      );
+                      // TODO: Navigate to Finance Dashboard screen
+                      // Navigator.push(
+                      //   context,
+                      //   MaterialPageRoute(
+                      //     builder: (_) => const FinanceDashboardScreen(),
+                      //   ),
+                      // );
+                    },
+                  ),
+
+                  const Divider(height: 1),
+
+                  // Catalogue
+                  _buildDrawerSection('Catalogue'),
+                  _buildDrawerItem(
+                    icon: Icons.library_books_rounded,
+                    iconColor: const Color(0xFFFF6B6B),
+                    title: 'Product Catalogue',
+                    subtitle: 'Browse & manage products',
+                    onTap: () {
+                      Navigator.pop(context);
+                      // TODO: Navigate to Catalogue screen
+                      // Navigator.push(
+                      //   context,
+                      //   MaterialPageRoute(
+                      //     builder: (_) => const CatalogueScreen(),
+                      //   ),
+                      // );
                     },
                   ),
 
