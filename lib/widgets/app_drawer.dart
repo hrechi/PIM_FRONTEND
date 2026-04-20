@@ -9,6 +9,10 @@ import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../screens/home_screen.dart';
 import '../screens/farmer_home_screen_v2.dart';
+import '../screens/animals/animal_list_screen.dart';
+import '../screens/animals/add_animal_screen.dart';
+import '../screens/animals/milk_production_screen.dart';
+import '../screens/animals/milk_analytics_screen.dart';
 import '../screens/vaccines/vaccine_dashboard_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/parcel_list_screen.dart';
@@ -22,6 +26,8 @@ import '../screens/soil/soil_measurements_list_screen.dart';
 import '../screens/security/incident_history_screen.dart';
 import '../screens/shorts_screen.dart';
 import '../screens/community_feed_screen.dart';
+import '../screens/finance/finance_dashboard_screen.dart';
+import '../screens/catalogue_list_screen.dart';
 import '../screens/signin_screen.dart';
 
 class AppDrawer extends StatelessWidget {
@@ -367,6 +373,26 @@ class AppDrawer extends StatelessWidget {
 
                   const Divider(height: 1),
 
+                  // Animals
+                  _buildDrawerSection('Animals'),
+                  _buildDrawerItem(
+                    icon: Icons.pets,
+                    iconColor: const Color(0xFFFB923C),
+                    title: 'Fattening Animals',
+                    subtitle: 'Animals in fattening',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AnimalListScreen(showFatteningOnly: true),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const Divider(height: 1),
+
                   // Finance
                   _buildDrawerSection('Finance'),
                   _buildDrawerItem(
@@ -376,16 +402,15 @@ class AppDrawer extends StatelessWidget {
                     subtitle: 'Financial overview & reports',
                     onTap: () {
                       Navigator.pop(context);
-                      // TODO: Navigate to Finance Dashboard screen
-                      // Navigator.push(
-                      //   context,
-                      //   MaterialPageRoute(
-                      //     builder: (_) => const FinanceDashboardScreen(),
-                      //   ),
-                      // );
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FinanceDashboardScreen(),
+                        ),
+                      );
                     },
                   ),
-
+                  
                   const Divider(height: 1),
 
                   // Catalogue
@@ -397,13 +422,29 @@ class AppDrawer extends StatelessWidget {
                     subtitle: 'Browse & manage products',
                     onTap: () {
                       Navigator.pop(context);
-                      // TODO: Navigate to Catalogue screen
-                      // Navigator.push(
-                      //   context,
-                      //   MaterialPageRoute(
-                      //     builder: (_) => const CatalogueScreen(),
-                      //   ),
-                      // );
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CatalogueListScreen(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const Divider(height: 1),
+
+                  _buildDrawerItem(
+                    icon: Icons.vaccines_rounded,
+                    title: 'Vaccination',
+                    subtitle: 'Herd Health & Planning',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const VaccineDashboardScreen(),
+                        ),
+                      );
                     },
                   ),
 

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import '../../main.dart';
 import '../../models/animal.dart';
 import '../../services/animal_service.dart';
 import '../../utils/constants.dart';
+import '../../utils/animal_utils.dart';
 import '../../widgets/app_drawer.dart';
 import '../../services/field_service.dart';
 import '../../models/field_model.dart';
@@ -10,13 +12,15 @@ import 'add_animal_screen.dart';
 import 'animal_details_screen.dart';
 
 class AnimalListScreen extends StatefulWidget {
-  const AnimalListScreen({super.key});
+  const AnimalListScreen({super.key, this.showFatteningOnly = false});
+
+  final bool showFatteningOnly;
 
   @override
   State<AnimalListScreen> createState() => _AnimalListScreenState();
 }
 
-class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerProviderStateMixin {
+class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver, RouteAware {
   final AnimalService _animalService = AnimalService();
   final FieldService _fieldService = FieldService();
   late Future<List<Animal>> _animalsFuture;
@@ -24,6 +28,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
   late TabController _tabController;
   String? _selectedType;
   String? _selectedFieldId;
+  bool _showFatteningOnly = false;
   List<FieldModel> _fields = [];
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -32,8 +37,45 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addObserver(this);
+    _showFatteningOnly = widget.showFatteningOnly;
     _fetchFields();
     _refreshData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _searchController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    if (mounted) {
+      debugPrint('↩️ Returned to AnimalListScreen - refreshing animal list');
+      _refreshData();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Refresh when app resumes (in case a sale was made from planned sales page)
+    if (state == AppLifecycleState.resumed && mounted) {
+      debugPrint('📱 App resumed - refreshing animal list');
+      _refreshData();
+    }
   }
 
   Future<void> _fetchFields() async {
@@ -47,13 +89,6 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
     }
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _searchController.dispose();
-    super.dispose();
-  }
-
   void _refreshData() {
     setState(() {
       _animalsFuture = _animalService.getAnimals(
@@ -62,6 +97,65 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
       );
       _statsFuture = _animalService.getStatistics(fieldId: _selectedFieldId);
     });
+    debugPrint('🔄 Animal list refreshed - ActiveTab, FieldId: $_selectedFieldId, Type: $_selectedType, Fattening: $_showFatteningOnly');
+  }
+
+  void _showCancelSaleDialog(Animal animal) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Annuler la vente'),
+        content: Text('Êtes-vous sûr de vouloir annuler la vente de ${animal.name}?\n\nL\'animal sera marqué comme actif.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Non'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _cancelSale(animal);
+            },
+            child: const Text('Oui, annuler'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _cancelSale(Animal animal) async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      await _animalService.cancelSale(animal.nodeId);
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('La vente de ${animal.name} a été annulée'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _refreshData();
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -261,12 +355,19 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 24),
-        itemCount: AppConstants.animalTypes.length + 1,
+        itemCount: AppConstants.animalTypes.length + 2,
         itemBuilder: (context, index) {
           final isAll = index == 0;
-          final type = isAll ? null : AppConstants.animalTypes[index - 1];
-          final label = isAll ? 'All' : type![0].toUpperCase() + type.substring(1).toLowerCase();
-          final isSelected = _selectedType == type;
+          final isFatteningFilter = index == AppConstants.animalTypes.length + 1;
+          final type = isAll ? null : !isFatteningFilter ? AppConstants.animalTypes[index - 1] : null;
+          final label = isAll
+              ? 'All'
+              : isFatteningFilter
+                  ? 'Vente planifiée'
+                  : type![0].toUpperCase() + type.substring(1).toLowerCase();
+          final isSelected = isFatteningFilter
+              ? _showFatteningOnly
+              : _selectedType == type;
 
           return Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -275,7 +376,11 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
               selected: isSelected,
               onSelected: (bool selected) {
                 setState(() {
-                  _selectedType = selected ? type : null;
+                  if (isFatteningFilter) {
+                    _showFatteningOnly = selected;
+                  } else {
+                    _selectedType = selected ? type : null;
+                  }
                   _refreshData();
                 });
               },
@@ -379,6 +484,9 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
           if (_selectedType != null) {
             if (a.animalType.toUpperCase() != _selectedType!.toUpperCase()) return false;
           }
+
+          // Filter by fattening / planned sale view
+          if (_showFatteningOnly && a.isFattening != true) return false;
 
           return true;
         }).toList();
@@ -491,7 +599,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
                           Row(
                             children: [
                               Icon(
-                                _getAnimalIcon(animal.animalType),
+                                AnimalUtils.getAnimalIcon(animal.animalType),
                                 size: 16,
                                 color: const Color(0xFF94A3B8),
                               ),
@@ -501,26 +609,75 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
                                 size: 16,
                                 color: Color(0xFF94A3B8),
                               ),
+                              if (animal.isFattening == true) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE0F2FE),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text(
+                                    'En engraissement',
+                                    style: TextStyle(
+                                      color: Color(0xFF0369A1),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
-                          Row(
-                            children: [
-                              const Text(
-                                'View Details',
-                                style: TextStyle(
-                                  color: AppColors.mistBlue,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                          if (animal.status.toLowerCase() == 'sold')
+                            GestureDetector(
+                              onTap: () => _showCancelSaleDialog(animal),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEF4444).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFEF4444), width: 1),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(
+                                      Symbols.close,
+                                      color: Color(0xFFEF4444),
+                                      size: 14,
+                                    ),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Cancel Sale',
+                                      style: TextStyle(
+                                        color: Color(0xFFEF4444),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Symbols.chevron_right,
-                                color: AppColors.mistBlue,
-                                size: 16,
-                              ),
-                            ],
-                          ),
+                            )
+                          else
+                            Row(
+                              children: [
+                                const Text(
+                                  'View Details',
+                                  style: TextStyle(
+                                    color: AppColors.mistBlue,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Symbols.chevron_right,
+                                  color: AppColors.mistBlue,
+                                  size: 16,
+                                ),
+                              ],
+                            ),
                         ],
                       ),
                     ],
@@ -558,7 +715,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
   Widget _buildFallbackIcon(String type) {
     return Center(
       child: Icon(
-        _getAnimalIcon(type),
+        AnimalUtils.getAnimalIcon(type),
         size: 40,
         color: AppColors.mistBlue.withValues(alpha: 0.3),
       ),
@@ -618,15 +775,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
     );
   }
 
-  IconData _getAnimalIcon(String type) {
-    switch (type.toUpperCase()) {
-      case 'COW': return Symbols.cruelty_free;
-      case 'SHEEP': return Symbols.pest_control_rodent;
-      case 'HORSE': return Symbols.emoji_nature;
-      case 'DOG': return Symbols.sound_detection_dog_barking;
-      default: return Symbols.pets;
-    }
-  }
+
 
   Color _getHealthStatusColor(String status) {
     switch (status.toUpperCase()) {

@@ -225,6 +225,7 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
     final nameController = TextEditingController(text: field.name);
     List<List<double>>? coordinates = field.areaCoordinates;
     double? areaSize = field.areaSize;
+    String selectedCurrency = 'TND';
     String? validationError;
 
     final result = await showDialog<Map<String, dynamic>>(
@@ -266,6 +267,35 @@ class _FieldsManagementScreenState extends State<FieldsManagementScreen> {
                     border: const OutlineInputBorder(),
                   ),
                   onChanged: (value) => setState(() => validationError = null),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedCurrency,
+                  decoration: const InputDecoration(
+                    labelText: 'Currency',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'TND', child: Text('TND - Tunisian Dinar')),
+                    DropdownMenuItem(value: 'MAD', child: Text('MAD - Moroccan Dirham')),
+                    DropdownMenuItem(value: 'DZD', child: Text('DZD - Algerian Dinar')),
+                    DropdownMenuItem(value: 'EUR', child: Text('EUR - Euro')),
+                    DropdownMenuItem(value: 'GBP', child: Text('GBP - British Pound')),
+                    DropdownMenuItem(value: 'CHF', child: Text('CHF - Swiss Franc')),
+                    DropdownMenuItem(value: 'USD', child: Text('USD - US Dollar')),
+                    DropdownMenuItem(value: 'CAD', child: Text('CAD - Canadian Dollar')),
+                    DropdownMenuItem(value: 'BRL', child: Text('BRL - Brazilian Real')),
+                    DropdownMenuItem(value: 'ARS', child: Text('ARS - Argentine Peso')),
+                    DropdownMenuItem(value: 'AUD', child: Text('AUD - Australian Dollar')),
+                    DropdownMenuItem(value: 'INR', child: Text('INR - Indian Rupee')),
+                    DropdownMenuItem(value: 'CNY', child: Text('CNY - Chinese Yuan')),
+                    DropdownMenuItem(value: 'TRY', child: Text('TRY - Turkish Lira')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => selectedCurrency = value);
+                    }
+                  },
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(

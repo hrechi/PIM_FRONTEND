@@ -64,6 +64,18 @@ class Animal {
   final double? estimatedValue;
   final double? salePrice;
   final DateTime? saleDate;
+  final String? buyerName;
+  final double? saleWeightKg;
+  final bool? isFattening;
+  final DateTime? fatteningStartDate;
+  final DateTime? targetSaleDate;
+
+  // New Genealogy & Financial Fields (Financial Module)
+  final String origin; // purchased | born
+  final String? motherId;
+  final String? fatherId;
+  final double? birthWeightKg;
+  final double? birthCost;
 
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -123,8 +135,18 @@ class Animal {
     this.estimatedValue,
     this.salePrice,
     this.saleDate,
+    this.buyerName,
+    this.saleWeightKg,
+    this.isFattening,
+    this.fatteningStartDate,
+    this.targetSaleDate,
     required this.createdAt,
     required this.updatedAt,
+    this.origin = 'purchased',
+    this.motherId,
+    this.fatherId,
+    this.birthWeightKg,
+    this.birthCost,
     this.vaccineRecords,
     this.medicalEvents,
   });
@@ -206,6 +228,16 @@ class Animal {
       estimatedValue: _toDouble(json['estimatedValue']),
       salePrice: _toDouble(json['salePrice']),
       saleDate: json['saleDate'] != null ? DateTime.parse(json['saleDate']) : null,
+      buyerName: json['buyerName'],
+      saleWeightKg: _toDouble(json['saleWeightKg']),
+      isFattening: json['isFattening'] ?? false,
+      fatteningStartDate: json['fatteningStartDate'] != null ? DateTime.parse(json['fatteningStartDate']) : null,
+      targetSaleDate: json['targetSaleDate'] != null ? DateTime.parse(json['targetSaleDate']) : null,
+      origin: json['origin'] ?? 'purchased',
+      motherId: json['motherId'],
+      fatherId: json['fatherId'],
+      birthWeightKg: _toDouble(json['birthWeightKg']),
+      birthCost: _toDouble(json['birthCost']),
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
       vaccineRecords: json['vaccineRecords'] != null 
@@ -261,6 +293,13 @@ class Animal {
       'estimatedValue': estimatedValue,
       'salePrice': salePrice,
       'saleDate': saleDate?.toIso8601String(),
+      'buyerName': buyerName,
+      'saleWeightKg': saleWeightKg,
+      'origin': origin,
+      'motherId': motherId,
+      'fatherId': fatherId,
+      'birthWeightKg': birthWeightKg,
+      'birthCost': birthCost,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };

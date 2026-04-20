@@ -12,6 +12,9 @@ import 'providers/irrigation_provider.dart';
 import 'providers/vaccine_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/shorts_provider.dart';
+import 'providers/field_provider.dart';
+import 'providers/finance_provider.dart';
+import 'providers/catalogue_provider.dart';
 import 'providers/voice_access_mode_provider.dart';
 import 'providers/global_voice_controller.dart';
 import 'providers/asset_provider.dart';
@@ -31,6 +34,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 /// Global navigator key — used for navigating from notification callbacks
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
 /// Background message handler — must be a top-level function
 @pragma('vm:entry-point')
@@ -139,6 +143,9 @@ class _FieldlyAppState extends State<FieldlyApp> {
         ChangeNotifierProvider(create: (_) => VaccineProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => ShortsProvider()),
+        ChangeNotifierProvider(create: (_) => FieldProvider()),
+        ChangeNotifierProvider(create: (_) => FinanceProvider()),
+        ChangeNotifierProvider(create: (_) => CatalogueProvider()),
         ChangeNotifierProvider(
           create: (_) => VoiceAccessModeProvider()..load(),
         ),
@@ -148,9 +155,11 @@ class _FieldlyAppState extends State<FieldlyApp> {
           ),
         ),
         ChangeNotifierProvider(create: (_) => AssetProvider()),
+      
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
+        navigatorObservers: [routeObserver],
         title: 'Fieldly',
         scrollBehavior: MyScrollBehavior(),
         debugShowCheckedModeBanner: false,

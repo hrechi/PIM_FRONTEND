@@ -2,6 +2,7 @@ import '../models/animal.dart';
 import 'api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 class AnimalService {
   // Simple helper to get farmerId from SharedPreferences 
@@ -34,17 +35,59 @@ class AnimalService {
       endpoint += '?${params.join('&')}';
     }
     
-    final response = await ApiService.get(endpoint, withAuth: true);
-    final List<dynamic> data = response is List ? response : (response['data'] ?? []);
-    
-    var animals = data.map((json) => Animal.fromJson(json)).toList();
-    
-    // For safety, apply a local case-insensitive filter as fallback
-    if (animalType != null) {
-      animals = animals.where((a) => a.animalType.toUpperCase() == animalType.toUpperCase()).toList();
+    try {
+      final response = await ApiService.get(endpoint, withAuth: true);
+      debugPrint('📡 Response type: ${response.runtimeType}');
+      debugPrint('📡 Response: $response');
+      
+      final List<dynamic> data = response is List ? response : (response['data'] ?? []);
+      debugPrint('📡 Data type: ${data.runtimeType}, length: ${data.length}');
+      
+      List<Animal> animals = [];
+      for (var json in data) {
+        try {
+          animals.add(Animal.fromJson(json));
+        } catch (e) {
+          debugPrint('⚠️ Failed to parse animal: $e, json: $json');
+        }
+      }
+      
+      debugPrint('✅ Parsed ${animals.length} animals from response');
+      
+      // If fieldId was requested but no animals found, fallback to all farmer animals
+      if (animals.isEmpty && fieldId != null) {
+        debugPrint('⚠️ No animals found for fieldId=$fieldId, fetching all farmer animals...');
+        try {
+          final fallbackResponse = await ApiService.get('/animals', withAuth: true);
+          debugPrint('📡 Fallback response type: ${fallbackResponse.runtimeType}');
+          
+          final List<dynamic> fallbackData = fallbackResponse is List ? fallbackResponse : (fallbackResponse['data'] ?? []);
+          debugPrint('📡 Fallback data length: ${fallbackData.length}');
+          
+          for (var json in fallbackData) {
+            try {
+              animals.add(Animal.fromJson(json));
+            } catch (e) {
+              debugPrint('⚠️ Failed to parse fallback animal: $e');
+            }
+          }
+          
+          debugPrint('📌 Fallback: found ${animals.length} total farmer animals');
+        } catch (e) {
+          debugPrint('❌ Fallback fetch failed: $e');
+        }
+      }
+      
+      // For safety, apply a local case-insensitive filter as fallback
+      if (animalType != null) {
+        animals = animals.where((a) => a.animalType.toUpperCase() == animalType.toUpperCase()).toList();
+      }
+      
+      return animals;
+    } catch (e) {
+      debugPrint('❌ Fatal error in getAnimals: $e');
+      return [];
     }
-    
-    return animals;
   }
 
   Future<Map<String, dynamic>> getStatistics({String? fieldId}) async {
@@ -67,6 +110,11 @@ class AnimalService {
     return Animal.fromJson(response);
   }
 
+  Future<Animal> getAnimalById(String id) async {
+    final response = await ApiService.get('/animals/id/$id', withAuth: true);
+    return Animal.fromJson(response);
+  }
+
   Future<Animal> updateAnimal(String nodeId, Map<String, dynamic> animalData) async {
     final response = await ApiService.patch('/animals/$nodeId', animalData, withAuth: true);
     return Animal.fromJson(response);
@@ -74,5 +122,40 @@ class AnimalService {
 
   Future<void> deleteAnimal(String nodeId) async {
     await ApiService.delete('/animals/$nodeId', withAuth: true);
+  }
+
+  Future<Animal> sellAnimal(String nodeId, Map<String, dynamic> sellData) async {
+    final response = await ApiService.patch('/animals/$nodeId/sell', sellData, withAuth: true);
+    return Animal.fromJson(response);
+  }
+
+  Future<Animal> markAnimalAsFattening(String nodeId, Map<String, dynamic> fatteningData) async {
+    final response = await ApiService.patch('/animals/$nodeId/set-fattening', fatteningData, withAuth: true);
+    return Animal.fromJson(response);
+  }
+
+  Future<List<Animal>> getAnimalsForSale({String? fieldId}) async {
+    String endpoint = '/animals/for-sale';
+    if (fieldId != null) {
+      endpoint += '?fieldId=$fieldId';
+    }
+    final response = await ApiService.get(endpoint, withAuth: true);
+    final List<dynamic> data = response is List ? response : (response['data'] ?? []);
+    return data.map((json) => Animal.fromJson(json)).toList();
+  }
+
+  Future<Animal> cancelSale(String nodeId) async {
+    final response = await ApiService.patch('/animals/$nodeId/cancel-sale', {}, withAuth: true);
+    return Animal.fromJson(response);
+  }
+
+  Future<List<Animal>> getSoldAnimals({String? fieldId}) async {
+    String endpoint = '/animals/sold';
+    if (fieldId != null) {
+      endpoint += '?fieldId=$fieldId';
+    }
+    final response = await ApiService.get(endpoint, withAuth: true);
+    final List<dynamic> data = response is List ? response : (response['data'] ?? []);
+    return data.map((json) => Animal.fromJson(json)).toList();
   }
 }

@@ -1,3 +1,5 @@
+import 'field_model.dart';
+
 class UserModel {
   final String id;
   final String? email;
@@ -5,6 +7,9 @@ class UserModel {
   final String? phone;
   final String farmName;
   final String? profilePicture;
+  final List<FieldModel> fields;
+  final String currency;
+  final String currencySymbol;
   final String role;
   final String? username;
   final String? assignedFieldId;
@@ -20,6 +25,9 @@ class UserModel {
     this.phone,
     required this.farmName,
     this.profilePicture,
+    required this.fields,
+    required this.currency,
+    required this.currencySymbol,
     required this.role,
     this.username,
     this.assignedFieldId,
@@ -38,6 +46,11 @@ class UserModel {
       phone: json['phone'] as String?,
       farmName: json['farmName'] as String,
       profilePicture: json['profilePicture'] as String?,
+      fields: (json['fields'] as List<dynamic>?)
+          ?.map((field) => FieldModel.fromJson(field as Map<String, dynamic>))
+          .toList() ?? [],
+      currency: json['currency'] as String? ?? 'USD',
+      currencySymbol: json['currencySymbol'] as String? ?? '\$',
       role: rawRole == 'FARMER' ? 'WORKER' : rawRole,
       username: json['username'] as String?,
       assignedFieldId: json['assignedFieldId'] as String?,
@@ -56,6 +69,9 @@ class UserModel {
       'phone': phone,
       'farmName': farmName,
       'profilePicture': profilePicture,
+      'fields': fields.map((field) => field.toJson()).toList(),
+      'currency': currency,
+      'currencySymbol': currencySymbol,
       'role': role,
       'username': username,
       'assignedFieldId': assignedFieldId,
@@ -73,6 +89,9 @@ class UserModel {
     String? phone,
     String? farmName,
     String? profilePicture,
+    List<FieldModel>? fields,
+    String? currency,
+    String? currencySymbol,
     String? role,
     String? username,
     String? assignedFieldId,
@@ -88,6 +107,9 @@ class UserModel {
       phone: phone ?? this.phone,
       farmName: farmName ?? this.farmName,
       profilePicture: profilePicture ?? this.profilePicture,
+      fields: fields ?? this.fields,
+      currency: currency ?? this.currency,
+      currencySymbol: currencySymbol ?? this.currencySymbol,
       role: role ?? this.role,
       username: username ?? this.username,
       assignedFieldId: assignedFieldId ?? this.assignedFieldId,
