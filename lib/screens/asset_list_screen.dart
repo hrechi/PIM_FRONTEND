@@ -10,6 +10,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../models/asset_item.dart';
 import '../providers/asset_provider.dart';
+import '../providers/auth_provider.dart';
 import 'asset_deep_dive_screen.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
@@ -79,6 +80,157 @@ class _AssetListScreenState extends State<AssetListScreen> {
       builder: (_) => AlertDialog(
         title: Text('Asset Found', style: AppTextStyles.h4()),
         content: _AssetPreview(asset: asset, aiMessage: aiMessage),
+      ),
+    );
+  }
+
+  Widget _buildAssetActionButton(AssetItem asset) {
+    final authProvider = context.read<AuthProvider>();
+    final isWorker = authProvider.user?.role == 'WORKER' || authProvider.user?.role == 'FARMER';
+
+    if (isWorker) {
+      return CustomButton(
+        text: asset.status == 'IN_USE' ? 'Finish Using' : 'Start Using',
+        onPressed: () async {
+          try {
+            final provider = context.read<AssetProvider>();
+            if (asset.status == 'IN_USE') {
+              await _showEndSessionDialog(asset, provider);
+            } else {
+              await provider.startUsageSession(
+                assetId: asset.id,
+                startMileage: (asset.mileage ?? 0).toDouble(),
+                startOperatingHours: asset.operatingHours?.toDouble(),
+              );
+              await provider.fetchAssets();
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Started using ${asset.name}'),
+                  backgroundColor: const Color(0xFF61C06F),
+                ),
+              );
+            }
+          } catch (e) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: ${e.toString()}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+        backgroundColor: asset.status == 'IN_USE'
+            ? const Color(0xFFE3A77B)
+            : const Color(0xFF61C06F),
+      );
+    } else {
+      return CustomButton(
+        text: asset.status == 'IN_USE' ? 'Mark Available' : 'Mark In Use',
+        onPressed: () async {
+          await context.read<AssetProvider>().updateAsset(
+            assetId: asset.id,
+            status: asset.status == 'IN_USE' ? 'AVAILABLE' : 'IN_USE',
+          );
+          await context.read<AssetProvider>().fetchAssets();
+        },
+        backgroundColor: asset.status == 'IN_USE'
+            ? const Color(0xFF61C06F)
+            : Colors.orange,
+      );
+    }
+  }
+
+  Future<void> _showEndSessionDialog(AssetItem asset, AssetProvider provider) async {
+    final endMileageController = TextEditingController(
+      text: asset.mileage?.toInt().toString() ?? '0',
+    );
+    final notesController = TextEditingController();
+
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Finish Using ${asset.name}', style: AppTextStyles.h4()),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CustomTextField(
+                controller: endMileageController,
+                label: 'End Mileage/Hours',
+                hintText: 'Current mileage',
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 12),
+              CustomTextField(
+                controller: notesController,
+                label: 'Notes (Optional)',
+                hintText: 'Any issues or observations?',
+                maxLines: 3,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.grey,
+            ),
+            child: const Text('Cancel'),
+          ),
+          CustomButton(
+            text: 'Finish Session',
+            onPressed: () async {
+              try {
+                final activeSession = provider.activeUsageSession;
+                if (activeSession == null) {
+                  if (!mounted) return;
+                  Navigator.pop(dialogContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('No active session found'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                final endMileage = (double.tryParse(endMileageController.text) ?? asset.mileage ?? 0).toDouble();
+
+                await provider.endUsageSession(
+                  usageLogId: activeSession['id'].toString(),
+                  endMileage: endMileage,
+                  returnConfirmation: true,
+                  notes: notesController.text.trim(),
+                );
+
+                await provider.fetchAssets();
+                if (!mounted) return;
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Finished using ${asset.name}'),
+                    backgroundColor: const Color(0xFF61C06F),
+                  ),
+                );
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: ${e.toString()}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              } finally {
+                endMileageController.dispose();
+                notesController.dispose();
+              }
+            },
+            backgroundColor: const Color(0xFF61C06F),
+          ),
+        ],
       ),
     );
   }
@@ -313,23 +465,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: CustomButton(
-                      text: asset.status == 'IN_USE'
-                          ? 'Mark Available'
-                          : 'Mark In Use',
-                      onPressed: () async {
-                        await context.read<AssetProvider>().updateAsset(
-                          assetId: asset.id,
-                          status: asset.status == 'IN_USE'
-                              ? 'AVAILABLE'
-                              : 'IN_USE',
-                        );
-                        await context.read<AssetProvider>().fetchAssets();
-                      },
-                      backgroundColor: asset.status == 'IN_USE'
-                          ? AppColors.success
-                          : AppColors.warning,
-                    ),
+                    child: _buildAssetActionButton(asset),
                   ),
                 ],
               ),
