@@ -2111,7 +2111,7 @@ class _SoilMeasurementDetailsScreenState
   /// Build soil photo section
   Widget _buildSoilPhotoSection() {
     final imageUrl = measurement.imagePath != null
-        ? ApiConfig.baseUrl.replaceFirst('/api', '') + '/' + measurement.imagePath!
+        ? '${ApiConfig.baseUrl.replaceFirst('/api', '')}/${measurement.imagePath!}'
         : null;
 
     return Container(
@@ -2419,7 +2419,7 @@ class _SoilMeasurementDetailsScreenState
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

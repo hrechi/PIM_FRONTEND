@@ -32,6 +32,10 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   final _notesController = TextEditingController();
   final _dailyMilkAvgController = TextEditingController();
   final _lactationNumberController = TextEditingController();
+  final _birthWeightController = TextEditingController();
+  final _birthCostController = TextEditingController();
+  final _purchasePriceController = TextEditingController();
+  final _salePriceController = TextEditingController();
 
   // State
   int _currentStep = 1;
@@ -51,6 +55,12 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   String? _trainingLevel;  // debutant, intermediaire, avance, confirme, elite
   String? _meatGrade;      // A, B, C
   String? _dogRole;        // garde, berger, compagnie
+
+  // Financial & Genealogy State
+  String _selectedOrigin = 'purchased'; // purchased | born
+  String? _selectedMotherId;
+  String? _selectedFatherId;
+  List<Animal> _potentialParents = [];
 
   // Vaccine list (legacy/manual)
   List<Map<String, dynamic>> _vaccines = [];
@@ -79,6 +89,16 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
       _selectedSex = a.sex.toLowerCase();
       _ageInMonths = a.age.toDouble();
       _isVaccinated = a.vaccination;
+
+      // Financials
+      _selectedOrigin = a.origin;
+      _selectedMotherId = a.motherId;
+      _selectedFatherId = a.fatherId;
+      _birthWeightController.text = a.birthWeightKg?.toString() ?? '';
+      _birthCostController.text = a.birthCost?.toString() ?? '';
+      _birthCostController.text = a.birthCost?.toString() ?? '';
+      _purchasePriceController.text = a.purchasePrice?.toString() ?? '';
+      _salePriceController.text = a.salePrice?.toString() ?? '';
       
       // Prefer vaccineRecords for modern sync
       if (a.vaccineRecords != null && a.vaccineRecords!.isNotEmpty) {
@@ -100,6 +120,18 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
       }
     });
     _fetchFields();
+    _fetchPotentialParents();
+  }
+
+  Future<void> _fetchPotentialParents() async {
+    try {
+      final animals = await _animalService.getAnimals();
+      setState(() {
+        _potentialParents = animals;
+      });
+    } catch (e) {
+      debugPrint('Error fetching potential parents: $e');
+    }
   }
 
   Future<void> _fetchFields() async {
@@ -151,14 +183,12 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _breedController.dispose();
-    _tagController.dispose();
-    _ageMonthsController.dispose();
-    _weightController.dispose();
-    _notesController.dispose();
     _dailyMilkAvgController.dispose();
     _lactationNumberController.dispose();
+    _birthWeightController.dispose();
+    _birthCostController.dispose();
+    _purchasePriceController.dispose();
+    _salePriceController.dispose();
     super.dispose();
   }
 
@@ -181,6 +211,16 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         'fieldId': _selectedFieldId,
         'vaccination': _isVaccinated,
         'vaccines': _isVaccinated ? _vaccines : null,
+        
+        // Financial & Genealogy
+        'origin': _selectedOrigin,
+        'motherId': _selectedMotherId,
+        'fatherId': _selectedFatherId,
+        'birthWeightKg': double.tryParse(_birthWeightController.text),
+        'birthCost': double.tryParse(_birthCostController.text),
+        'purchasePrice': double.tryParse(_purchasePriceController.text),
+        'salePrice': double.tryParse(_salePriceController.text),
+
         // COW + female
         'isPregnant': (_selectedType == 'cow' && _selectedSex == 'female') ? _isPregnant : null,
         'lactationNumber': (_selectedType == 'cow' && _selectedSex == 'female')
@@ -698,6 +738,20 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           readOnly: isEditMode,
         ),
         const SizedBox(height: 32),
+
+        // --- NEW: Origin & Genealogy ---
+        _buildLabel('Origin'),
+        _buildOriginSection(),
+        const SizedBox(height: 24),
+
+        if (_selectedOrigin == 'born') ...[
+          _buildGenealogySection(),
+          const SizedBox(height: 24),
+        ],
+
+        _buildFinancialSection(),
+        const SizedBox(height: 24),
+
 
         // --- Species-Specific Fields (Consolidated in Step 2) ---
         if (_selectedType == 'cow' && _selectedSex == 'female') ...[
@@ -1457,6 +1511,337 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     );
   }
 
+  Widget _buildOriginSection() {
+    return _buildSectionCard(
+      title: 'Provenance',
+      icon: Symbols.location_on,
+      iconColor: Colors.teal,
+      children: [
+        Row(
+          children: [
+            _buildSelectableOption(
+              label: 'Purchased',
+              isSelected: _selectedOrigin == 'purchased',
+              onTap: () => setState(() => _selectedOrigin = 'purchased'),
+              icon: Symbols.shopping_cart,
+            ),
+            const SizedBox(width: 12),
+            _buildSelectableOption(
+              label: 'Born on Farm',
+              isSelected: _selectedOrigin == 'born',
+              onTap: () => setState(() {
+                _selectedOrigin = 'born';
+                _purchasePriceController.clear();
+              }),
+              icon: Symbols.child_care,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGenealogySection() {
+    return _buildSectionCard(
+      title: 'Généalogie',
+      icon: Symbols.family_history,
+      iconColor: Colors.indigo,
+      children: [
+        _buildLabel('Mère (Mother)'),
+        _buildAnimalPickerField(
+          label: 'Mother',
+          value: _selectedMotherId,
+          hint: 'Select mother...',
+          onSelected: (v) => setState(() => _selectedMotherId = v),
+          genderFilter: 'female',
+        ),
+        const SizedBox(height: 24),
+        _buildAnimalPickerField(
+          label: 'Father',
+          value: _selectedFatherId,
+          hint: 'Select father...',
+          onSelected: (v) => setState(() => _selectedFatherId = v),
+          genderFilter: 'male',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFinancialSection() {
+    return _buildSectionCard(
+      title: 'Données Financières',
+      icon: Symbols.payments,
+      iconColor: Colors.green,
+      children: [
+        if (_selectedOrigin == 'purchased') ...[
+          _buildLabel('Prix d\'achat'),
+          _buildTextField(
+            _purchasePriceController,
+            'Prix payé...',
+            keyboardType: TextInputType.number,
+            prefixIcon: Symbols.monetization_on,
+            suffix: 'USD',
+          ),
+          const SizedBox(height: 16),
+        ] else ...[
+          _buildLabel('Coût de naissance'),
+          _buildTextField(
+            _birthCostController,
+            'Frais véto/médocs...',
+            keyboardType: TextInputType.number,
+            prefixIcon: Symbols.medical_services,
+          ),
+          const SizedBox(height: 16),
+          _buildLabel('Poids à la naissance'),
+          _buildTextField(
+            _birthWeightController,
+            'Poids initial...',
+            keyboardType: TextInputType.number,
+            suffix: 'KG',
+          ),
+          const SizedBox(height: 16),
+        ],
+      ],
+    );
+  }
+
+
+  Widget _buildSelectableOption({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required IconData icon,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.mistyBlue.withValues(alpha: 0.1) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected ? AppColors.mistyBlue : const Color(0xFFF1F5F9),
+              width: 2,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, size: 24, color: isSelected ? AppColors.mistyBlue : const Color(0xFF94A3B8)),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: isSelected ? AppColors.mistyBlue : const Color(0xFF64748B),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnimalPickerField({
+    required String label,
+    required String? value,
+    required String hint,
+    required void Function(String?) onSelected,
+    required String genderFilter,
+  }) {
+    final selectedAnimal = _potentialParents.cast<Animal?>().firstWhere(
+      (a) => a?.id == value,
+      orElse: () => null,
+    );
+
+    return GestureDetector(
+      onTap: () => _showAnimalPicker(
+        title: 'Select $label',
+        genderFilter: genderFilter,
+        onSelected: onSelected,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFF1F5F9)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(
+              genderFilter == 'female' ? Symbols.female : Symbols.male,
+              color: const Color(0xFF94A3B8),
+              size: 22,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                selectedAnimal != null ? '${selectedAnimal.name} (${selectedAnimal.tagNumber ?? selectedAnimal.nodeId})' : hint,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                  color: selectedAnimal != null ? const Color(0xFF1F2937) : const Color(0xFFCBD5E1),
+                ),
+              ),
+            ),
+            const Icon(Symbols.search, color: Color(0xFF94A3B8), size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAnimalPicker({
+    required String title,
+    required String genderFilter,
+    required void Function(String?) onSelected,
+  }) {
+    String searchQuery = '';
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final filtered = _potentialParents.where((a) {
+            final matchesType = a.animalType.toLowerCase() == _selectedType.toLowerCase();
+            final matchesSex = a.sex.toLowerCase() == genderFilter.toLowerCase();
+            final matchesSearch = a.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
+                                (a.tagNumber?.toLowerCase().contains(searchQuery.toLowerCase()) ?? false) ||
+                                a.nodeId.toLowerCase().contains(searchQuery.toLowerCase());
+            return matchesType && matchesSex && matchesSearch;
+          }).toList();
+
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.75,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(2))),
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Row(
+                    children: [
+                      Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                      const Spacer(),
+                      IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Symbols.close)),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(16)),
+                    child: TextField(
+                      onChanged: (v) => setModalState(() => searchQuery = v),
+                      decoration: const InputDecoration(
+                        hintText: 'Search by name or Tag ID...',
+                        hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                        border: InputBorder.none,
+                        icon: Icon(Symbols.search, color: Color(0xFF94A3B8), size: 20),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Symbols.pets, size: 48, color: const Color(0xFFF1F5F9)),
+                              const SizedBox(height: 16),
+                              Text('No matching animals found', style: TextStyle(color: const Color(0xFF94A3B8), fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.all(24),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final animal = filtered[index];
+                            return InkWell(
+                              onTap: () {
+                                onSelected(animal.id);
+                                Navigator.pop(context);
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: const Color(0xFFF1F5F9)),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      backgroundColor: AppColors.mistyBlue.withValues(alpha: 0.1),
+                                      child: Text(animal.name[0], style: const TextStyle(color: AppColors.mistyBlue, fontWeight: FontWeight.bold)),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(animal.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                          Text(animal.tagNumber ?? animal.nodeId, style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                                        ],
+                                      ),
+                                    ),
+                                    const Icon(Symbols.chevron_right, color: Color(0xFFCBD5E1), size: 20),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDatePickerField(TextEditingController controller, String label, Function(DateTime) onPicked) {
+    return GestureDetector(
+      onTap: () async {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: DateTime.now(),
+          firstDate: DateTime(2020),
+          lastDate: DateTime(2030),
+        );
+        if (picked != null) onPicked(picked);
+      },
+      child: _buildTextField(
+        controller,
+        label,
+        readOnly: true,
+        prefixIcon: Symbols.calendar_month,
+      ),
+    );
+  }
+
   /// Generic styled dropdown
   Widget _buildDropdown<T>({
     required T? value,
@@ -1478,7 +1863,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         ],
       ),
       child: DropdownButtonFormField<T>(
-        value: value,
+        initialValue: value,
         hint: Text(hint, style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 14)),
         items: items,
         onChanged: onChanged,

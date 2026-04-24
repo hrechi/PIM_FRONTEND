@@ -10,7 +10,11 @@ import 'providers/parcel_provider.dart';
 import 'providers/weather_provider.dart';
 import 'providers/irrigation_provider.dart';
 import 'providers/vaccine_provider.dart';
+import 'providers/notification_provider.dart';
 import 'providers/shorts_provider.dart';
+import 'providers/field_provider.dart';
+import 'providers/finance_provider.dart';
+import 'providers/catalogue_provider.dart';
 import 'providers/voice_access_mode_provider.dart';
 import 'providers/global_voice_controller.dart';
 import 'providers/asset_provider.dart';
@@ -19,7 +23,11 @@ import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/farmer_home_screen_v2.dart';
 import 'screens/asset_list_screen.dart';
+import 'screens/control_room_screen.dart';
+import 'screens/skill_certification_screen.dart';
 import 'screens/security/incident_detail_screen.dart';
+import 'screens/notification_center_screen.dart';
+import 'screens/vaccines/vaccine_dashboard_screen.dart';
 import 'screens/soil/soil_measurements_list_screen.dart';
 import 'screens/soil/soil_alert_notifications_screen.dart';
 import 'services/local_notification_service.dart';
@@ -28,6 +36,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 /// Global navigator key — used for navigating from notification callbacks
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
 /// Background message handler — must be a top-level function
 @pragma('vm:entry-point')
@@ -134,7 +143,11 @@ class _FieldlyAppState extends State<FieldlyApp> {
         ChangeNotifierProvider(create: (_) => WeatherProvider()),
         ChangeNotifierProvider(create: (_) => IrrigationProvider()),
         ChangeNotifierProvider(create: (_) => VaccineProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => ShortsProvider()),
+        ChangeNotifierProvider(create: (_) => FieldProvider()),
+        ChangeNotifierProvider(create: (_) => FinanceProvider()),
+        ChangeNotifierProvider(create: (_) => CatalogueProvider()),
         ChangeNotifierProvider(
           create: (_) => VoiceAccessModeProvider()..load(),
         ),
@@ -144,9 +157,11 @@ class _FieldlyAppState extends State<FieldlyApp> {
           ),
         ),
         ChangeNotifierProvider(create: (_) => AssetProvider()),
+      
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
+        navigatorObservers: [routeObserver],
         title: 'Fieldly',
         scrollBehavior: MyScrollBehavior(),
         debugShowCheckedModeBanner: false,
@@ -164,12 +179,16 @@ class _FieldlyAppState extends State<FieldlyApp> {
           '/owner_dashboard': (context) => const HomeScreen(),
           '/worker_home': (context) => const FarmerHomeScreenV2(),
           '/farmer_home': (context) => const FarmerHomeScreenV2(),
+          '/control_room': (context) => const ControlRoomScreen(),
+          '/skill_certification': (context) => const SkillCertificationScreen(),
           '/assets': (context) => const AssetListScreen(),
           '/incident-details': (context) {
             final incidentId =
                 ModalRoute.of(context)!.settings.arguments as String;
             return IncidentDetailScreen(incidentId: incidentId);
           },
+          '/notifications': (context) => const NotificationCenterScreen(),
+          '/vaccine-dashboard': (context) => const VaccineDashboardScreen(), // assuming this exists or maps to the correct screen
         },
       ),
     );

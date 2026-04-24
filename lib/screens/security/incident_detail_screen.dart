@@ -294,7 +294,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                   Image.network(
                     _imageUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (_, _, _) => Container(
                       color: Colors.grey.shade900,
                       child: Icon(_typeIcon, size: 80, color: Colors.white30),
                     ),

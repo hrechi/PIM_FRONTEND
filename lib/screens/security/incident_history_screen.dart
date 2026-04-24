@@ -521,7 +521,7 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
                   width: 72,
                   height: 72,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
+                  errorBuilder: (_, _, _) => Container(
                     width: 72,
                     height: 72,
                     decoration: BoxDecoration(

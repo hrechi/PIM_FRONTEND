@@ -6,6 +6,7 @@ import '../../services/milk_production_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/app_drawer.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import '../../utils/animal_utils.dart';
 import 'package:intl/intl.dart';
 import 'milk_record_success_screen.dart';
 
@@ -177,7 +178,7 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
                                         itemBuilder: (context, index) {
                                           final cow = filteredCows[index];
                                           return ListTile(
-                                            leading: const Icon(Icons.pets, color: AppColors.mistBlue),
+                                            leading: Icon(AnimalUtils.getAnimalIcon('cow'), color: AppColors.mistBlue),
                                             title: Text(cow.name),
                                             subtitle: Text('ID: ${cow.nodeId}'),
                                             onTap: () => Navigator.pop(context, cow),
@@ -670,8 +671,8 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
 
   Widget _buildHistoryList() {
     final filteredRecords = _records.where((record) {
-      final name = record.animal?.name?.toLowerCase() ?? '';
-      final tag = record.animal?.nodeId?.toLowerCase() ?? '';
+      final name = record.animal?.name.toLowerCase() ?? '';
+      final tag = record.animal?.nodeId.toLowerCase() ?? '';
       return name.contains(_searchQuery) || tag.contains(_searchQuery);
     }).toList();
 

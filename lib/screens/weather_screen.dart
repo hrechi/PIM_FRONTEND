@@ -4,7 +4,6 @@ import '../providers/weather_provider.dart';
 import '../models/weather_info.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
-import '../utils/responsive.dart';
 import '../widgets/app_drawer.dart';
 
 /// Full-screen weather forecast + AI recommendations screen.

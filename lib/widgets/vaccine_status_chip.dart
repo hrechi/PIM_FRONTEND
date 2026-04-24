@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../models/vaccine_models.dart';
 
 class VaccineStatusChip extends StatelessWidget {
   final String status;

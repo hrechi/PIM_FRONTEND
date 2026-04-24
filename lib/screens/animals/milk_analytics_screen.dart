@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../utils/constants.dart';
+import '../../utils/animal_utils.dart';
 import '../../services/milk_production_service.dart';
 import 'milk_production_screen.dart';
 import '../../widgets/app_drawer.dart';
@@ -527,7 +527,7 @@ class _MilkAnalyticsScreenState extends State<MilkAnalyticsScreen> with SingleTi
             radius: 24,
             backgroundImage: animal['profileImage'] != null ? NetworkImage(animal['profileImage']) : null,
             backgroundColor: const Color(0xFFF1F5F9),
-            child: animal['profileImage'] == null ? const Icon(Icons.pets, color: AppColors.mistBlue) : null,
+            child: animal['profileImage'] == null ? Icon(AnimalUtils.getAnimalIcon(animal['animalType'] as String?), color: AppColors.mistBlue) : null,
           ),
           const SizedBox(width: 16),
           Expanded(

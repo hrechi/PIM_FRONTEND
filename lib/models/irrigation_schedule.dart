@@ -1,4 +1,5 @@
 /// Models for the Smart Irrigation Scheduler feature.
+library;
 
 class DailyIrrigationPlan {
   final String date;

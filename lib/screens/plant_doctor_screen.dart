@@ -260,29 +260,22 @@ class _PlantDoctorScreenState extends State<PlantDoctorScreen> {
                       ...(_aiResult!['treatment_steps'] as List)
                           .map(
                             (step) => Padding(
-                              padding: const EdgeInsets.only(bottom: 12.0),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Icon(
-                                    Icons.check_circle,
-                                    color: AppColorPalette.success,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      step.toString(),
-                                      style: AppTextStyles.bodyMedium(
-                                        color: AppColorPalette.charcoalGreen,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.check_circle, color: AppColorPalette.success, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  step.toString(),
+                                  style: AppTextStyles.bodyMedium(color: AppColorPalette.charcoalGreen),
+                                ),
                               ),
-                            ),
-                          )
-                          .toList()
+                            ],
+                          ),
+                        ),
+                      )
                     else
                       const Text(
                         "No specific steps provided. Consult an expert.",

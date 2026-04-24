@@ -1461,7 +1461,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen>
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(vertical: 4),
               itemCount: items.length,
-                separatorBuilder: (_, index) =>
+              separatorBuilder: (_, a) =>
                   const Divider(height: 1, indent: 16),
               itemBuilder: (_, i) {
                 final item = items[i];

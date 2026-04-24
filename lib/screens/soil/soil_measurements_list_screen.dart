@@ -25,7 +25,7 @@ class SoilMeasurementsProvider extends ChangeNotifier {
   
   // Pagination
   int _currentPage = 1;
-  int _limit = 20;
+  final int _limit = 20;
   bool _hasMore = true;
   PaginationMeta? _meta;
   

@@ -281,7 +281,11 @@ class _AgriculturalNewsScreenState extends State<AgriculturalNewsScreen> with Si
             icon: const Icon(Icons.refresh, color: Colors.green),
             onPressed: () {
               final val = _categories[_tabController.index]['value']!;
-              if (val == 'saved') _fetchBookmarks(); else _fetchNews(val);
+              if (val == 'saved') {
+                _fetchBookmarks();
+              } else {
+                _fetchNews(val);
+              }
             },
           ),
         ),
@@ -480,7 +484,7 @@ class _AgriculturalNewsScreenState extends State<AgriculturalNewsScreen> with Si
           ? Image.network(
               url,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+              errorBuilder: (_, _, _) => const Icon(Icons.broken_image, size: 50, color: Colors.grey),
             )
           : const Icon(Icons.image_outlined, size: 50, color: Colors.grey),
     );

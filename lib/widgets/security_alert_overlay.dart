@@ -262,7 +262,7 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
               children: [
                 AnimatedBuilder(
                   animation: _glowAnim,
-                  builder: (_, __) => Icon(
+                  builder: (_, _) => Icon(
                     Icons.warning_amber_rounded,
                     color: Colors.white,
                     size: 24,
@@ -340,7 +340,7 @@ class _SecurityAlertOverlayState extends State<SecurityAlertOverlay>
                             ? Image.network(
                                 widget.imageUrl,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) =>
+                                errorBuilder: (_, _, _) =>
                                     _placeholderThumbnail(),
                               )
                             : _placeholderThumbnail(),

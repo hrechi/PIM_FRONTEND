@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:frontend_pim/screens/animals/animal_dashboard_screen.dart';
 import '../screens/agricultural_news_screen.dart';
 import '../screens/harvest_analytics_screen.dart';
 import '../screens/aerotwin_screen.dart';
@@ -27,6 +26,8 @@ import '../screens/soil/soil_measurements_list_screen.dart';
 import '../screens/security/incident_history_screen.dart';
 import '../screens/shorts_screen.dart';
 import '../screens/community_feed_screen.dart';
+import '../screens/finance/finance_dashboard_screen.dart';
+import '../screens/catalogue_list_screen.dart';
 import '../screens/signin_screen.dart';
 
 class AppDrawer extends StatelessWidget {
@@ -111,6 +112,26 @@ class AppDrawer extends StatelessWidget {
                         );
                       },
                     ),
+                    _buildDrawerItem(
+                      icon: Icons.videogame_asset_rounded,
+                      iconColor: AppColorPalette.robotTechStart,
+                      title: 'Control Room',
+                      subtitle: 'Control robot and monitor view',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushNamed(context, '/control_room');
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.workspace_premium_rounded,
+                      iconColor: const Color(0xFF0A7E52),
+                      title: 'Skill Certification',
+                      subtitle: 'Micro-lessons and quizzes',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushNamed(context, '/skill_certification');
+                      },
+                    ),
                     const Divider(height: 1),
                     _buildDrawerItem(
                       icon: Icons.logout_rounded,
@@ -188,16 +209,19 @@ class AppDrawer extends StatelessWidget {
                     title: 'Home',
                     subtitle: 'Main Dashboard',
                     onTap: () {
-                      final role = context.read<AuthProvider>().user?.role.toUpperCase();
+                      final role = context
+                          .read<AuthProvider>()
+                          .user
+                          ?.role
+                          .toUpperCase();
                       Navigator.pop(context);
                       // Navigate to the role-specific dashboard.
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              role == 'WORKER'
-                                  ? const FarmerHomeScreenV2()
-                                  : const HomeScreen(),
+                          builder: (_) => role == 'WORKER'
+                              ? const FarmerHomeScreenV2()
+                              : const HomeScreen(),
                         ),
                         (route) => false,
                       );
@@ -372,81 +396,66 @@ class AppDrawer extends StatelessWidget {
 
                   const Divider(height: 1),
 
-                  // Livestock
-                  _buildDrawerSection('Livestock'),
-                  _buildExpansionDrawerItem(
-                    context: context,
-                    icon: Icons.pets_rounded,
-                    title: 'Animal Management',
-                    subtitle: 'Dashboard & Records',
-                    children: [
-                      _buildDrawerSubItem(
-                        icon: Icons.dashboard_rounded,
-                        title: 'Livestock Dashboard',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const AnimalDashboardScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      _buildDrawerSubItem(
-                        icon: Icons.list_alt_rounded,
-                        title: 'Livestock List',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const AnimalListScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      _buildDrawerSubItem(
-                        icon: Icons.add_circle_outline_rounded,
-                        title: 'Add New Animal',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => AddAnimalScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      _buildDrawerSubItem(
-                        icon: Icons.analytics_rounded,
-                        title: 'Milk Analytics',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const MilkAnalyticsScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      _buildDrawerSubItem(
-                        icon: Icons.opacity_rounded,
-                        title: 'Milk Production',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const MilkProductionScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                  // Animals
+                  _buildDrawerSection('Animals'),
+                  _buildDrawerItem(
+                    icon: Icons.pets,
+                    iconColor: const Color(0xFFFB923C),
+                    title: 'Fattening Animals',
+                    subtitle: 'Animals in fattening',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AnimalListScreen(showFatteningOnly: true),
+                        ),
+                      );
+                    },
                   ),
+
+                  const Divider(height: 1),
+
+                  // Finance
+                  _buildDrawerSection('Finance'),
+                  _buildDrawerItem(
+                    icon: Icons.attach_money_rounded,
+                    iconColor: const Color(0xFF2E7D32),
+                    title: 'Finance Dashboard',
+                    subtitle: 'Financial overview & reports',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FinanceDashboardScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  
+                  const Divider(height: 1),
+
+                  // Catalogue
+                  _buildDrawerSection('Catalogue'),
+                  _buildDrawerItem(
+                    icon: Icons.library_books_rounded,
+                    iconColor: const Color(0xFFFF6B6B),
+                    title: 'Product Catalogue',
+                    subtitle: 'Browse & manage products',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CatalogueListScreen(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const Divider(height: 1),
+
                   _buildDrawerItem(
                     icon: Icons.vaccines_rounded,
                     title: 'Vaccination',
@@ -521,6 +530,30 @@ class AppDrawer extends StatelessWidget {
                           builder: (_) => const LiveFeedScreen(),
                         ),
                       );
+                    },
+                  ),
+
+                  const Divider(height: 1),
+
+                  _buildDrawerSection('Operations'),
+                  _buildDrawerItem(
+                    icon: Icons.videogame_asset_rounded,
+                    iconColor: AppColorPalette.robotTechStart,
+                    title: 'Control Room',
+                    subtitle: 'Control robot and monitor view',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/control_room');
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.workspace_premium_rounded,
+                    iconColor: const Color(0xFF0A7E52),
+                    title: 'Skill Certification',
+                    subtitle: 'Micro-lessons and quizzes',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/skill_certification');
                     },
                   ),
 
