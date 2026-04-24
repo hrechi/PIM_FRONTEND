@@ -15,30 +15,18 @@ class ApiService {
     final port = AppConfig.serverPort;
 
     if (kIsWeb) {
-<<<<<<< HEAD
       return 'http://192.168.1.17:$port/api';
-=======
-      return 'http://192.168.1.162:$port/api';
->>>>>>> integration
     }
     if (Platform.isAndroid) {
       // Emulator and localhost fallback both use the configured project WiFi IP
       final isEmulator = host == 'localhost' || host == '127.0.0.1';
       return isEmulator
-<<<<<<< HEAD
           ? 'http://192.168.1.17:$port/api'
-=======
-          ? 'http://192.168.1.162:$port/api'
->>>>>>> integration
           : 'http://$host:$port/api';
     }
     // iOS simulator can use localhost; real iPhone uses WiFi IP
     if (host == 'localhost' || host == '127.0.0.1') {
-<<<<<<< HEAD
       return 'http://192.168.1.17:$port/api';
-=======
-      return 'http://192.168.1.162:$port/api';
->>>>>>> integration
     }
     return 'http://$host:$port/api';
   }
