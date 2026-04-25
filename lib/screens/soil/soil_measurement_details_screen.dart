@@ -11,6 +11,7 @@ import '../../models/field_model.dart';
 import '../../models/soil_intelligence.dart';
 import '../../widgets/soil/status_badge.dart';
 import '../../widgets/soil/soil_metric_card.dart';
+import '../../widgets/soil/soil_video_player.dart';
 import '../../services/field_service.dart';
 import '../../services/soil_repository.dart';
 import '../../services/parcel_crud_service.dart';
@@ -2163,7 +2164,9 @@ class _SoilMeasurementDetailsScreenState
           ),
           const SizedBox(height: 16),
           if (imageUrl != null)
-            ClipRRect(
+            (measurement.imagePath?.toLowerCase().endsWith('.mp4') ?? false)
+                ? SoilVideoPlayer(url: imageUrl)
+                : ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
                 imageUrl,

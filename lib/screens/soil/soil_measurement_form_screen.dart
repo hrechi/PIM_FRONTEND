@@ -8,9 +8,11 @@ import '../../utils/responsive.dart';
 import '../../models/soil_measurement.dart';
 import '../../models/field_model.dart';
 import '../../services/field_service.dart';
+import '../../services/robot_api_service.dart';
 import '../../services/voice_number_parser.dart';
 import '../../services/voice_page_action_registry.dart';
 import '../../services/weather_service.dart';
+import '../robot/robot_capture_screen.dart';
 import 'location_picker_screen.dart';
 import 'soil_measurements_list_screen.dart';
 
@@ -50,14 +52,21 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
   bool isSaving = false;
   bool _awaitingVoiceSubmitConfirmation = false;
 
-  // Photo upload state
+  // Photo / robot-recording upload state.
+  // [_selectedImage] is either a JPG (camera/gallery/screenshot) or a .zip
+  // of recorded JPEG frames produced by the robot capture screen. The
+  // backend assembles the .zip into an MP4 server-side. [_selectedIsVideo]
+  // tells the form which kind of preview to render.
   File? _selectedImage;
+  bool _selectedIsVideo = false;
   String? _detectedSoilType;
   double? _detectionConfidence;
 
   final FieldService _fieldService = FieldService();
   final WeatherService _weatherService = WeatherService();
   final ImagePicker _imagePicker = ImagePicker();
+  final RobotApiService _robotApi = RobotApiService();
+  bool _capturingFromRobot = false;
 
   @override
   void initState() {
@@ -123,7 +132,58 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
     _nitrogenController.dispose();
     _phosphorusController.dispose();
     _potassiumController.dispose();
+    _robotApi.dispose();
     super.dispose();
+  }
+
+  /// Open the robot live-preview screen and wait for the operator to either
+  /// take a screenshot or record a video. The returned file is wired into
+  /// the existing soil-image submission pipeline; for a recording, the
+  /// .zip of frames is sent to the backend which assembles the MP4.
+  Future<void> _captureFromRobot() async {
+    if (_capturingFromRobot) return;
+    setState(() => _capturingFromRobot = true);
+
+    try {
+      final robots = await _robotApi.listRobots();
+      if (robots.isEmpty) {
+        throw RobotApiException('No robots are registered with the backend.');
+      }
+      final robot = robots.first;
+      if (!mounted) return;
+      final result = await Navigator.of(context).push<RobotCaptureResult>(
+        MaterialPageRoute(
+          builder: (_) => RobotCaptureScreen(robot: robot),
+        ),
+      );
+      if (!mounted || result == null) return;
+      setState(() {
+        _selectedImage = result.file;
+        _selectedIsVideo = result.isVideo;
+        _detectedSoilType = null;
+        _detectionConfidence = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.isVideo
+                ? 'Recorded video from ${robot.name}'
+                : 'Captured from ${robot.name}',
+          ),
+          backgroundColor: AppColorPalette.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Robot capture failed: $e'),
+          backgroundColor: AppColorPalette.alertError,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _capturingFromRobot = false);
+    }
   }
 
   String _normalizeVoiceText(String input) {
@@ -1047,6 +1107,7 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
                           if (image != null) {
                             setState(() {
                               _selectedImage = File(image.path);
+                              _selectedIsVideo = false;
                               _detectedSoilType = null;
                               _detectionConfidence = null;
                             });
@@ -1120,6 +1181,7 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
                           if (image != null) {
                             setState(() {
                               _selectedImage = File(image.path);
+                              _selectedIsVideo = false;
                               _detectedSoilType = null;
                               _detectionConfidence = null;
                             });
@@ -1165,6 +1227,61 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
                   ),
                 ),
               ),
+              const SizedBox(width: 12),
+              // Robot camera button
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColorPalette.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColorPalette.warning.withOpacity(0.4),
+                      width: 2,
+                    ),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: _capturingFromRobot ? null : _captureFromRobot,
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppColorPalette.warning.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: _capturingFromRobot
+                                  ? const SizedBox(
+                                      width: 32,
+                                      height: 32,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 3,
+                                      ),
+                                    )
+                                  : Icon(
+                                      Icons.smart_toy,
+                                      size: 32,
+                                      color: AppColorPalette.warning,
+                                    ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Robot',
+                              style: AppTextStyles.bodyMedium().copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           )
         else
@@ -1186,12 +1303,35 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(10),
                       ),
-                      child: Image.file(
-                        _selectedImage!,
-                        height: 200,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
+                      child: _selectedIsVideo
+                          ? Container(
+                              height: 200,
+                              width: double.infinity,
+                              color: Colors.black,
+                              child: const Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.movie,
+                                      color: Colors.white70,
+                                      size: 56,
+                                    ),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      'Robot recording ready to upload',
+                                      style: TextStyle(color: Colors.white70),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : Image.file(
+                              _selectedImage!,
+                              height: 200,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
                     ),
                     // Remove button
                     Positioned(
@@ -1207,6 +1347,7 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
                           onPressed: () {
                             setState(() {
                               _selectedImage = null;
+                              _selectedIsVideo = false;
                               _detectedSoilType = null;
                               _detectionConfidence = null;
                             });
@@ -1262,6 +1403,7 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
                                   if (image != null) {
                                     setState(() {
                                       _selectedImage = File(image.path);
+                                      _selectedIsVideo = false;
                                       _detectedSoilType = null;
                                       _detectionConfidence = null;
                                     });
@@ -1302,6 +1444,7 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
                                   if (image != null) {
                                     setState(() {
                                       _selectedImage = File(image.path);
+                                      _selectedIsVideo = false;
                                       _detectedSoilType = null;
                                       _detectionConfidence = null;
                                     });

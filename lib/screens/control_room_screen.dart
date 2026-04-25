@@ -3,8 +3,12 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../services/robot_api_service.dart';
+import '../services/robot_service.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
+import '../widgets/camera_view.dart';
+import '../widgets/drive_button.dart';
 
 class ControlRoomScreen extends StatefulWidget {
   const ControlRoomScreen({super.key});
@@ -26,7 +30,15 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
   bool _showFloatingPreview = false;
   bool _previewDockingDisabled = false;
 
-  bool _isConnected = true;
+  // ── Robot wiring ────────────────────────────────────────────
+  final RobotApiService _robotApi = RobotApiService();
+  RobotService? _robot;
+  RobotDescriptor? _activeRobot;
+  StreamSubscription<RobotConnectionState>? _robotStateSub;
+  String? _robotError;
+  bool _loadingRobots = true;
+
+  bool _isConnected = false;
   double _batteryLevel = 88;
   int _signalStrength = 91;
   double _speed = 0;
@@ -65,6 +77,65 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
         }
       });
     });
+    _bootstrapRobot();
+  }
+
+  /// Pulls the robot registry from NestJS, connects to the first robot's
+  /// rosbridge, and wires the connection-state stream to UI flags.
+  Future<void> _bootstrapRobot() async {
+    try {
+      final robots = await _robotApi.listRobots();
+      if (!mounted) return;
+      if (robots.isEmpty) {
+        setState(() {
+          _loadingRobots = false;
+          _robotError = 'No robots registered for this account.';
+        });
+        return;
+      }
+      final robot = robots.first;
+      final svc = RobotService(
+        robotIp: robot.ip,
+        rosbridgePort: robot.rosbridgePort,
+      );
+      _robotStateSub = svc.connectionState.listen((state) {
+        if (!mounted) return;
+        final connected = state == RobotConnectionState.connected;
+        setState(() {
+          _isConnected = connected;
+          if (!connected) {
+            _speed = 0;
+            _direction = 'Disconnected';
+            _joystickOffset = Offset.zero;
+          } else {
+            _direction = 'Idle';
+          }
+        });
+        _appendEvent(
+          connected
+              ? 'Robot link connected (${robot.name})'
+              : 'Robot link ${state.name}',
+          connected ? AppColorPalette.success : AppColorPalette.warning,
+        );
+      });
+      await svc.connect();
+      if (!mounted) {
+        await svc.dispose();
+        return;
+      }
+      setState(() {
+        _activeRobot = robot;
+        _robot = svc;
+        _loadingRobots = false;
+        _robotError = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loadingRobots = false;
+        _robotError = 'Failed to load robots: $e';
+      });
+    }
   }
 
   @override
@@ -72,6 +143,11 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
     _mockTimer?.cancel();
     _scrollController.removeListener(_handleScroll);
     _scrollController.dispose();
+    _robotStateSub?.cancel();
+    // Fire-and-forget; we can't await in dispose, but RobotService.dispose()
+    // is internally idempotent and sends a final stop().
+    _robot?.dispose();
+    _robotApi.dispose();
     super.dispose();
   }
 
@@ -142,26 +218,39 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
     return _scrollController.offset + delta - 12;
   }
 
-  void _toggleConnection() {
-    setState(() {
-      _isConnected = !_isConnected;
-      if (!_isConnected) {
-        _speed = 0;
-        _direction = 'Disconnected';
-        _joystickOffset = Offset.zero;
-      } else {
-        _direction = 'Idle';
-      }
-      _appendEvent(
-        _isConnected
-            ? 'Robot link connected (mock)'
-            : 'Robot link disconnected (mock)',
-        _isConnected ? AppColorPalette.success : AppColorPalette.warning,
-      );
-    });
+  Future<void> _toggleConnection() async {
+    final svc = _robot;
+    if (svc == null) {
+      // Not bootstrapped yet — try again.
+      await _bootstrapRobot();
+      return;
+    }
+    if (svc.isConnected) {
+      await svc.dispose();
+      // After explicit disconnect we tear down the service and let the user
+      // re-bootstrap to reconnect.
+      _robotStateSub?.cancel();
+      _robotStateSub = null;
+      if (!mounted) return;
+      setState(() {
+        _robot = null;
+        _isConnected = false;
+      });
+    } else {
+      await svc.connect();
+    }
   }
 
   void _emergencyStop() {
+    _robot?.stop();
+    if (_activeRobot != null) {
+      _robotApi.logCommand(
+        robotId: _activeRobot!.id,
+        command: RobotCommand.stop,
+        linear: 0,
+        angular: 0,
+      );
+    }
     setState(() {
       _speed = 0;
       _joystickOffset = Offset.zero;
@@ -170,39 +259,23 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
     });
   }
 
-  void _sendQuickCommand(String command) {
-    if (!_isConnected) return;
+  RobotCommand _commandFor(double linear, double angular) {
+    if (linear > 0) return RobotCommand.forward;
+    if (linear < 0) return RobotCommand.backward;
+    if (angular > 0) return RobotCommand.left;
+    if (angular < 0) return RobotCommand.right;
+    return RobotCommand.stop;
+  }
 
-    setState(() {
-      switch (command) {
-        case 'Forward':
-          _speed = 1.8;
-          _heading = 0;
-          _direction = 'Forward';
-          break;
-        case 'Backward':
-          _speed = 1.2;
-          _heading = 180;
-          _direction = 'Backward';
-          break;
-        case 'Left':
-          _speed = 1;
-          _heading = 270;
-          _direction = 'Turning Left';
-          break;
-        case 'Right':
-          _speed = 1;
-          _heading = 90;
-          _direction = 'Turning Right';
-          break;
-        case 'Hold':
-          _speed = 0;
-          _direction = 'Stationary';
-          break;
-      }
-
-      _appendEvent('Command: $command', AppColorPalette.fieldFreshStart);
-    });
+  void _onDriveCommandSent(double linear, double angular) {
+    final robot = _activeRobot;
+    if (robot == null) return;
+    _robotApi.logCommand(
+      robotId: robot.id,
+      command: _commandFor(linear, angular),
+      linear: linear,
+      angular: angular,
+    );
   }
 
   void _onJoystickPanUpdate(DragUpdateDetails details) {
@@ -526,68 +599,34 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
   }
 
   Widget _buildLivePreviewCanvas({bool compact = false}) {
-    final wave = (math.sin(_frameIndex / 3) + 1) / 2;
-
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(compact ? 10 : 14),
-        gradient: LinearGradient(
-          colors: [
-            Color.lerp(
-              AppColorPalette.robotTechStart,
-              AppColorPalette.robotTechEnd,
-              wave,
-            )!,
-            Color.lerp(
-              AppColorPalette.charcoalGreen,
-              AppColorPalette.darkGrey,
-              1 - wave,
-            )!,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    final robot = _activeRobot;
+    if (robot == null) {
+      return Container(
+        decoration: BoxDecoration(
+          color: AppColorPalette.charcoalGreen,
+          borderRadius: BorderRadius.circular(compact ? 10 : 14),
         ),
-      ),
-      child: Stack(
-        children: [
-          Align(
-            alignment: Alignment.topLeft,
-            child: Padding(
-              padding: EdgeInsets.all(compact ? 6 : 10),
-              child: Text(
-                'FRAME ${_frameIndex.toString().padLeft(4, '0')}',
-                style: AppTextStyles.caption(
-                  color: Colors.white.withValues(alpha: 0.9),
-                ).copyWith(fontSize: compact ? 10 : 12),
+        alignment: Alignment.center,
+        child: _loadingRobots
+            ? const CircularProgressIndicator(strokeWidth: 2)
+            : Padding(
+                padding: EdgeInsets.all(compact ? 6 : 12),
+                child: Text(
+                  _robotError ?? 'No robot selected',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.caption(
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
               ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.center,
-            child: Icon(
-              _isConnected
-                  ? Icons.center_focus_strong_rounded
-                  : Icons.videocam_off_rounded,
-              size: compact ? 34 : 56,
-              color: Colors.white.withValues(alpha: 0.85),
-            ),
-          ),
-          Align(
-            alignment: Alignment.bottomLeft,
-            child: Padding(
-              padding: EdgeInsets.all(compact ? 6 : 10),
-              child: Text(
-                _isConnected
-                    ? 'Heartbeat: ${_lastHeartbeat.hour.toString().padLeft(2, '0')}:${_lastHeartbeat.minute.toString().padLeft(2, '0')}:${_lastHeartbeat.second.toString().padLeft(2, '0')}'
-                    : 'No signal',
-                style: AppTextStyles.caption(
-                  color: Colors.white.withValues(alpha: 0.9),
-                ).copyWith(fontSize: compact ? 9 : 12),
-              ),
-            ),
-          ),
-        ],
-      ),
+      );
+    }
+
+    return CameraView(
+      robotIp: robot.ip,
+      videoPort: robot.videoPort,
+      videoTopic: robot.videoTopic,
+      isLive: _isConnected,
     );
   }
 
@@ -691,13 +730,8 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
   }
 
   Widget _buildQuickCommands() {
-    final commands = <_QuickCommand>[
-      _QuickCommand('Forward', Icons.keyboard_arrow_up_rounded),
-      _QuickCommand('Left', Icons.keyboard_arrow_left_rounded),
-      _QuickCommand('Hold', Icons.pause_circle_outline_rounded),
-      _QuickCommand('Right', Icons.keyboard_arrow_right_rounded),
-      _QuickCommand('Backward', Icons.keyboard_arrow_down_rounded),
-    ];
+    final robot = _robot;
+    final canDrive = robot != null && _isConnected;
 
     return Container(
       width: double.infinity,
@@ -716,42 +750,104 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Quick Commands',
-            style: AppTextStyles.h4(color: AppColorPalette.charcoalGreen),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          Row(
             children: [
-              for (final item in commands)
-                ElevatedButton.icon(
-                  onPressed: _isConnected
-                      ? () => _sendQuickCommand(item.label)
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColorPalette.mistyBlue,
-                    disabledBackgroundColor: AppColorPalette.lightGrey,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: Icon(item.icon, size: 18),
-                  label: Text(item.label),
+              Text(
+                'Hold to Drive',
+                style: AppTextStyles.h4(color: AppColorPalette.charcoalGreen),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: canDrive
+                      ? AppColorPalette.success
+                      : AppColorPalette.alertError,
                 ),
-              ElevatedButton.icon(
-                onPressed: _emergencyStop,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColorPalette.alertError,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                canDrive ? 'Online' : 'Offline',
+                style: AppTextStyles.caption(
+                  color: canDrive
+                      ? AppColorPalette.success
+                      : AppColorPalette.alertError,
                 ),
-                icon: const Icon(Icons.stop_circle_rounded, size: 18),
-                label: const Text('Emergency Stop'),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          if (!canDrive || robot == null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                _robotError ??
+                    'Waiting for rosbridge connection to ${_activeRobot?.ip ?? 'robot'}…',
+                style: AppTextStyles.bodySmall(
+                  color: AppColorPalette.softSlate,
+                ),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              alignment: WrapAlignment.center,
+              children: [
+                DriveButton(
+                  robot: robot,
+                  linear: 0.25,
+                  angular: 0,
+                  icon: Icons.keyboard_arrow_up_rounded,
+                  label: 'Forward',
+                  color: AppColorPalette.fieldFreshStart,
+                  onCommandSent: _onDriveCommandSent,
+                ),
+                DriveButton(
+                  robot: robot,
+                  linear: -0.25,
+                  angular: 0,
+                  icon: Icons.keyboard_arrow_down_rounded,
+                  label: 'Reverse',
+                  color: AppColorPalette.fieldFreshStart,
+                  onCommandSent: _onDriveCommandSent,
+                ),
+                DriveButton(
+                  robot: robot,
+                  linear: 0,
+                  angular: 1.2,
+                  icon: Icons.keyboard_arrow_left_rounded,
+                  label: 'Left',
+                  color: AppColorPalette.mistyBlue,
+                  onCommandSent: _onDriveCommandSent,
+                ),
+                DriveButton(
+                  robot: robot,
+                  linear: 0,
+                  angular: -1.2,
+                  icon: Icons.keyboard_arrow_right_rounded,
+                  label: 'Right',
+                  color: AppColorPalette.mistyBlue,
+                  onCommandSent: _onDriveCommandSent,
+                ),
+              ],
+            ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ElevatedButton.icon(
+              onPressed: _emergencyStop,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColorPalette.alertError,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: const Icon(Icons.stop_circle_rounded, size: 18),
+              label: const Text('Emergency Stop'),
+            ),
           ),
         ],
       ),
@@ -1017,11 +1113,4 @@ class _ControlEvent {
   final String message;
   final Color color;
   final DateTime timestamp;
-}
-
-class _QuickCommand {
-  const _QuickCommand(this.label, this.icon);
-
-  final String label;
-  final IconData icon;
 }
