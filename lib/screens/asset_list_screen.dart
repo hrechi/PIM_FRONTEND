@@ -190,9 +190,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
       ),
       child: Text(
         label,
-        style: AppTextStyles.caption(
-          color: textColor ?? Colors.white,
-        ),
+        style: AppTextStyles.caption(color: textColor ?? Colors.white),
       ),
     );
   }
@@ -204,9 +202,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
       borderRadius: BorderRadius.circular(26),
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => AssetDeepDiveScreen(asset: asset),
-          ),
+          MaterialPageRoute(builder: (_) => AssetDeepDiveScreen(asset: asset)),
         );
       },
       child: Container(
@@ -225,9 +221,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
               offset: const Offset(0, 12),
             ),
           ],
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.06),
-          ),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -252,7 +246,9 @@ class _AssetListScreenState extends State<AssetListScreen> {
                             const Spacer(),
                             _pill(
                               _statusLabel(asset.status),
-                              backgroundColor: statusColor.withValues(alpha: 0.16),
+                              backgroundColor: statusColor.withValues(
+                                alpha: 0.16,
+                              ),
                               textColor: statusColor,
                             ),
                           ],
@@ -285,10 +281,19 @@ class _AssetListScreenState extends State<AssetListScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _pill('Serial ${asset.serialNumber}', backgroundColor: Colors.white.withValues(alpha: 0.08)),
-                  _pill('Category ${asset.category}', backgroundColor: Colors.white.withValues(alpha: 0.08)),
+                  _pill(
+                    'Serial ${asset.serialNumber}',
+                    backgroundColor: Colors.white.withValues(alpha: 0.08),
+                  ),
+                  _pill(
+                    'Category ${asset.category}',
+                    backgroundColor: Colors.white.withValues(alpha: 0.08),
+                  ),
                   if (asset.assignedToName != null)
-                    _pill('Assigned ${asset.assignedToName}', backgroundColor: Colors.white.withValues(alpha: 0.08)),
+                    _pill(
+                      'Assigned ${asset.assignedToName}',
+                      backgroundColor: Colors.white.withValues(alpha: 0.08),
+                    ),
                   if (asset.lastServiceDate != null)
                     _pill(
                       'Serviced ${DateFormat('dd MMM').format(asset.lastServiceDate!)}',
@@ -309,12 +314,16 @@ class _AssetListScreenState extends State<AssetListScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: CustomButton(
-                      text: asset.status == 'IN_USE' ? 'Mark Available' : 'Mark In Use',
+                      text: asset.status == 'IN_USE'
+                          ? 'Mark Available'
+                          : 'Mark In Use',
                       onPressed: () async {
                         await context.read<AssetProvider>().updateAsset(
-                              assetId: asset.id,
-                              status: asset.status == 'IN_USE' ? 'AVAILABLE' : 'IN_USE',
-                            );
+                          assetId: asset.id,
+                          status: asset.status == 'IN_USE'
+                              ? 'AVAILABLE'
+                              : 'IN_USE',
+                        );
                         await context.read<AssetProvider>().fetchAssets();
                       },
                       backgroundColor: asset.status == 'IN_USE'
@@ -339,7 +348,9 @@ class _AssetListScreenState extends State<AssetListScreen> {
                   label: const Text('Open details'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.16),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -422,7 +433,9 @@ class _AssetListScreenState extends State<AssetListScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.10),
+                    ),
                   ),
                   child: const Icon(
                     Icons.qr_code_scanner_rounded,
@@ -450,7 +463,9 @@ class _AssetListScreenState extends State<AssetListScreen> {
           const SizedBox(height: 18),
           Row(
             children: [
-              Expanded(child: _statBlock('Total', provider.assets.length.toString())),
+              Expanded(
+                child: _statBlock('Total', provider.assets.length.toString()),
+              ),
               const SizedBox(width: 10),
               Expanded(child: _statBlock('Available', available.toString())),
               const SizedBox(width: 10),
@@ -473,14 +488,13 @@ class _AssetListScreenState extends State<AssetListScreen> {
       ),
       child: Column(
         children: [
-          Text(
-            value,
-            style: AppTextStyles.h3(color: Colors.white),
-          ),
+          Text(value, style: AppTextStyles.h3(color: Colors.white)),
           const SizedBox(height: 2),
           Text(
             label,
-            style: AppTextStyles.caption(color: Colors.white.withValues(alpha: 0.7)),
+            style: AppTextStyles.caption(
+              color: Colors.white.withValues(alpha: 0.7),
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -518,16 +532,11 @@ class _AssetListScreenState extends State<AssetListScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          Text(
-            'No assets yet',
-            style: AppTextStyles.h4(),
-          ),
+          Text('No assets yet', style: AppTextStyles.h4()),
           const SizedBox(height: 6),
           Text(
             'Add your first machine, tool, or vehicle to start tracking image, status, and service details.',
-            style: AppTextStyles.bodyMedium(
-              color: AppColorPalette.softSlate,
-            ),
+            style: AppTextStyles.bodyMedium(color: AppColorPalette.softSlate),
             textAlign: TextAlign.center,
           ),
         ],
@@ -695,6 +704,8 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
   Map<String, dynamic>? _liveValidation;
   bool _isLiveValidating = false;
   bool _submittedOnce = false;
+  String? _categoryError;
+  String? _fieldError;
 
   static const List<String> _categoryOptions = [
     'TRACTOR',
@@ -797,82 +808,35 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
     });
   }
 
-  List<String> _currentValidationMessages() {
-    final messages = <String>[];
-    final liveIssues = (_liveValidation?['issues'] as List?)
+  List<String> _liveMessages() {
+    final liveIssues =
+        (_liveValidation?['issues'] as List?)
             ?.map((e) => e.toString())
             .toList() ??
         <String>[];
-    final liveWarnings = (_liveValidation?['warnings'] as List?)
+    final liveWarnings =
+        (_liveValidation?['warnings'] as List?)
             ?.map((e) => e.toString())
             .toList() ??
         <String>[];
-
-    messages.addAll(liveIssues);
-    messages.addAll(liveWarnings);
-
-    if (_selectedImageBase64 == null || _selectedImageBase64!.isEmpty) {
-      messages.add('Photo is required before validation.');
-    }
-
-    return messages;
+    return [...liveIssues, ...liveWarnings];
   }
+
+  String? _fieldValidationMessage(List<String> keywords) {
+    final messages = _liveMessages();
+    for (final message in messages) {
+      final normalized = message.toLowerCase();
+      if (keywords.any((keyword) => normalized.contains(keyword))) {
+        return message;
+      }
+    }
+    return null;
+  }
+
 
   Future<void> _runLiveValidation() async {
     if ((_brandController.text.trim()).isEmpty ||
         (_nameController.text.trim()).isEmpty) {
-      return;
-    }
-
-    if (_selectedImageBase64 == null || _selectedImageBase64!.isEmpty) {
-      if (!mounted) return;
-      setState(() {
-        _liveValidation = {
-          'valid': false,
-          'confidence': 0.0,
-          'issues': ['Add a photo before validating this asset.'],
-          'warnings': <String>[],
-          'suggestions': [
-            'Upload the machine photo so the AI can inspect it.',
-          ],
-        };
-        _isLiveValidating = false;
-      });
-      return;
-    }
-
-    if (_selectedImageBase64 == null || _selectedImageBase64!.isEmpty) {
-      if (!mounted) return;
-      setState(() {
-        _liveValidation = {
-          'valid': false,
-          'confidence': 0.0,
-          'issues': ['Add a photo before validating this asset.'],
-          'warnings': <String>[],
-          'suggestions': [
-            'Upload the machine photo so the AI can inspect it.',
-          ],
-        };
-        _isLiveValidating = false;
-      });
-      return;
-    }
-
-    final nameError = Validators.assetName(_nameController.text.trim());
-    if (nameError != null) {
-      if (!mounted) return;
-      setState(() {
-        _liveValidation = {
-          'valid': false,
-          'confidence': 0.0,
-          'issues': [nameError],
-          'warnings': <String>[],
-          'suggestions': [
-            'Use a readable asset name like "New Holland T6.175 Tractor".',
-          ],
-        };
-        _isLiveValidating = false;
-      });
       return;
     }
 
@@ -892,7 +856,6 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
         ),
         'mileage': double.tryParse(_mileageController.text.trim()),
         'usage': double.tryParse(_mileageController.text.trim()),
-        'imageBase64': _selectedImageBase64,
       });
 
       if (!mounted) return;
@@ -945,12 +908,18 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 30,
+      maxWidth: 960,
+      maxHeight: 960,
+    );
     if (image != null) {
       final bytes = await image.readAsBytes();
       setState(() {
         _selectedImage = image;
         _selectedImageBase64 = base64Encode(bytes);
+        _liveValidation = null;
       });
       _scheduleLiveValidation();
     }
@@ -992,44 +961,18 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
     setState(() => _submittedOnce = true);
     if (!_formKey.currentState!.validate()) return;
 
+    setState(() {
+      _categoryError = null;
+      _fieldError = null;
+    });
+
     if (_selectedCategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a category.')),
-      );
+      setState(() => _categoryError = 'Please select a category.');
       return;
     }
 
     if (_selectedFieldId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please select a field.')));
-      return;
-    }
-
-    if (_selectedImageBase64 == null || _selectedImageBase64!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add a photo before validation.')),
-      );
-      return;
-    }
-
-    final nameError = Validators.assetName(_nameController.text.trim());
-    if (nameError != null) {
-      if (!mounted) return;
-      setState(() {
-        _liveValidation = {
-          'valid': false,
-          'confidence': 0.0,
-          'issues': [nameError],
-          'warnings': <String>[],
-          'suggestions': [
-            'Use a descriptive name with a brand and model.',
-          ],
-        };
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(nameError)),
-      );
+      setState(() => _fieldError = 'Please select a field.');
       return;
     }
 
@@ -1046,90 +989,37 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
           ? null
           : _modelController.text.trim(),
       'modelYear': int.tryParse(_modelYearController.text.trim()),
-      'imageBase64': _selectedImageBase64,
     };
     String aiStatus = 'valid';
     String aiMessage = '';
-    List<dynamic> aiIssues = [];
-    List<dynamic> aiWarnings = [];
-    List<dynamic> aiSuggestions = [];
     try {
       final assetAiService = AssetAiService();
       final aiResult = await assetAiService.validateAsset(aiPayload);
+      if (mounted) {
+        setState(() {
+          _liveValidation = aiResult;
+        });
+      }
       if (aiResult['valid'] == false) {
         aiStatus = 'invalid';
-        aiIssues = aiResult['issues'] ?? [];
-        aiWarnings = aiResult['warnings'] ?? [];
-        aiSuggestions = aiResult['suggestions'] ?? [];
       } else if ((aiResult['warnings'] as List?)?.isNotEmpty ?? false) {
         aiStatus = 'warning';
-        aiWarnings = aiResult['warnings'] ?? [];
-        aiSuggestions = aiResult['suggestions'] ?? [];
       } else if ((aiResult['confidence'] ?? 1.0) < 0.7) {
         aiStatus = 'warning';
-        aiIssues = aiResult['issues'] ?? [];
-        aiWarnings = aiResult['warnings'] ?? [];
-        aiSuggestions = aiResult['suggestions'] ?? [];
       }
     } catch (e) {
       aiStatus = 'warning';
       aiMessage = 'AI validation unavailable. Proceeding with caution.';
     }
 
-    // Show dialog if not valid
-    if (aiStatus == 'invalid' || aiStatus == 'warning') {
-      final proceed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(
-            aiStatus == 'invalid'
-                ? '❌ Invalid Asset Data'
-                : '⚠️ Asset Data Warning',
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (aiMessage.isNotEmpty) Text(aiMessage),
-              if (aiIssues.isNotEmpty) ...[
-                const Text(
-                  'Issues:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                ...aiIssues.map((e) => Text('- $e')).toList(),
-              ],
-              if (aiWarnings.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                const Text(
-                  'Warnings:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                ...aiWarnings.map((e) => Text('- $e')).toList(),
-              ],
-              if (aiSuggestions.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                const Text(
-                  'Suggestions:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                ...aiSuggestions.map((e) => Text('- $e')).toList(),
-              ],
-            ],
-          ),
-          actions: [
-            if (aiStatus == 'warning')
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Proceed Anyway'),
-              ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Cancel'),
-            ),
-          ],
-        ),
-      );
-      if (proceed != true) return;
+    // For invalid inputs, keep user on form and show field-level messages.
+    if (aiStatus == 'invalid') {
+      if (aiMessage.isNotEmpty && mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(aiMessage)));
+      }
+      return;
     }
 
     // --- Proceed to submit asset ---
@@ -1155,6 +1045,14 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Asset added successfully.')),
       );
+      return;
+    }
+
+    if (mounted) {
+      final errorMessage = provider.error ?? 'Unable to create asset';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
     }
   }
 
@@ -1190,42 +1088,6 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  if (_currentValidationMessages().isNotEmpty)
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.orange.withValues(alpha: 0.20),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Validation issues',
-                            style: AppTextStyles.bodyMedium(
-                              color: Colors.orange.shade800,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          ..._currentValidationMessages().take(4).map(
-                                (message) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 4),
-                                  child: Text(
-                                    '• $message',
-                                    style: AppTextStyles.bodySmall(
-                                      color: Colors.orange.shade900,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                        ],
-                      ),
-                    ),
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 220),
                     padding: const EdgeInsets.symmetric(
@@ -1273,7 +1135,7 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
                                       ? 'Start filling brand/model for AI guidance.'
                                       : ((_liveValidation?['valid'] == true)
                                             ? 'Looks coherent so far.'
-                                            : 'Please review warnings before submit.')),
+                                            : 'Please fix the highlighted fields below.')),
                             style: AppTextStyles.bodySmall(),
                           ),
                         ),
@@ -1294,6 +1156,16 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
                         validator: Validators.assetName,
                         autovalidateMode: AutovalidateMode.onUserInteraction,
                       ),
+                      if (_fieldValidationMessage(['name']) != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            _fieldValidationMessage(['name'])!,
+                            style: AppTextStyles.bodySmall(
+                              color: Colors.red.shade700,
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 10),
                       AssetSuggestField(
                         label: 'Brand',
@@ -1321,6 +1193,16 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
                           );
                         },
                       ),
+                      if (_fieldValidationMessage(['brand']) != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            _fieldValidationMessage(['brand'])!,
+                            style: AppTextStyles.bodySmall(
+                              color: Colors.red.shade700,
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 8),
                       AssetSuggestField(
                         label: 'Model',
@@ -1350,6 +1232,16 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
                           );
                         },
                       ),
+                      if (_fieldValidationMessage(['model']) != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            _fieldValidationMessage(['model'])!,
+                            style: AppTextStyles.bodySmall(
+                              color: Colors.red.shade700,
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 8),
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 220),
@@ -1402,10 +1294,33 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
                             )
                             .toList(),
                         onChanged: (value) {
-                          setState(() => _selectedCategory = value);
+                          setState(() {
+                            _selectedCategory = value;
+                            _categoryError = null;
+                          });
                           _scheduleLiveValidation();
                         },
                       ),
+                      if (_categoryError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            _categoryError!,
+                            style: AppTextStyles.bodySmall(
+                              color: Colors.red.shade700,
+                            ),
+                          ),
+                        )
+                      else if (_fieldValidationMessage(['category']) != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            _fieldValidationMessage(['category'])!,
+                            style: AppTextStyles.bodySmall(
+                              color: Colors.red.shade700,
+                            ),
+                          ),
+                        ),
                       if (_suggestedCategories.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         Wrap(
@@ -1431,7 +1346,8 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
                               hintText: 'e.g. 2020',
                               label: 'Model Year',
                               keyboardType: TextInputType.number,
-                              autovalidateMode: AutovalidateMode.onUserInteraction,
+                              autovalidateMode:
+                                  AutovalidateMode.onUserInteraction,
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -1444,7 +1360,8 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
                                   const TextInputType.numberWithOptions(
                                     decimal: true,
                                   ),
-                              autovalidateMode: AutovalidateMode.onUserInteraction,
+                              autovalidateMode:
+                                  AutovalidateMode.onUserInteraction,
                             ),
                           ),
                         ],
@@ -1517,9 +1434,21 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
                             ),
                           ),
                         ],
-                        onChanged: (value) =>
-                            setState(() => _selectedFieldId = value),
+                        onChanged: (value) => setState(() {
+                          _selectedFieldId = value;
+                          _fieldError = null;
+                        }),
                       ),
+                      if (_fieldError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            _fieldError!,
+                            style: AppTextStyles.bodySmall(
+                              color: Colors.red.shade700,
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 8),
                       Text(
                         'Worker assignment is optional and can be done later.',
@@ -1539,17 +1468,6 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
                   ),
 
                   const SizedBox(height: 12),
-                  if (_submittedOnce &&
-                      (_selectedImageBase64 == null || _selectedImageBase64!.isEmpty))
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(
-                        'Photo is required before validation.',
-                        style: AppTextStyles.bodySmall(
-                          color: Colors.red.shade700,
-                        ),
-                      ),
-                    ),
                   Material(
                     child: InkWell(
                       onTap: _pickImage,
@@ -1591,16 +1509,9 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
                     ),
                   ),
                   if (_submittedOnce &&
-                      (_selectedImageBase64 == null || _selectedImageBase64!.isEmpty))
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(
-                        'Photo is required before validation.',
-                        style: AppTextStyles.bodySmall(
-                          color: Colors.red.shade700,
-                        ),
-                      ),
-                    ),
+                      (_selectedImageBase64 == null ||
+                          _selectedImageBase64!.isEmpty))
+                    const SizedBox.shrink(),
                   const SizedBox(height: 12),
                   Material(
                     child: InkWell(

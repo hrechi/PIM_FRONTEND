@@ -107,14 +107,13 @@ class SoilApiService {
         'order': 'DESC',
       };
 
-      final response = await _dio.get(
-        '',
-        queryParameters: queryParams,
-      );
+      final response = await _dio.get('', queryParameters: queryParams);
 
       final paginatedResponse = PaginatedSoilResponse.fromJson(response.data);
       // Filter measurements to only include those assigned to this parcel
-      return paginatedResponse.data.where((m) => m.parcelId == parcelId).toList();
+      return paginatedResponse.data
+          .where((m) => m.parcelId == parcelId)
+          .toList();
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -452,7 +451,7 @@ class SoilApiException implements Exception {
   String get userMessage {
     switch (type) {
       case SoilApiExceptionType.network:
-        return 'Cannot connect to server. Please check your internet connection and ensure the backend is running at http://192.168.1.18:3000';
+        return 'Cannot connect to server. Please check your internet connection and ensure the backend is running at http://192.168.1.162:3000';
       case SoilApiExceptionType.timeout:
         return 'Request timed out. Please try again.';
       case SoilApiExceptionType.notFound:

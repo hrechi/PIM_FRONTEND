@@ -28,6 +28,12 @@ class AssetProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  bool _isRemoteAssetImage(String value) {
+    return value.startsWith('http://') ||
+        value.startsWith('https://') ||
+        value.startsWith('/uploads/');
+  }
+
   Future<void> fetchAssets() async {
     _isLoading = true;
     _error = null;
@@ -133,6 +139,23 @@ class AssetProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      String? resolvedImageUrl;
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        final candidate = imageUrl.trim();
+        if (_isRemoteAssetImage(candidate)) {
+          resolvedImageUrl = candidate;
+        } else {
+          final uploadResult = await ApiService.uploadFile(
+            '/assets/upload',
+            candidate,
+            fieldName: 'image',
+          );
+          resolvedImageUrl =
+              uploadResult['image_url']?.toString() ??
+              uploadResult['imagePath']?.toString();
+        }
+      }
+
       final body = <String, dynamic>{
         'name': name,
         'brand': brand,
@@ -144,7 +167,9 @@ class AssetProvider with ChangeNotifier {
       if (modelYear != null) body['modelYear'] = modelYear;
       if (mileage != null) body['mileage'] = mileage;
       if (operatingHours != null) body['operatingHours'] = operatingHours;
-      if (imageUrl != null && imageUrl.isNotEmpty) body['image_url'] = imageUrl;
+      if (resolvedImageUrl != null && resolvedImageUrl.isNotEmpty) {
+        body['image_url'] = resolvedImageUrl;
+      }
       if (assignedTo != null && assignedTo.isNotEmpty)
         body['assignedTo'] = assignedTo;
       if (lastServiceDate != null) {
@@ -173,15 +198,38 @@ class AssetProvider with ChangeNotifier {
     required String assetId,
     String? status,
     String? assignedTo,
+    String? imageUrl,
   }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
+      String? resolvedImageUrl;
+      if (imageUrl != null) {
+        final candidate = imageUrl.trim();
+        if (candidate.isNotEmpty) {
+          if (_isRemoteAssetImage(candidate)) {
+            resolvedImageUrl = candidate;
+          } else {
+            final uploadResult = await ApiService.uploadFile(
+              '/assets/upload',
+              candidate,
+              fieldName: 'image',
+            );
+            resolvedImageUrl =
+                uploadResult['image_url']?.toString() ??
+                uploadResult['imagePath']?.toString();
+          }
+        } else {
+          resolvedImageUrl = '';
+        }
+      }
+
       final body = <String, dynamic>{};
       if (status != null) body['status'] = status;
       if (assignedTo != null) body['assignedTo'] = assignedTo;
+      if (resolvedImageUrl != null) body['image_url'] = resolvedImageUrl;
 
       final data = await ApiService.patch(
         '/assets/$assetId',

@@ -12,6 +12,7 @@ import '../providers/asset_provider.dart';
 import '../services/api_service.dart';
 import '../utils/asset_image_utils.dart';
 import '../widgets/custom_button.dart';
+import 'mechanic_chat_screen.dart';
 
 class AssetDeepDiveScreen extends StatefulWidget {
   const AssetDeepDiveScreen({super.key, required this.asset});
@@ -436,6 +437,26 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
                                 ),
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: CustomButton(
+                              text: '🔧 Ask Mechanic',
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => MechanicChatScreen(
+                                      assetBrand: widget.asset.brand,
+                                      assetModel: widget.asset.model,
+                                      assetCategory: widget.asset.category,
+                                    ),
+                                  ),
+                                );
+                              },
+                              backgroundColor: const Color(0xFF2F8ED1),
+                            ),
                           ),
                         ],
                       ),

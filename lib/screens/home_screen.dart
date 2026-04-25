@@ -139,6 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
       (_) => _refreshSoilAlertsForBell(),
     );
 
+    // Listen to parcel provider changes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final parcelProvider = context.read<ParcelProvider>();
       parcelProvider.addListener(_onParcelProviderChanged);
@@ -177,7 +178,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final parcels = parcelProvider.parcels;
 
     debugPrint(
-        '🔄 Parcel provider changed: ${parcels.length} parcels available');
+      '🔄 Parcel provider changed: ${parcels.length} parcels available',
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -214,7 +216,8 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       debugPrint(
-          'Parcel provider changed, selected: ${_selectedParcel?.location}');
+        'Parcel provider changed, selected: ${_selectedParcel?.location}',
+      );
     });
   }
 
@@ -271,17 +274,19 @@ class _HomeScreenState extends State<HomeScreen> {
       deduped.sort((a, b) => b.triggeredAt.compareTo(a.triggeredAt));
 
       final mapped = deduped
-          .map((alert) => AlertItem(
-                id: alert.id,
-                title: 'Soil Alert: ${alert.type.replaceAll('_', ' ')}',
-                description: alert.message,
-                severity: _mapAlertSeverity(alert.severity),
-                type: AlertType.environment,
-                timestamp: alert.triggeredAt,
-                relatedEntityId: alert.id,
-                isRead: alert.isRead,
-                isResolved: false,
-              ))
+          .map(
+            (alert) => AlertItem(
+              id: alert.id,
+              title: 'Soil Alert: ${alert.type.replaceAll('_', ' ')}',
+              description: alert.message,
+              severity: _mapAlertSeverity(alert.severity),
+              type: AlertType.environment,
+              timestamp: alert.triggeredAt,
+              relatedEntityId: alert.id,
+              isRead: alert.isRead,
+              isResolved: false,
+            ),
+          )
           .toList();
 
       await _notifyNewSoilAlertsLocally(deduped);
@@ -294,7 +299,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _notifyNewSoilAlertsLocally(
-      List<SoilWeatherAlert> alertsList) async {
+    List<SoilWeatherAlert> alertsList,
+  ) async {
     if (!_soilAlertsPrimed) {
       _soilAlertsPrimed = true;
 
@@ -319,7 +325,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (alertsList.isEmpty) return;
 
     final newUnreadAlerts = alertsList.where(
-        (alert) => !alert.isRead && !_notifiedSoilAlertIds.contains(alert.id));
+      (alert) => !alert.isRead && !_notifiedSoilAlertIds.contains(alert.id),
+    );
 
     for (final alert in newUnreadAlerts) {
       _notifiedSoilAlertIds.add(alert.id);
@@ -426,8 +433,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    debugPrint(
-        '🔄 Fetching soil and crop data for field: $selectedFieldId');
+    debugPrint('🔄 Fetching soil and crop data for field: $selectedFieldId');
     setState(() => _isLoadingSoilCrop = true);
 
     try {
@@ -435,19 +441,24 @@ class _HomeScreenState extends State<HomeScreen> {
       final parcels = parcelProvider.parcels;
 
       final namedParcels = parcels
-          .where((p) =>
-              p.location.trim().toLowerCase() ==
-              selectedField.name.trim().toLowerCase())
+          .where(
+            (p) =>
+                p.location.trim().toLowerCase() ==
+                selectedField.name.trim().toLowerCase(),
+          )
           .toList();
-      final fieldParcels =
-          parcels.where((p) => p.fieldId == selectedFieldId).toList();
+      final fieldParcels = parcels
+          .where((p) => p.fieldId == selectedFieldId)
+          .toList();
 
       final parcelsForField = namedParcels.isNotEmpty
           ? namedParcels
           : (fieldParcels.isNotEmpty ? fieldParcels : <Parcel>[]);
 
-      final totalCropsForField =
-          parcelsForField.fold<int>(0, (sum, p) => sum + p.crops.length);
+      final totalCropsForField = parcelsForField.fold<int>(
+        0,
+        (sum, p) => sum + p.crops.length,
+      );
 
       final measurementsResponse = await _soilRepository.getMeasurements(
         page: 1,
@@ -458,11 +469,13 @@ class _HomeScreenState extends State<HomeScreen> {
       final matchingMeasurements = measurementsResponse.data
           .where((m) => m.fieldId == selectedFieldId)
           .toList();
-      final soilMeasurement =
-          matchingMeasurements.isNotEmpty ? matchingMeasurements.first : null;
+      final soilMeasurement = matchingMeasurements.isNotEmpty
+          ? matchingMeasurements.first
+          : null;
 
       debugPrint(
-          '✅ Data fetched: soilPh=${soilMeasurement?.ph}, crops count=$totalCropsForField');
+        '✅ Data fetched: soilPh=${soilMeasurement?.ph}, crops count=$totalCropsForField',
+      );
 
       if (mounted) {
         final calculatedData = _calculateSoilMetrics(soilMeasurement);
@@ -494,8 +507,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final ph = (soilMeasurement.ph as num?)?.toDouble() ?? 6.5;
-    final moisture =
-        (soilMeasurement.soilMoisture as num?)?.toDouble() ?? 50.0;
+    final moisture = (soilMeasurement.soilMoisture as num?)?.toDouble() ?? 50.0;
     final temp = (soilMeasurement.temperature as num?)?.toDouble() ?? 20.0;
 
     int nitrogen = 0;
@@ -552,14 +564,16 @@ class _HomeScreenState extends State<HomeScreen> {
       nutrientScore = 25;
     }
 
-    final healthScore = ((phScore * 0.25) +
-            (moistureScore * 0.35) +
-            (nutrientScore * 0.25) +
-            ((temp >= 15 && temp <= 30 ? 100 : 50) * 0.15))
-        .toInt();
+    final healthScore =
+        ((phScore * 0.25) +
+                (moistureScore * 0.35) +
+                (nutrientScore * 0.25) +
+                ((temp >= 15 && temp <= 30 ? 100 : 50) * 0.15))
+            .toInt();
 
     debugPrint(
-        '📊 Soil Metrics: pH=$ph (score=$phScore), Moisture=$moisture% (score=$moistureScore), Nutrients=$avgNutrient (score=$nutrientScore), Health=$healthScore, Wilting=$wiltingRisk');
+      '📊 Soil Metrics: pH=$ph (score=$phScore), Moisture=$moisture% (score=$moistureScore), Nutrients=$avgNutrient (score=$nutrientScore), Health=$healthScore, Wilting=$wiltingRisk',
+    );
 
     return {
       'healthScore': healthScore.clamp(0, 100),
@@ -597,7 +611,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                  data['message']?.toString() ?? 'New soil alert received'),
+                data['message']?.toString() ?? 'New soil alert received',
+              ),
               backgroundColor: AppColorPalette.alertError,
             ),
           );
@@ -696,15 +711,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Text('Fieldly',
-                            style:
-                                AppTextStyles.h2(color: AppColorPalette.white)),
+                        Text(
+                          'Fieldly',
+                          style: AppTextStyles.h2(color: AppColorPalette.white),
+                        ),
                         const SizedBox(height: 4),
                         Text(
                           'Smart Farm System',
                           style: AppTextStyles.bodySmall(
-                            color:
-                                AppColorPalette.white.withValues(alpha: 0.9),
+                            color: AppColorPalette.white.withValues(alpha: 0.9),
                           ),
                         ),
                       ],
@@ -722,9 +737,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const ParcelListScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ParcelListScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -735,9 +752,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const PlantDoctorScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PlantDoctorScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -748,10 +767,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  const HarvestAnalyticsScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const HarvestAnalyticsScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -762,9 +782,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const CropCalendarScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CropCalendarScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -775,9 +797,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const WeatherScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const WeatherScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -788,9 +812,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => AgriculturalNewsScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AgriculturalNewsScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -801,9 +827,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const ShortsScreen()));
+                        context,
+                        MaterialPageRoute(builder: (_) => const ShortsScreen()),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -814,9 +840,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const CommunityFeedScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CommunityFeedScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -827,10 +855,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  const IrrigationSchedulerScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const IrrigationSchedulerScreen(),
+                        ),
+                      );
                     },
                   ),
 
@@ -846,9 +875,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const FinanceDashboardScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FinanceDashboardScreen(),
+                        ),
+                      );
                     },
                   ),
 
@@ -864,9 +895,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const CatalogueListScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CatalogueListScreen(),
+                        ),
+                      );
                     },
                   ),
 
@@ -879,10 +912,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  const SoilMeasurementsListScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SoilMeasurementsListScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -893,10 +927,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => FarmQuizScreen(
-                                  parcelId: _selectedParcel?.id)));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              FarmQuizScreen(parcelId: _selectedParcel?.id),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.workspace_premium_rounded,
+                    iconColor: const Color(0xFF0A7E52),
+                    title: 'Skill Certification',
+                    subtitle: 'Micro-lessons & competency checks',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/skill_certification');
                     },
                   ),
 
@@ -911,9 +957,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const StaffListScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const StaffListScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -923,9 +971,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const AddStaffScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AddStaffScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -935,10 +985,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  const IncidentHistoryScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const IncidentHistoryScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -949,9 +1000,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const LiveFeedScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const LiveFeedScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -962,9 +1015,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const DailyReportScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const DailyReportScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -975,10 +1030,26 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  const AcousticMonitorScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AcousticMonitorScreen(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const Divider(height: 1),
+
+                  // ── Operations ────────────────────────
+                  _buildDrawerSection('Operations'),
+                  _buildDrawerItem(
+                    icon: Icons.videogame_asset_rounded,
+                    iconColor: AppColorPalette.robotTechStart,
+                    title: 'Control Room',
+                    subtitle: 'Control robot and monitor view',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/control_room');
                     },
                   ),
 
@@ -993,9 +1064,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const AnimalListScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AnimalListScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -1008,7 +1081,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (_) => const PlannedSalesScreen()));
+                              builder: (_) => const PlannedSalesScreen()
+                              ));
                     },
                   ),
                   _buildDrawerItem(
@@ -1019,9 +1093,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const AddAnimalScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AddAnimalScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -1032,10 +1108,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  const MilkProductionScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MilkProductionScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -1046,10 +1123,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  const MilkAnalyticsScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MilkAnalyticsScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -1060,10 +1138,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  const VaccineDashboardScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const VaccineDashboardScreen(),
+                        ),
+                      );
                     },
                   ),
 
@@ -1078,9 +1157,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const ProfileScreen()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ProfileScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -1095,7 +1176,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Text(
                       'Version 1.0.0',
                       style: AppTextStyles.caption(
-                          color: AppColorPalette.softSlate),
+                        color: AppColorPalette.softSlate,
+                      ),
                     ),
                   ),
                 ],
@@ -1112,8 +1194,9 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Text(
         title.toUpperCase(),
-        style: AppTextStyles.caption(color: AppColorPalette.softSlate)
-            .copyWith(fontWeight: FontWeight.bold, letterSpacing: 1.2),
+        style: AppTextStyles.caption(
+          color: AppColorPalette.softSlate,
+        ).copyWith(fontWeight: FontWeight.bold, letterSpacing: 1.2),
       ),
     );
   }
@@ -1135,11 +1218,14 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Icon(icon, color: color, size: 24),
       ),
-      title: Text(title,
-          style:
-              AppTextStyles.bodyLarge(color: AppColorPalette.charcoalGreen)),
-      subtitle: Text(subtitle,
-          style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate)),
+      title: Text(
+        title,
+        style: AppTextStyles.bodyLarge(color: AppColorPalette.charcoalGreen),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate),
+      ),
       onTap: onTap,
     );
   }
@@ -1155,7 +1241,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Stack(
           children: [
             _buildAssetBackgroundImage(
-                _backgroundSlides[_selectedBackgroundIndex]),
+              _backgroundSlides[_selectedBackgroundIndex],
+            ),
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -1222,14 +1309,19 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Hi, Good Morning',
-                    style: AppTextStyles.h3()
-                        .copyWith(color: AppColorPalette.white)),
+                Text(
+                  'Hi, Good Morning',
+                  style: AppTextStyles.h3().copyWith(
+                    color: AppColorPalette.white,
+                  ),
+                ),
                 if (_selectedFieldName != null)
-                  Text(_selectedFieldName!,
-                      style: AppTextStyles.bodySmall(
-                          color:
-                              AppColorPalette.white.withValues(alpha: 0.9))),
+                  Text(
+                    _selectedFieldName!,
+                    style: AppTextStyles.bodySmall(
+                      color: AppColorPalette.white.withValues(alpha: 0.9),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -1239,12 +1331,15 @@ class _HomeScreenState extends State<HomeScreen> {
         Stack(
           children: [
             IconButton(
-              icon: const Icon(Icons.notifications_outlined,
-                  color: AppColorPalette.white),
+              icon: const Icon(
+                Icons.notifications_outlined,
+                color: AppColorPalette.white,
+              ),
               onPressed: () async {
                 await Navigator.of(context).push(
                   MaterialPageRoute(
-                      builder: (_) => const NotificationCenterScreen()),
+                    builder: (_) => const NotificationCenterScreen(),
+                  ),
                 );
                 _refreshSoilAlertsForBell();
               },
@@ -1262,8 +1357,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Consumer<NotificationProvider>(
                     builder: (context, notificationProvider, _) => Text(
                       '${notificationProvider.unreadCount}',
-                      style: AppTextStyles.caption(color: AppColorPalette.white)
-                          .copyWith(fontSize: 10),
+                      style: AppTextStyles.caption(
+                        color: AppColorPalette.white,
+                      ).copyWith(fontSize: 10),
                     ),
                   ),
                 ),
@@ -1274,8 +1370,9 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.only(right: 16.0),
           child: GestureDetector(
-            onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ProfileScreen())),
+            onTap: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
             child: CircleAvatar(
               backgroundColor: AppColorPalette.white.withValues(alpha: 0.3),
               child: const Icon(Icons.person, color: AppColorPalette.white),
@@ -1320,9 +1417,11 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.location_on_rounded,
-                  color: AppColorPalette.fieldFreshStart,
-                  size: isSmall ? 16 : 18),
+              Icon(
+                Icons.location_on_rounded,
+                color: AppColorPalette.fieldFreshStart,
+                size: isSmall ? 16 : 18,
+              ),
               SizedBox(width: isSmall ? 6 : 8),
               if (_selectedFieldName != null)
                 Flexible(
@@ -1330,14 +1429,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     _selectedFieldName!,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.bodyMedium(
-                            color: AppColorPalette.charcoalGreen)
-                        .copyWith(fontSize: isSmall ? 12 : 14),
+                      color: AppColorPalette.charcoalGreen,
+                    ).copyWith(fontSize: isSmall ? 12 : 14),
                   ),
                 ),
               SizedBox(width: isSmall ? 6 : 8),
-              Icon(Icons.swap_horiz_rounded,
-                  color: AppColorPalette.fieldFreshStart,
-                  size: isSmall ? 16 : 18),
+              Icon(
+                Icons.swap_horiz_rounded,
+                color: AppColorPalette.fieldFreshStart,
+                size: isSmall ? 16 : 18,
+              ),
             ],
           ),
         ),
@@ -1349,7 +1450,8 @@ class _HomeScreenState extends State<HomeScreen> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (context) => Consumer<WeatherProvider>(
         builder: (context, weatherProvider, _) {
           final fields = weatherProvider.fields;
@@ -1357,8 +1459,7 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
               color: Colors.white,
-              borderRadius:
-                  BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1366,17 +1467,21 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Text('Select Field',
-                      style: AppTextStyles.h3(
-                          color: AppColorPalette.charcoalGreen)),
+                  child: Text(
+                    'Select Field',
+                    style: AppTextStyles.h3(
+                      color: AppColorPalette.charcoalGreen,
+                    ),
+                  ),
                 ),
                 if (fields.isEmpty)
                   Center(
                     child: Padding(
                       padding: const EdgeInsets.all(32.0),
-                      child: Text('No fields available',
-                          style: AppTextStyles.bodyMedium(
-                              color: Colors.grey)),
+                      child: Text(
+                        'No fields available',
+                        style: AppTextStyles.bodyMedium(color: Colors.grey),
+                      ),
                     ),
                   )
                 else
@@ -1391,26 +1496,28 @@ class _HomeScreenState extends State<HomeScreen> {
                           onTap: () async {
                             await weatherProvider.selectField(field.id);
                             if (!mounted) return;
-                            setState(
-                                () => _selectedFieldName = field.name);
+                            setState(() => _selectedFieldName = field.name);
                             Navigator.pop(context);
                             _fetchAnimalsForField(field.id);
                             _fetchSoilAndCropData();
                           },
                           child: Container(
                             margin: const EdgeInsets.symmetric(
-                                vertical: 8, horizontal: 16),
+                              vertical: 8,
+                              horizontal: 16,
+                            ),
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? AppColorPalette.fieldFreshStart
-                                      .withValues(alpha: 0.1)
+                                  ? AppColorPalette.fieldFreshStart.withValues(
+                                      alpha: 0.1,
+                                    )
                                   : Colors.grey.shade100,
                               border: isSelected
                                   ? Border.all(
-                                      color:
-                                          AppColorPalette.fieldFreshStart,
-                                      width: 2)
+                                      color: AppColorPalette.fieldFreshStart,
+                                      width: 2,
+                                    )
                                   : null,
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -1422,12 +1529,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                   decoration: BoxDecoration(
                                     color: AppColorPalette.fieldFreshStart
                                         .withValues(alpha: 0.2),
-                                    borderRadius:
-                                        BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Icon(Icons.grass,
-                                      color:
-                                          AppColorPalette.fieldFreshStart),
+                                  child: const Icon(
+                                    Icons.grass,
+                                    color: AppColorPalette.fieldFreshStart,
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -1435,24 +1542,34 @@ class _HomeScreenState extends State<HomeScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(field.name,
-                                          style: AppTextStyles.bodyLarge(
-                                              color: AppColorPalette
-                                                  .charcoalGreen)),
                                       Text(
-                                          field.areaSize != null
-                                              ? '${field.areaSize} ha'
-                                              : 'Area not set',
-                                          style: AppTextStyles.bodySmall(
-                                              color: AppColorPalette
-                                                  .softSlate)),
+                                        field.name,
+                                        style: AppTextStyles.bodyLarge(
+                                          color: AppColorPalette.charcoalGreen,
+                                        ),
+                                      ),
+                                      Text(
+                                        field.name,
+                                        style: AppTextStyles.bodyLarge(
+                                          color: AppColorPalette.charcoalGreen,
+                                        ),
+                                      ),
+                                      Text(
+                                        field.areaSize != null
+                                            ? '${field.areaSize} ha'
+                                            : 'Area not set',
+                                        style: AppTextStyles.bodySmall(
+                                          color: AppColorPalette.softSlate,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
                                 if (isSelected)
-                                  const Icon(Icons.check_circle,
-                                      color:
-                                          AppColorPalette.fieldFreshStart),
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: AppColorPalette.fieldFreshStart,
+                                  ),
                               ],
                             ),
                           ),
@@ -1481,9 +1598,10 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 12,
-                offset: const Offset(0, 4))
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Padding(
@@ -1497,8 +1615,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(14)),
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -1509,16 +1628,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           height: 12,
                           width: 100,
                           decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(6)),
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Container(
                           height: 24,
                           width: 150,
                           decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(6)),
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                         ),
                       ],
                     ),
@@ -1529,15 +1650,17 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 height: 8,
                 decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(4)),
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
               const SizedBox(height: 16),
               Container(
                 height: 60,
                 decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12)),
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ],
           ),
@@ -1566,8 +1689,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final responsiveVertical = Responsive.verticalPadding(context);
     final isSmall = Responsive.isMobile(context);
     final weatherProvider = context.watch<WeatherProvider>();
-    final displayedWeather =
-        weatherProvider.forecast?.current ?? weatherInfo;
+    final displayedWeather = weatherProvider.forecast?.current ?? weatherInfo;
     final buttonPadding = isSmall ? 8.0 : 12.0;
     final fontSize = isSmall ? 12.0 : 14.0;
     final iconSize = isSmall ? 18.0 : 20.0;
@@ -1586,19 +1708,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) =>
-                            const FieldsManagementScreen()),
+                      builder: (context) => const FieldsManagementScreen(),
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColorPalette.mistyBlue,
                     padding: EdgeInsets.symmetric(
-                        vertical: buttonPadding, horizontal: 4),
+                      vertical: buttonPadding,
+                      horizontal: 4,
+                    ),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   icon: Icon(Icons.landscape, size: iconSize),
-                  label:
-                      Text('Fields', style: TextStyle(fontSize: fontSize)),
+                  label: Text('Fields', style: TextStyle(fontSize: fontSize)),
                 ),
               ),
               const SizedBox(width: 10),
@@ -1607,18 +1731,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => const MissionListScreen()),
+                      builder: (context) => const MissionListScreen(),
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColorPalette.mistyBlue,
                     padding: EdgeInsets.symmetric(
-                        vertical: buttonPadding, horizontal: 4),
+                      vertical: buttonPadding,
+                      horizontal: 4,
+                    ),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   icon: Icon(Icons.task, size: iconSize),
-                  label: Text('Missions',
-                      style: TextStyle(fontSize: fontSize)),
+                  label: Text('Missions', style: TextStyle(fontSize: fontSize)),
                 ),
               ),
               const SizedBox(width: 10),
@@ -1627,19 +1754,24 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) =>
-                            const ChatAssistantScreen()),
+                      builder: (context) => const ChatAssistantScreen(),
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColorPalette.mistyBlue,
                     padding: EdgeInsets.symmetric(
-                        vertical: buttonPadding, horizontal: 4),
+                      vertical: buttonPadding,
+                      horizontal: 4,
+                    ),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   icon: Icon(Icons.chat_bubble_outline, size: iconSize),
-                  label: Text('Assistant',
-                      style: TextStyle(fontSize: fontSize)),
+                  label: Text(
+                    'Assistant',
+                    style: TextStyle(fontSize: fontSize),
+                  ),
                 ),
               ),
             ],
@@ -1653,24 +1785,67 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => const AssetListScreen()),
+                      builder: (context) => const AssetListScreen(),
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColorPalette.success,
                     padding: EdgeInsets.symmetric(
-                        vertical: buttonPadding, horizontal: 4),
+                      vertical: buttonPadding,
+                      horizontal: 4,
+                    ),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   icon: Icon(Icons.construction, size: iconSize),
-                  label:
-                      Text('Assets', style: TextStyle(fontSize: fontSize)),
+                  label: Text('Assets', style: TextStyle(fontSize: fontSize)),
                 ),
               ),
               const SizedBox(width: 10),
-              Expanded(child: SizedBox(height: buttonPadding * 2)),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () =>
+                      Navigator.pushNamed(context, '/skill_certification'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0A7E52),
+                    padding: EdgeInsets.symmetric(
+                      vertical: buttonPadding,
+                      horizontal: 4,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: Icon(Icons.workspace_premium_rounded, size: iconSize),
+                  label: Text(
+                    'Skill Path',
+                    style: TextStyle(fontSize: fontSize),
+                  ),
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: SizedBox(height: buttonPadding * 2)),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () =>
+                      Navigator.pushNamed(context, '/control_room'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColorPalette.robotTechStart,
+                    padding: EdgeInsets.symmetric(
+                      vertical: buttonPadding,
+                      horizontal: 4,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: Icon(Icons.videogame_asset_rounded, size: iconSize),
+                  label: Text(
+                    'Control Room',
+                    style: TextStyle(fontSize: fontSize),
+                  ),
+                ),
+              ),
             ],
           ),
 
@@ -1700,8 +1875,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildWeatherChip(
                     icon: Icons.opacity,
                     label: 'Humidity',
-                    value:
-                        '${displayedWeather.humidity.toStringAsFixed(0)}%',
+                    value: '${displayedWeather.humidity.toStringAsFixed(0)}%',
                     color: const Color(0xFF4ECDC4),
                   ),
                 ],
@@ -1725,18 +1899,24 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (_) => const FieldsManagementScreen()),
+                  builder: (_) => const FieldsManagementScreen(),
+                ),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorPalette.fieldFreshStart,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               icon: const Icon(Icons.map, color: Colors.white),
-              label: const Text('See Map',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
+              label: const Text(
+                'See Map',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ],
@@ -1764,12 +1944,18 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: AppTextStyles.caption(color: color)
-                      .copyWith(fontSize: 11)),
-              Text(value,
-                  style: AppTextStyles.bodySmall(color: color)
-                      .copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                label,
+                style: AppTextStyles.caption(
+                  color: color,
+                ).copyWith(fontSize: 11),
+              ),
+              Text(
+                value,
+                style: AppTextStyles.bodySmall(
+                  color: color,
+                ).copyWith(fontWeight: FontWeight.bold),
+              ),
             ],
           ),
         ],
@@ -1786,7 +1972,9 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+            ),
           ],
         ),
         child: Center(
@@ -1796,7 +1984,8 @@ class _HomeScreenState extends State<HomeScreen> {
             child: CircularProgressIndicator(
               strokeWidth: 2,
               valueColor: AlwaysStoppedAnimation<Color>(
-                  AppColorPalette.fieldFreshStart.withOpacity(0.6)),
+                AppColorPalette.fieldFreshStart.withOpacity(0.6),
+              ),
             ),
           ),
         ),
@@ -1811,7 +2000,9 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+            ),
           ],
         ),
         child: Column(
@@ -1819,29 +2010,40 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.grass,
-                    color: AppColorPalette.fieldFreshStart, size: 20),
+                Icon(
+                  Icons.grass,
+                  color: AppColorPalette.fieldFreshStart,
+                  size: 20,
+                ),
                 const SizedBox(width: 6),
-                Text('Soil Health',
-                    style: AppTextStyles.bodyMedium(
-                        color: AppColorPalette.charcoalGreen)),
+                Text(
+                  'Soil Health',
+                  style: AppTextStyles.bodyMedium(
+                    color: AppColorPalette.charcoalGreen,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 8),
-            Text('pH: No data',
-                style: AppTextStyles.bodyLarge(color: Colors.grey.shade600)
-                    .copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              'pH: No data',
+              style: AppTextStyles.bodyLarge(
+                color: Colors.grey.shade600,
+              ).copyWith(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 6),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(8)),
-              child: Text('Not recorded',
-                  style:
-                      AppTextStyles.caption(color: Colors.grey.shade600)
-                          .copyWith(fontWeight: FontWeight.bold)),
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Not recorded',
+                style: AppTextStyles.caption(
+                  color: Colors.grey.shade600,
+                ).copyWith(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -1855,8 +2057,7 @@ class _HomeScreenState extends State<HomeScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8),
         ],
       ),
       child: Column(
@@ -1864,31 +2065,39 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.grass,
-                  color: AppColorPalette.fieldFreshStart, size: 20),
+              Icon(
+                Icons.grass,
+                color: AppColorPalette.fieldFreshStart,
+                size: 20,
+              ),
               const SizedBox(width: 6),
-              Text('Soil Health',
-                  style: AppTextStyles.bodyMedium(
-                      color: AppColorPalette.charcoalGreen)),
+              Text(
+                'Soil Health',
+                style: AppTextStyles.bodyMedium(
+                  color: AppColorPalette.charcoalGreen,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          Text('pH: ${phValue.toStringAsFixed(1)}',
-              style: AppTextStyles.bodyLarge(
-                      color: AppColorPalette.charcoalGreen)
-                  .copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'pH: ${phValue.toStringAsFixed(1)}',
+            style: AppTextStyles.bodyLarge(
+              color: AppColorPalette.charcoalGreen,
+            ).copyWith(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 6),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-                color: const Color(0xFF4ECDC4).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8)),
+              color: const Color(0xFF4ECDC4).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Text(
               phValue >= 6.0 && phValue <= 7.5 ? 'Optimal' : 'Adjust',
-              style:
-                  AppTextStyles.caption(color: const Color(0xFF4ECDC4))
-                      .copyWith(fontWeight: FontWeight.bold),
+              style: AppTextStyles.caption(
+                color: const Color(0xFF4ECDC4),
+              ).copyWith(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -1905,7 +2114,9 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+            ),
           ],
         ),
         child: Center(
@@ -1915,7 +2126,8 @@ class _HomeScreenState extends State<HomeScreen> {
             child: CircularProgressIndicator(
               strokeWidth: 2,
               valueColor: AlwaysStoppedAnimation<Color>(
-                  Colors.green.withOpacity(0.6)),
+                Colors.green.withOpacity(0.6),
+              ),
             ),
           ),
         ),
@@ -1928,8 +2140,7 @@ class _HomeScreenState extends State<HomeScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8),
         ],
       ),
       child: Column(
@@ -1937,29 +2148,35 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.local_florist,
-                  color: Colors.green.shade700, size: 20),
+              Icon(Icons.local_florist, color: Colors.green.shade700, size: 20),
               const SizedBox(width: 6),
-              Text('Crops Count',
-                  style: AppTextStyles.bodyMedium(
-                      color: AppColorPalette.charcoalGreen)),
+              Text(
+                'Crops Count',
+                style: AppTextStyles.bodyMedium(
+                  color: AppColorPalette.charcoalGreen,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          Text('$_totalCrops',
-              style: AppTextStyles.h2(color: Colors.green.shade700)
-                  .copyWith(fontWeight: FontWeight.bold, fontSize: 32)),
+          Text(
+            '$_totalCrops',
+            style: AppTextStyles.h2(
+              color: Colors.green.shade700,
+            ).copyWith(fontWeight: FontWeight.bold, fontSize: 32),
+          ),
           const SizedBox(height: 6),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8)),
+              color: Colors.green.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Text(
               _totalCrops > 0 ? 'Active' : 'No crops',
-              style: AppTextStyles.caption(color: Colors.green.shade700)
-                  .copyWith(fontWeight: FontWeight.bold),
+              style: AppTextStyles.caption(
+                color: Colors.green.shade700,
+              ).copyWith(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -1976,7 +2193,8 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, weatherProvider, _) {
         final forecast = weatherProvider.forecast;
         final current = forecast?.current ?? weatherInfo;
-        final fieldName = weatherProvider.selectedField?.name ??
+        final fieldName =
+            weatherProvider.selectedField?.name ??
             forecast?.fieldName ??
             'Selected field';
 
@@ -1990,13 +2208,15 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: EdgeInsets.all(Responsive.cardPadding(context)),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                  colors: [Color(0xFF57A0D3), Color(0xFF87CEEB)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight),
+                colors: [Color(0xFF57A0D3), Color(0xFF87CEEB)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(20),
             ),
             child: const Center(
-                child: CircularProgressIndicator(color: Colors.white)),
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
           );
         }
 
@@ -2009,20 +2229,26 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: EdgeInsets.all(Responsive.cardPadding(context)),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                  colors: [Color(0xFF7D9FB6), Color(0xFF9EB7C8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight),
+                colors: [Color(0xFF7D9FB6), Color(0xFF9EB7C8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Weather unavailable',
-                    style: AppTextStyles.h3(color: Colors.white)),
+                Text(
+                  'Weather unavailable',
+                  style: AppTextStyles.h3(color: Colors.white),
+                ),
                 const SizedBox(height: 8),
-                Text(weatherProvider.error!,
-                    style: AppTextStyles.bodySmall(
-                        color: Colors.white.withValues(alpha: 0.9))),
+                Text(
+                  weatherProvider.error!,
+                  style: AppTextStyles.bodySmall(
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                ),
                 const SizedBox(height: 12),
                 ElevatedButton.icon(
                   onPressed: _syncWeatherWithAdviceField,
@@ -2036,8 +2262,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
         if (current == null) {
           return GestureDetector(
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const WeatherScreen())),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const WeatherScreen()),
+            ),
             child: Container(
               margin: EdgeInsets.symmetric(
                 horizontal: Responsive.horizontalPadding(context),
@@ -2046,13 +2274,16 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: EdgeInsets.all(Responsive.cardPadding(context)),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                    colors: [Color(0xFF57A0D3), Color(0xFF87CEEB)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight),
+                  colors: [Color(0xFF57A0D3), Color(0xFF87CEEB)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Text('Open Weather & Advice to choose a field',
-                  style: AppTextStyles.bodyMedium(color: Colors.white)),
+              child: Text(
+                'Open Weather & Advice to choose a field',
+                style: AppTextStyles.bodyMedium(color: Colors.white),
+              ),
             ),
           );
         }
@@ -2060,8 +2291,10 @@ class _HomeScreenState extends State<HomeScreen> {
         final skyGradient = _skyGradientForCondition(current.condition);
 
         return GestureDetector(
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const WeatherScreen())),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const WeatherScreen()),
+          ),
           child: Container(
             margin: EdgeInsets.symmetric(
               horizontal: Responsive.horizontalPadding(context),
@@ -2073,8 +2306,9 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: _skyShadowColorForCondition(current.condition)
-                      .withValues(alpha: 0.30),
+                  color: _skyShadowColorForCondition(
+                    current.condition,
+                  ).withValues(alpha: 0.30),
                   blurRadius: 14,
                   offset: const Offset(0, 6),
                 ),
@@ -2083,11 +2317,12 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(fieldName.toUpperCase(),
-                    style: AppTextStyles.caption(color: Colors.white70)
-                        .copyWith(
-                            letterSpacing: 1.4,
-                            fontWeight: FontWeight.w600)),
+                Text(
+                  fieldName.toUpperCase(),
+                  style: AppTextStyles.caption(
+                    color: Colors.white70,
+                  ).copyWith(letterSpacing: 1.4, fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2097,41 +2332,53 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('${current.temperature.toStringAsFixed(0)}°',
-                              style: AppTextStyles.displayLarge(
-                                      color: Colors.white)
-                                  .copyWith(fontSize: 58, height: 1)),
+                          Text(
+                            '${current.temperature.toStringAsFixed(0)}°',
+                            style: AppTextStyles.displayLarge(
+                              color: Colors.white,
+                            ).copyWith(fontSize: 58, height: 1),
+                          ),
                           const SizedBox(height: 6),
-                          Text(current.condition,
-                              style: AppTextStyles.bodyLarge(
-                                      color: Colors.white)
-                                  .copyWith(fontWeight: FontWeight.w600)),
+                          Text(
+                            current.condition,
+                            style: AppTextStyles.bodyLarge(
+                              color: Colors.white,
+                            ).copyWith(fontWeight: FontWeight.w600),
+                          ),
                         ],
                       ),
                     ),
-                    Text(current.weatherIcon,
-                        style: const TextStyle(fontSize: 50)),
+                    Text(
+                      current.weatherIcon,
+                      style: const TextStyle(fontSize: 50),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.26)),
+                      color: Colors.white.withValues(alpha: 0.26),
+                    ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      _buildWeatherStat('Humidity', '${current.humidity}%'),
                       _buildWeatherStat(
-                          'Humidity', '${current.humidity}%'),
-                      _buildWeatherStat('Wind',
-                          '${current.windSpeed.toStringAsFixed(1)} km/h'),
-                      _buildWeatherStat('Rain',
-                          '${current.precipitation.toStringAsFixed(1)} mm'),
+                        'Wind',
+                        '${current.windSpeed.toStringAsFixed(1)} km/h',
+                      ),
+                      _buildWeatherStat(
+                        'Rain',
+                        '${current.precipitation.toStringAsFixed(1)} mm',
+                      ),
                     ],
                   ),
                 ),
@@ -2148,9 +2395,12 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: AppTextStyles.caption(color: Colors.white70)),
-        Text(value,
-            style: AppTextStyles.bodyMedium(color: Colors.white)
-                .copyWith(fontWeight: FontWeight.w700)),
+        Text(
+          value,
+          style: AppTextStyles.bodyMedium(
+            color: Colors.white,
+          ).copyWith(fontWeight: FontWeight.w700),
+        ),
       ],
     );
   }
@@ -2159,28 +2409,30 @@ class _HomeScreenState extends State<HomeScreen> {
     final n = condition.toLowerCase();
     if (n.contains('thunder') || n.contains('storm')) {
       return const LinearGradient(
-          colors: [Color(0xFF4B5B7E), Color(0xFF283248)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight);
+        colors: [Color(0xFF4B5B7E), Color(0xFF283248)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
     }
     if (n.contains('rain') || n.contains('drizzle')) {
       return const LinearGradient(
-          colors: [Color(0xFF5F86A5), Color(0xFF3A5F7D)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight);
+        colors: [Color(0xFF5F86A5), Color(0xFF3A5F7D)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
     }
-    if (n.contains('cloud') ||
-        n.contains('overcast') ||
-        n.contains('fog')) {
+    if (n.contains('cloud') || n.contains('overcast') || n.contains('fog')) {
       return const LinearGradient(
-          colors: [Color(0xFF86A4BA), Color(0xFF64839A)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight);
+        colors: [Color(0xFF86A4BA), Color(0xFF64839A)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
     }
     return const LinearGradient(
-        colors: [Color(0xFF57A0D3), Color(0xFF87CEEB)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight);
+      colors: [Color(0xFF57A0D3), Color(0xFF87CEEB)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
   }
 
   Color _skyShadowColorForCondition(String condition) {
@@ -2191,9 +2443,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (n.contains('rain') || n.contains('drizzle')) {
       return const Color(0xFF3A5F7D);
     }
-    if (n.contains('cloud') ||
-        n.contains('overcast') ||
-        n.contains('fog')) {
+    if (n.contains('cloud') || n.contains('overcast') || n.contains('fog')) {
       return const Color(0xFF64839A);
     }
     return const Color(0xFF57A0D3);
@@ -2205,22 +2455,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildFarmReelsCard() {
     return GestureDetector(
-      onTap: () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const ShortsScreen())),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ShortsScreen()),
+      ),
       child: Container(
         margin: EdgeInsets.symmetric(
-            horizontal: Responsive.horizontalPadding(context), vertical: 8),
+          horizontal: Responsive.horizontalPadding(context),
+          vertical: 8,
+        ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           gradient: const LinearGradient(
-              colors: [Color(0xFF1DB954), Color(0xFF1ABC9C), Color(0xFF00D2FF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight),
+            colors: [Color(0xFF1DB954), Color(0xFF1ABC9C), Color(0xFF00D2FF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           boxShadow: [
             BoxShadow(
-                color: const Color(0xFF1DB954).withOpacity(0.35),
-                blurRadius: 16,
-                offset: const Offset(0, 6))
+              color: const Color(0xFF1DB954).withOpacity(0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
           ],
         ),
         child: Padding(
@@ -2230,10 +2486,14 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16)),
-                child: const Icon(Icons.play_circle_filled,
-                    color: Colors.white, size: 36),
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.play_circle_filled,
+                  color: Colors.white,
+                  size: 36,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -2242,24 +2502,32 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Row(
                       children: [
-                        Text('Farm Reels',
-                            style: AppTextStyles.h3().copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold)),
+                        Text(
+                          'Farm Reels',
+                          style: AppTextStyles.h3().copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(width: 6),
-                        const Text('🌾',
-                            style: TextStyle(fontSize: 18)),
+                        const Text('🌾', style: TextStyle(fontSize: 18)),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text('Watch agriculture tips & tricks',
-                        style: AppTextStyles.bodySmall(
-                            color: Colors.white.withOpacity(0.85))),
+                    Text(
+                      'Watch agriculture tips & tricks',
+                      style: AppTextStyles.bodySmall(
+                        color: Colors.white.withOpacity(0.85),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios,
-                  color: Colors.white.withOpacity(0.7), size: 20),
+              Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.white.withOpacity(0.7),
+                size: 20,
+              ),
             ],
           ),
         ),
@@ -2294,10 +2562,13 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Live Health Metrics',
-                    style: AppTextStyles.h3()
-                        .copyWith(color: Colors.white, fontSize: 20)),
-
+                Text(
+                  'Live Health Metrics',
+                  style: AppTextStyles.h3().copyWith(
+                    color: Colors.white,
+                    fontSize: 20,
+                  ),
+                ),
               ],
             ),
           ),
@@ -2311,9 +2582,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   Symbols.pets,
                   const Color(0xFF10B981),
                   onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const AnimalListScreen())),
+                    context,
+                    MaterialPageRoute(builder: (_) => const AnimalListScreen()),
+                  ),
                 ),
               ),
               const SizedBox(width: cardSpacing),
@@ -2340,9 +2611,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   Symbols.vaccines,
                   const Color(0xFF3B82F6),
                   onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const VaccineDashboardScreen())),
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const VaccineDashboardScreen(),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: cardSpacing),
@@ -2353,10 +2626,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   'Feed & Care',
                   Symbols.payments,
                   const Color(0xFFF59E0B),
-                  onTap:  () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const FinanceDashboardScreen())),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const FinanceDashboardScreen(),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -2386,9 +2661,10 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 12,
-                offset: const Offset(0, 4))
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Column(
@@ -2397,27 +2673,37 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: EdgeInsets.all(isSmall ? 6 : 8),
               decoration: BoxDecoration(
-                  color: color.withOpacity(0.1), shape: BoxShape.circle),
-              child:
-                  Icon(icon, color: color, size: isSmall ? 16 : 20),
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: isSmall ? 16 : 20),
             ),
             SizedBox(height: isSmall ? 8 : 12),
-            Text(value,
-                style: TextStyle(
-                    fontSize: isSmall ? 18 : 22,
-                    fontWeight: FontWeight.w900,
-                    color: const Color(0xFF1E293B))),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: isSmall ? 18 : 22,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF1E293B),
+              ),
+            ),
             SizedBox(height: isSmall ? 1 : 2),
-            Text(title,
-                style: TextStyle(
-                    color: const Color(0xFF64748B),
-                    fontWeight: FontWeight.bold,
-                    fontSize: isSmall ? 10 : 11)),
+            Text(
+              title,
+              style: TextStyle(
+                color: const Color(0xFF64748B),
+                fontWeight: FontWeight.bold,
+                fontSize: isSmall ? 10 : 11,
+              ),
+            ),
             SizedBox(height: isSmall ? 1 : 2),
-            Text(subtitle,
-                style: TextStyle(
-                    color: const Color(0xFF94A3B8),
-                    fontSize: isSmall ? 9 : 10)),
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: const Color(0xFF94A3B8),
+                fontSize: isSmall ? 9 : 10,
+              ),
+            ),
           ],
         ),
       ),
@@ -2449,19 +2735,17 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                AppColors.mistBlue,
-                AppColors.mistBlue.withOpacity(0.8)
-              ],
+              colors: [AppColors.mistBlue, AppColors.mistBlue.withOpacity(0.8)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
-                  color: AppColors.mistBlue.withOpacity(0.3),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8))
+                color: AppColors.mistBlue.withOpacity(0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
             ],
           ),
           child: Column(
@@ -2471,21 +2755,28 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Symbols.water_drop,
-                          color: Colors.white, size: 24),
+                      const Icon(
+                        Symbols.water_drop,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                       const SizedBox(width: 8),
-                      Text("Today's Yield",
-                          style: AppTextStyles.h4()
-                              .copyWith(color: Colors.white)),
+                      Text(
+                        "Today's Yield",
+                        style: AppTextStyles.h4().copyWith(color: Colors.white),
+                      ),
                     ],
                   ),
                   if (yesterday > 0)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12)),
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: Row(
                         children: [
                           Icon(
@@ -2499,9 +2790,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(
                             '${trendPercent.abs().toStringAsFixed(1)}%',
                             style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold),
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
@@ -2516,22 +2808,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     today.toStringAsFixed(1),
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 40,
-                        fontWeight: FontWeight.w900),
+                      color: Colors.white,
+                      fontSize: 40,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                   const SizedBox(width: 4),
-                  const Text('Liters',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500)),
+                  const Text(
+                    'Liters',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   const Spacer(),
                   Text(
                     'vs ${yesterday.toStringAsFixed(0)}L yesterday',
                     style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
-                        fontSize: 12),
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -2567,7 +2864,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => const AnimalListScreen()),
+                    builder: (context) => const AnimalListScreen(),
+                  ),
                 ),
               );
             },
@@ -2586,17 +2884,17 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(
-            builder: (context) => const ChatAssistantScreen()),
+        MaterialPageRoute(builder: (context) => const ChatAssistantScreen()),
       ),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-                color: AppColorPalette.charcoalGreen.withOpacity(0.3),
-                blurRadius: 16,
-                offset: const Offset(0, 8))
+              color: AppColorPalette.charcoalGreen.withOpacity(0.3),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
           ],
         ),
         child: ClipRRect(

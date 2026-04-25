@@ -113,6 +113,26 @@ class AppDrawer extends StatelessWidget {
                         );
                       },
                     ),
+                    _buildDrawerItem(
+                      icon: Icons.videogame_asset_rounded,
+                      iconColor: AppColorPalette.robotTechStart,
+                      title: 'Control Room',
+                      subtitle: 'Control robot and monitor view',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushNamed(context, '/control_room');
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.workspace_premium_rounded,
+                      iconColor: const Color(0xFF0A7E52),
+                      title: 'Skill Certification',
+                      subtitle: 'Micro-lessons and quizzes',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushNamed(context, '/skill_certification');
+                      },
+                    ),
                     const Divider(height: 1),
                     _buildDrawerItem(
                       icon: Icons.logout_rounded,
@@ -190,16 +210,19 @@ class AppDrawer extends StatelessWidget {
                     title: 'Home',
                     subtitle: 'Main Dashboard',
                     onTap: () {
-                      final role = context.read<AuthProvider>().user?.role.toUpperCase();
+                      final role = context
+                          .read<AuthProvider>()
+                          .user
+                          ?.role
+                          .toUpperCase();
                       Navigator.pop(context);
                       // Navigate to the role-specific dashboard.
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              role == 'WORKER'
-                                  ? const FarmerHomeScreenV2()
-                                  : const HomeScreen(),
+                          builder: (_) => role == 'WORKER'
+                              ? const FarmerHomeScreenV2()
+                              : const HomeScreen(),
                         ),
                         (route) => false,
                       );
@@ -508,6 +531,30 @@ class AppDrawer extends StatelessWidget {
                           builder: (_) => const LiveFeedScreen(),
                         ),
                       );
+                    },
+                  ),
+
+                  const Divider(height: 1),
+
+                  _buildDrawerSection('Operations'),
+                  _buildDrawerItem(
+                    icon: Icons.videogame_asset_rounded,
+                    iconColor: AppColorPalette.robotTechStart,
+                    title: 'Control Room',
+                    subtitle: 'Control robot and monitor view',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/control_room');
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.workspace_premium_rounded,
+                    iconColor: const Color(0xFF0A7E52),
+                    title: 'Skill Certification',
+                    subtitle: 'Micro-lessons and quizzes',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/skill_certification');
                     },
                   ),
 
