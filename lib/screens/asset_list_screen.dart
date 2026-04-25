@@ -86,7 +86,9 @@ class _AssetListScreenState extends State<AssetListScreen> {
 
   Widget _buildAssetActionButton(AssetItem asset) {
     final authProvider = context.read<AuthProvider>();
-    final isWorker = authProvider.user?.role == 'WORKER' || authProvider.user?.role == 'FARMER';
+    final isWorker =
+        authProvider.user?.role == 'WORKER' ||
+        authProvider.user?.role == 'FARMER';
 
     if (isWorker) {
       return CustomButton(
@@ -142,7 +144,10 @@ class _AssetListScreenState extends State<AssetListScreen> {
     }
   }
 
-  Future<void> _showEndSessionDialog(AssetItem asset, AssetProvider provider) async {
+  Future<void> _showEndSessionDialog(
+    AssetItem asset,
+    AssetProvider provider,
+  ) async {
     final endMileageController = TextEditingController(
       text: asset.mileage?.toInt().toString() ?? '0',
     );
@@ -160,7 +165,9 @@ class _AssetListScreenState extends State<AssetListScreen> {
                 controller: endMileageController,
                 label: 'End Mileage/Hours',
                 hintText: 'Current mileage',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
               ),
               const SizedBox(height: 12),
               CustomTextField(
@@ -175,9 +182,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
         actions: [
           OutlinedButton(
             onPressed: () => Navigator.pop(dialogContext),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.grey,
-            ),
+            style: OutlinedButton.styleFrom(foregroundColor: Colors.grey),
             child: const Text('Cancel'),
           ),
           CustomButton(
@@ -197,7 +202,11 @@ class _AssetListScreenState extends State<AssetListScreen> {
                   return;
                 }
 
-                final endMileage = (double.tryParse(endMileageController.text) ?? asset.mileage ?? 0).toDouble();
+                final endMileage =
+                    (double.tryParse(endMileageController.text) ??
+                            asset.mileage ??
+                            0)
+                        .toDouble();
 
                 await provider.endUsageSession(
                   usageLogId: activeSession['id'].toString(),
@@ -464,9 +473,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildAssetActionButton(asset),
-                  ),
+                  Expanded(child: _buildAssetActionButton(asset)),
                 ],
               ),
               const SizedBox(height: 10),
@@ -968,7 +975,6 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
     }
     return null;
   }
-
 
   Future<void> _runLiveValidation() async {
     if ((_brandController.text.trim()).isEmpty ||
