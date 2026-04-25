@@ -122,6 +122,7 @@ class CatalogueService {
     String? vaccinationStatus,
     String? reproductionStatus,
     String? tagNumber,
+    bool? isFattening,
   }) async {
     final filterData = <String, dynamic>{};
     if (species != null) filterData['species'] = species;
@@ -134,6 +135,7 @@ class CatalogueService {
     if (vaccinationStatus != null) filterData['vaccinationStatus'] = vaccinationStatus;
     if (reproductionStatus != null) filterData['reproductionStatus'] = reproductionStatus;
     if (tagNumber != null) filterData['tagNumber'] = tagNumber;
+    if (isFattening != null) filterData['isFattening'] = isFattening;
 
     final response = await ApiService.post('/catalogues/preview-filter', filterData, withAuth: true);
 

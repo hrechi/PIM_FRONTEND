@@ -32,6 +32,7 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
   String? _vaccinationStatus;
   String? _reproductionStatus;
   String? _tagNumber;
+  bool? _isFattening;
 
   final _tagController = TextEditingController();
 
@@ -67,6 +68,7 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
         vaccinationStatus: _vaccinationStatus,
         reproductionStatus: _reproductionStatus,
         tagNumber: _tagNumber,
+        isFattening: _isFattening,
       );
 
       if (animals != null) {
@@ -172,13 +174,26 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
               ),
               _buildFilterChip(
                 label: 'Vaccination',
-                value: _vaccinationStatus,
+                value: _vaccinationStatus == 'up_to_date'
+                    ? 'À jour'
+                    : _vaccinationStatus == 'incomplete'
+                        ? 'Incomplet'
+                        : _vaccinationStatus,
                 onTap: () => _showVaccinationFilter(),
               ),
               _buildFilterChip(
                 label: 'Reproduction',
-                value: _reproductionStatus,
+                value: _reproductionStatus == 'pregnant'
+                    ? 'Gestante'
+                    : _reproductionStatus == 'not_pregnant'
+                        ? 'Non gestante'
+                        : _reproductionStatus,
                 onTap: () => _showReproductionFilter(),
+              ),
+              _buildFilterChip(
+                label: 'Engraissement',
+                value: _isFattening == null ? null : (_isFattening! ? 'Oui' : 'Non'),
+                onTap: () => _showFatteningFilter(),
               ),
             ],
           ),
@@ -447,6 +462,7 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
       _vaccinationStatus = null;
       _reproductionStatus = null;
       _tagNumber = null;
+      _isFattening = null;
       _tagController.clear();
     });
     _loadAnimals();
@@ -475,7 +491,8 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
       context: context,
       builder: (context) => _buildFilterBottomSheet(
         title: 'Select Species',
-        options: ['Cow', 'Sheep', 'Horse', 'Dog'],
+        options: ['cow', 'sheep', 'horse', 'dog'],
+        displayOptions: ['Vache', 'Mouton', 'Cheval', 'Chien'],
         selectedValue: _species,
         onSelected: (value) {
           setState(() => _species = value);
@@ -490,7 +507,8 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
       context: context,
       builder: (context) => _buildFilterBottomSheet(
         title: 'Select Sex',
-        options: ['Male', 'Female'],
+        options: ['male', 'female'],
+        displayOptions: ['Mâle', 'Femelle'],
         selectedValue: _sex,
         onSelected: (value) {
           setState(() => _sex = value);
@@ -562,7 +580,8 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
       context: context,
       builder: (context) => _buildFilterBottomSheet(
         title: 'Vaccination Status',
-        options: ['Up to date', 'Overdue', 'Not vaccinated'],
+        options: ['up_to_date', 'incomplete'],
+        displayOptions: ['À jour', 'Incomplet'],
         selectedValue: _vaccinationStatus,
         onSelected: (value) {
           setState(() => _vaccinationStatus = value);
@@ -577,7 +596,8 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
       context: context,
       builder: (context) => _buildFilterBottomSheet(
         title: 'Reproduction Status',
-        options: ['Pregnant', 'Open', 'Lactating', 'Dry'],
+        options: ['pregnant', 'not_pregnant'],
+        displayOptions: ['Gestante', 'Non gestante'],
         selectedValue: _reproductionStatus,
         onSelected: (value) {
           setState(() => _reproductionStatus = value);
@@ -587,9 +607,33 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
     );
   }
 
+  void _showFatteningFilter() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => _buildFilterBottomSheet(
+        title: 'Engraissement',
+        options: ['Oui', 'Non'],
+        selectedValue: _isFattening == null ? null : (_isFattening! ? 'Oui' : 'Non'),
+        onSelected: (value) {
+          setState(() {
+            if (value == 'Oui') {
+              _isFattening = true;
+            } else if (value == 'Non') {
+              _isFattening = false;
+            } else {
+              _isFattening = null;
+            }
+          });
+          _loadAnimals();
+        },
+      ),
+    );
+  }
+
   Widget _buildFilterBottomSheet({
     required String title,
     required List<String> options,
+    List<String>? displayOptions,
     required String? selectedValue,
     required ValueChanged<String?> onSelected,
   }) {
@@ -604,16 +648,20 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
           ),
-          ...options.map((option) => ListTile(
-            title: Text(option),
-            trailing: selectedValue == option
-                ? const Icon(Icons.check, color: Colors.green)
-                : null,
-            onTap: () {
-              onSelected(selectedValue == option ? null : option);
-              Navigator.pop(context);
-            },
-          )),
+          ...options.asMap().entries.map((entry) {
+            final value = entry.value;
+            final label = displayOptions != null ? displayOptions[entry.key] : value;
+            return ListTile(
+              title: Text(label),
+              trailing: selectedValue == value
+                  ? const Icon(Icons.check, color: Colors.green)
+                  : null,
+              onTap: () {
+                onSelected(selectedValue == value ? null : value);
+                Navigator.pop(context);
+              },
+            );
+          }),
           ListTile(
             title: const Text('Clear Filter'),
             onTap: () {

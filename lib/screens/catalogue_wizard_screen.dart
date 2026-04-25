@@ -141,10 +141,10 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
 
   String _getStepTitle(int step) {
     switch (step) {
-      case 0: return 'Basic Info';
-      case 1: return 'Select Animals';
-      case 2: return 'Settings';
-      case 3: return 'Preview';
+      case 0: return 'Infos';
+      case 1: return 'Animaux';
+      case 2: return 'Paramètres';
+      case 3: return 'Aperçu';
       case 4: return 'Export';
       default: return '';
     }
@@ -442,7 +442,9 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
 
   bool _canProceed() {
     switch (_currentStep) {
-      case 0: return _formKey.currentState?.validate() ?? false;
+      case 0:
+        // Allow proceeding if title is not empty (validate on attempt)
+        return _titleController.text.trim().isNotEmpty;
       case 1: return _selectedAnimals.isNotEmpty;
       case 2: return true;
       case 3: return true;
@@ -455,23 +457,31 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
     switch (_currentStep) {
       case 0: return 'Select Animals';
       case 1: return 'Settings';
-      case 2: return 'Preview';
-      case 3: return 'Export';
-      case 4: return widget.catalogue != null ? 'Update' : 'Create';
+      case 2: return widget.catalogue != null ? 'Update' : 'Create';
+      case 3: return 'Preview';
+      case 4: return 'Export';
       default: return 'Next';
     }
   }
 
   void _handleNext() async {
-    if (_currentStep == 4) {
+    if (_currentStep == 2) {
+      // Step 2 → save the catalogue before going to preview
       await _saveCatalogue();
-    } else {
+    } else if (_currentStep < 4) {
       setState(() => _currentStep++);
     }
   }
 
   Future<void> _saveCatalogue() async {
-    if (!_formKey.currentState!.validate()) return;
+    // Validate title manually (form may not be in tree at step 2)
+    if (_titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Le titre est obligatoire')),
+      );
+      setState(() => _currentStep = 0);
+      return;
+    }
 
     final provider = context.read<CatalogueProvider>();
     SaleCatalogue? result;
@@ -480,7 +490,7 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
       // Update existing
       result = await provider.updateCatalogue(
         widget.catalogue!.id,
-        title: _titleController.text,
+        title: _titleController.text.trim(),
         saleDate: _saleDate,
         location: _locationController.text.isEmpty ? null : _locationController.text,
         currency: _currency,
@@ -490,7 +500,7 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
     } else {
       // Create new
       result = await provider.createCatalogue(
-        title: _titleController.text,
+        title: _titleController.text.trim(),
         saleDate: _saleDate,
         location: _locationController.text.isEmpty ? null : _locationController.text,
         currency: _currency,
@@ -504,8 +514,25 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
       }
     }
 
-    if (result != null && mounted) {
+    if (!mounted) return;
+
+    if (result != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(widget.catalogue != null
+              ? 'Catalogue mis à jour avec succès'
+              : 'Catalogue créé avec succès'),
+          backgroundColor: Colors.green,
+        ),
+      );
       Navigator.pop(context, result);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(provider.error ?? 'Erreur lors de la sauvegarde'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 

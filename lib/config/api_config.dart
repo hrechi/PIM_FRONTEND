@@ -3,7 +3,7 @@
 class ApiConfig {
   // Base URLs
   // Use the WiFi IP for device, emulator, and simulator testing.
-  static const String _localBaseUrl = 'http://192.168.1.124:3000:3000/api';
+  static const String _localBaseUrl = 'http://192.168.1.124:3000/api';
   static const String _productionBaseUrl =
       'https://your-production-api.com/api';
 

@@ -34,6 +34,7 @@ import 'asset_list_screen.dart';
 import 'soil/soil_measurements_list_screen.dart';
 import 'animals/animal_list_screen.dart';
 import 'animals/add_animal_screen.dart';
+import 'animals/planned_sales_screen.dart';
 import 'animals/milk_production_screen.dart';
 import 'animals/milk_analytics_screen.dart';
 import 'finance/finance_dashboard_screen.dart';
@@ -1000,15 +1001,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildDrawerItem(
                     icon: Icons.food_bank,
                     iconColor: const Color(0xFFFB923C),
-                    title: 'Fattening Animals',
+                    title: 'Planned Sales',
                     subtitle: 'Animals in fattening',
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (_) => const AnimalListScreen(
-                                  showFatteningOnly: true)));
+                              builder: (_) => const PlannedSalesScreen()));
                     },
                   ),
                   _buildDrawerItem(

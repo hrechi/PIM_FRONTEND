@@ -252,6 +252,7 @@ class CatalogueProvider with ChangeNotifier {
     String? vaccinationStatus,
     String? reproductionStatus,
     String? tagNumber,
+    bool? isFattening,
   }) async {
     _isLoading = true;
     _error = null;
@@ -269,6 +270,7 @@ class CatalogueProvider with ChangeNotifier {
         vaccinationStatus: vaccinationStatus,
         reproductionStatus: reproductionStatus,
         tagNumber: tagNumber,
+        isFattening: isFattening,
       );
     } catch (e) {
       _error = e.toString();

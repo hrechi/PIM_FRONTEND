@@ -11,6 +11,7 @@ import '../screens/home_screen.dart';
 import '../screens/farmer_home_screen_v2.dart';
 import '../screens/animals/animal_list_screen.dart';
 import '../screens/animals/add_animal_screen.dart';
+import '../screens/animals/planned_sales_screen.dart';
 import '../screens/animals/milk_production_screen.dart';
 import '../screens/animals/milk_analytics_screen.dart';
 import '../screens/vaccines/vaccine_dashboard_screen.dart';
@@ -378,14 +379,14 @@ class AppDrawer extends StatelessWidget {
                   _buildDrawerItem(
                     icon: Icons.pets,
                     iconColor: const Color(0xFFFB923C),
-                    title: 'Fattening Animals',
+                    title: 'Planned Sales',
                     subtitle: 'Animals in fattening',
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const AnimalListScreen(showFatteningOnly: true),
+                          builder: (_) => const PlannedSalesScreen(),
                         ),
                       );
                     },
