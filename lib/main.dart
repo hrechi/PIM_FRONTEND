@@ -36,7 +36,8 @@ import 'package:intl/date_symbol_data_local.dart';
 
 /// Global navigator key — used for navigating from notification callbacks
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
+final RouteObserver<ModalRoute<void>> routeObserver =
+    RouteObserver<ModalRoute<void>>();
 
 /// Background message handler — must be a top-level function
 @pragma('vm:entry-point')
@@ -53,6 +54,15 @@ void handleNotificationData(Map<String, dynamic> data) {
   if (screen == 'SOIL_ALERTS' || type == 'SOIL_WEATHER_ALERT') {
     navigatorKey.currentState?.push(
       MaterialPageRoute(builder: (_) => const SoilAlertNotificationsScreen()),
+    );
+    return;
+  }
+
+  if (screen == 'ASSET_DETAILS' || type == 'ASSET_MAINTENANCE_ALERT') {
+    final assetId = (data['assetId'] ?? '').toString();
+    navigatorKey.currentState?.pushNamed(
+      '/assets',
+      arguments: assetId.isEmpty ? null : {'assetId': assetId},
     );
     return;
   }
@@ -157,7 +167,6 @@ class _FieldlyAppState extends State<FieldlyApp> {
           ),
         ),
         ChangeNotifierProvider(create: (_) => AssetProvider()),
-      
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
@@ -181,14 +190,19 @@ class _FieldlyAppState extends State<FieldlyApp> {
           '/farmer_home': (context) => const FarmerHomeScreenV2(),
           '/control_room': (context) => const ControlRoomScreen(),
           '/skill_certification': (context) => const SkillCertificationScreen(),
-          '/assets': (context) => const AssetListScreen(),
+          '/assets': (context) {
+            final args = ModalRoute.of(context)?.settings.arguments;
+            final assetId = args is Map ? args['assetId']?.toString() : null;
+            return AssetListScreen(focusAssetId: assetId);
+          },
           '/incident-details': (context) {
             final incidentId =
                 ModalRoute.of(context)!.settings.arguments as String;
             return IncidentDetailScreen(incidentId: incidentId);
           },
           '/notifications': (context) => const NotificationCenterScreen(),
-          '/vaccine-dashboard': (context) => const VaccineDashboardScreen(), // assuming this exists or maps to the correct screen
+          '/vaccine-dashboard': (context) =>
+              const VaccineDashboardScreen(), // assuming this exists or maps to the correct screen
         },
       ),
     );
