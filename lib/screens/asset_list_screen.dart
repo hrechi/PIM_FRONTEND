@@ -12,10 +12,10 @@ import '../models/asset_item.dart';
 import '../providers/asset_provider.dart';
 import '../providers/auth_provider.dart';
 import 'asset_deep_dive_screen.dart';
+import 'worker_assistant_screen.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../utils/constants.dart';
-import '../utils/asset_image_utils.dart';
 import '../utils/validators.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
@@ -24,7 +24,9 @@ import '../services/asset_ai_service.dart';
 import '../services/api_service.dart';
 
 class AssetListScreen extends StatefulWidget {
-  const AssetListScreen({super.key});
+  const AssetListScreen({super.key, this.focusAssetId});
+
+  final String? focusAssetId;
 
   @override
   State<AssetListScreen> createState() => _AssetListScreenState();
@@ -32,6 +34,8 @@ class AssetListScreen extends StatefulWidget {
 
 class _AssetListScreenState extends State<AssetListScreen> {
   bool _initialized = false;
+  Timer? _refreshTimer;
+  bool _focusAssetOpened = false;
 
   @override
   void didChangeDependencies() {
@@ -42,6 +46,22 @@ class _AssetListScreenState extends State<AssetListScreen> {
     provider.fetchAssets();
     provider.fetchStaffOptions();
     provider.fetchFieldOptions();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!mounted) return;
+      context.read<AssetProvider>().fetchAssets();
+    });
+
+    if (widget.focusAssetId != null && widget.focusAssetId!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _openFocusedAssetIfAvailable();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _openAddAssetForm() async {
@@ -50,6 +70,31 @@ class _AssetListScreenState extends State<AssetListScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const _AddAssetSheet(),
+    );
+  }
+
+  Future<void> _openFocusedAssetIfAvailable() async {
+    if (_focusAssetOpened) return;
+    final focusAssetId = widget.focusAssetId;
+    if (focusAssetId == null || focusAssetId.isEmpty) return;
+
+    final provider = context.read<AssetProvider>();
+    final navigator = Navigator.of(context);
+    await provider.fetchAssets();
+    if (!mounted || _focusAssetOpened) return;
+
+    final asset = provider.assets
+        .where((item) => item.id == focusAssetId)
+        .toList();
+    if (asset.isEmpty) {
+      return;
+    }
+
+    _focusAssetOpened = true;
+    await navigator.push(
+      MaterialPageRoute(
+        builder: (_) => AssetDeepDiveScreen(asset: asset.first),
+      ),
     );
   }
 
@@ -89,53 +134,113 @@ class _AssetListScreenState extends State<AssetListScreen> {
     final isWorker =
         authProvider.user?.role == 'WORKER' ||
         authProvider.user?.role == 'FARMER';
+    final provider = context.watch<AssetProvider>();
+    final isSessionLoading = provider.isSessionActionLoading(asset.id);
+    final currentWorkerId = authProvider.user?.staffId ?? authProvider.user?.id;
+    final activeWorkerId = asset.activeUsageWorkerId;
+    final predictive =
+        provider.predictiveMaintenanceById[asset.id] as Map<String, dynamic>?;
+    final maintenanceBlocked = predictive?['canUse'] == false;
+    final isCurrentUserUsing =
+        asset.isInUse &&
+        currentWorkerId != null &&
+        activeWorkerId == currentWorkerId;
+    final isOtherUserUsing =
+        asset.isInUse &&
+        activeWorkerId != null &&
+        activeWorkerId != currentWorkerId;
 
     if (isWorker) {
+      if (!asset.isInUse && maintenanceBlocked) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              '⚠ Machine requires maintenance before use',
+              style: AppTextStyles.caption(color: const Color(0xFFE3A77B)),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            CustomButton(
+              text: 'Maintenance Required',
+              onPressed: null,
+              backgroundColor: Colors.red.shade400,
+              isLoading: isSessionLoading,
+            ),
+          ],
+        );
+      }
+
       return CustomButton(
-        text: asset.status == 'IN_USE' ? 'Finish Using' : 'Start Using',
-        onPressed: () async {
-          try {
-            final provider = context.read<AssetProvider>();
-            if (asset.status == 'IN_USE') {
-              await _showEndSessionDialog(asset, provider);
-            } else {
-              await provider.startUsageSession(
-                assetId: asset.id,
-                startMileage: (asset.mileage ?? 0).toDouble(),
-                startOperatingHours: asset.operatingHours?.toDouble(),
-              );
-              await provider.fetchAssets();
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Started using ${asset.name}'),
-                  backgroundColor: const Color(0xFF61C06F),
-                ),
-              );
-            }
-          } catch (e) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error: ${e.toString()}'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        backgroundColor: asset.status == 'IN_USE'
-            ? const Color(0xFFE3A77B)
+        text: asset.isInUse
+            ? (isCurrentUserUsing ? 'Finish Using' : 'In Use')
+            : 'Start Using',
+        onPressed: isSessionLoading
+            ? null
+            : isOtherUserUsing
+            ? null
+            : () async {
+                try {
+                  if (asset.isInUse) {
+                    final ended = await _showEndSessionCheckoutDialog(
+                      asset,
+                      provider,
+                    );
+                    if (!ended) return;
+                  } else {
+                    await provider.startUsageSession(assetId: asset.id);
+                  }
+                  await provider.fetchAssets();
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        asset.isInUse
+                            ? 'Finished using ${asset.name}'
+                            : 'Started using ${asset.name}',
+                      ),
+                      backgroundColor: const Color(0xFF61C06F),
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                      action: asset.isInUse && isCurrentUserUsing
+                          ? SnackBarAction(
+                              label: 'Retry',
+                              textColor: Colors.white,
+                              onPressed: () async {
+                                if (!mounted) return;
+                                await _showEndSessionCheckoutDialog(
+                                  asset,
+                                  provider,
+                                );
+                              },
+                            )
+                          : null,
+                    ),
+                  );
+                }
+              },
+        backgroundColor: asset.isInUse
+            ? (isCurrentUserUsing ? const Color(0xFFE3A77B) : Colors.grey)
             : const Color(0xFF61C06F),
+        isLoading: isSessionLoading,
       );
     } else {
+      final provider = context.read<AssetProvider>();
       return CustomButton(
         text: asset.status == 'IN_USE' ? 'Mark Available' : 'Mark In Use',
         onPressed: () async {
-          await context.read<AssetProvider>().updateAsset(
+          await provider.updateAsset(
             assetId: asset.id,
             status: asset.status == 'IN_USE' ? 'AVAILABLE' : 'IN_USE',
           );
-          await context.read<AssetProvider>().fetchAssets();
+          await provider.fetchAssets();
         },
         backgroundColor: asset.status == 'IN_USE'
             ? const Color(0xFF61C06F)
@@ -144,104 +249,315 @@ class _AssetListScreenState extends State<AssetListScreen> {
     }
   }
 
-  Future<void> _showEndSessionDialog(
-    AssetItem asset,
-    AssetProvider provider,
-  ) async {
-    final endMileageController = TextEditingController(
-      text: asset.mileage?.toInt().toString() ?? '0',
+  String _currentWorkerId(AuthProvider authProvider) {
+    return authProvider.user?.staffId ?? authProvider.user?.id ?? '';
+  }
+
+  bool _isWorkerView(AuthProvider authProvider) {
+    return authProvider.user?.role == 'WORKER' ||
+        authProvider.user?.role == 'FARMER';
+  }
+
+  bool _isCurrentUserUsingAsset(AssetItem asset, AuthProvider authProvider) {
+    final workerId = _currentWorkerId(authProvider);
+    return asset.isInUse &&
+        workerId.isNotEmpty &&
+        asset.activeUsageWorkerId == workerId;
+  }
+
+  Color _conditionColor(String? condition) {
+    switch (condition?.toUpperCase()) {
+      case 'WARNING':
+        return const Color(0xFFD9822B);
+      case 'CRITICAL':
+        return const Color(0xFFC83E4D);
+      default:
+        return Colors.transparent;
+    }
+  }
+
+  String _conditionLabel(String? condition) {
+    switch (condition?.toUpperCase()) {
+      case 'WARNING':
+        return 'Warning';
+      case 'CRITICAL':
+        return 'Critical';
+      default:
+        return '';
+    }
+  }
+
+  Widget _availabilityBadge(AssetItem asset) {
+    if (asset.hasAvailabilityWarning) {
+      final color = _conditionColor(asset.usageCondition);
+      return _pill(
+        '⚠️ ${_conditionLabel(asset.usageCondition)}',
+        backgroundColor: color.withValues(alpha: 0.16),
+        textColor: color,
+      );
+    }
+
+    final statusColor = _statusColor(asset.status);
+    return _pill(
+      asset.status == 'IN_USE' ? '🔴 In use' : '🟢 Available',
+      backgroundColor: statusColor.withValues(alpha: 0.16),
+      textColor: statusColor,
     );
-    final notesController = TextEditingController();
+  }
 
-    return showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('Finish Using ${asset.name}', style: AppTextStyles.h4()),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CustomTextField(
-                controller: endMileageController,
-                label: 'End Mileage/Hours',
-                hintText: 'Current mileage',
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: notesController,
-                label: 'Notes (Optional)',
-                hintText: 'Any issues or observations?',
-                maxLines: 3,
-              ),
-            ],
+  Widget _usageBanner(AssetItem asset, AuthProvider authProvider) {
+    if (!asset.isInUse) return const SizedBox.shrink();
+
+    final isCurrentUserUsing = _isCurrentUserUsingAsset(asset, authProvider);
+    final whoIsUsing = asset.activeUsageWorkerName?.trim().isNotEmpty == true
+        ? asset.activeUsageWorkerName!
+        : (asset.activeUsageWorkerId ?? 'Worker not synced yet');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isCurrentUserUsing ? Icons.person_outline : Icons.people_outline,
+            size: 18,
+            color: Colors.white.withValues(alpha: 0.88),
           ),
-        ),
-        actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            style: OutlinedButton.styleFrom(foregroundColor: Colors.grey),
-            child: const Text('Cancel'),
-          ),
-          CustomButton(
-            text: 'Finish Session',
-            onPressed: () async {
-              try {
-                final activeSession = provider.activeUsageSession;
-                if (activeSession == null) {
-                  if (!mounted) return;
-                  Navigator.pop(dialogContext);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('No active session found'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                  return;
-                }
-
-                final endMileage =
-                    (double.tryParse(endMileageController.text) ??
-                            asset.mileage ??
-                            0)
-                        .toDouble();
-
-                await provider.endUsageSession(
-                  usageLogId: activeSession['id'].toString(),
-                  endMileage: endMileage,
-                  returnConfirmation: true,
-                  notes: notesController.text.trim(),
-                );
-
-                await provider.fetchAssets();
-                if (!mounted) return;
-                Navigator.pop(dialogContext);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Finished using ${asset.name}'),
-                    backgroundColor: const Color(0xFF61C06F),
-                  ),
-                );
-              } catch (e) {
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error: ${e.toString()}'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              } finally {
-                endMileageController.dispose();
-                notesController.dispose();
-              }
-            },
-            backgroundColor: const Color(0xFF61C06F),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              isCurrentUserUsing
+                  ? 'Currently used by you'
+                  : 'Currently used by $whoIsUsing',
+              style: AppTextStyles.caption(
+                color: Colors.white.withValues(alpha: 0.92),
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Future<bool> _showEndSessionCheckoutDialog(
+    AssetItem asset,
+    AssetProvider provider,
+  ) async {
+    final distanceController = TextEditingController();
+    final issuesController = TextEditingController();
+    final maintenanceController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    String selectedCondition = 'GOOD';
+    bool isSubmitting = false;
+
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setLocalState) {
+            final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+            return SafeArea(
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF2EFE7),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(18, 14, 18, 18 + bottomInset),
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 48,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Text('Finish & Save', style: AppTextStyles.h3()),
+                        const SizedBox(height: 6),
+                        Text(
+                          '${asset.name}${asset.model != null && asset.model!.isNotEmpty ? ' • ${asset.model}' : ''}${asset.fieldName != null ? ' • ${asset.fieldName}' : ''}',
+                          style: AppTextStyles.bodyMedium(
+                            color: AppColorPalette.softSlate,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        _workerSheetSectionTitle('Usage'),
+                        const SizedBox(height: 8),
+                        CustomTextField(
+                          controller: distanceController,
+                          label: 'Distance (km)',
+                          hintText: 'Enter distance traveled',
+                          prefixIcon: Icons.route,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          validator: (value) {
+                            final raw = value?.trim() ?? '';
+                            if (raw.isEmpty) return 'Distance is required';
+                            final parsed = double.tryParse(raw);
+                            if (parsed == null) return 'Enter a valid number';
+                            if (parsed < 0)
+                              return 'Distance cannot be negative';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        _workerSheetSectionTitle('Issues'),
+                        const SizedBox(height: 8),
+                        CustomTextField(
+                          controller: issuesController,
+                          label: 'Issues (Optional)',
+                          hintText: 'Describe issues encountered',
+                          prefixIcon: Icons.report_problem_outlined,
+                          maxLines: 4,
+                        ),
+                        const SizedBox(height: 14),
+                        _workerSheetSectionTitle('Maintenance'),
+                        const SizedBox(height: 8),
+                        CustomTextField(
+                          controller: maintenanceController,
+                          label: 'Maintenance Note (Optional)',
+                          hintText: 'Recommended maintenance actions',
+                          prefixIcon: Icons.build_circle_outlined,
+                          maxLines: 4,
+                        ),
+                        const SizedBox(height: 14),
+                        _workerSheetSectionTitle('Condition'),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            _conditionChip(
+                              label: 'Good',
+                              value: 'GOOD',
+                              selectedValue: selectedCondition,
+                              color: const Color(0xFF61C06F),
+                              onTap: isSubmitting
+                                  ? null
+                                  : () => setLocalState(
+                                      () => selectedCondition = 'GOOD',
+                                    ),
+                            ),
+                            _conditionChip(
+                              label: 'Warning',
+                              value: 'WARNING',
+                              selectedValue: selectedCondition,
+                              color: const Color(0xFFE3A77B),
+                              onTap: isSubmitting
+                                  ? null
+                                  : () => setLocalState(
+                                      () => selectedCondition = 'WARNING',
+                                    ),
+                            ),
+                            _conditionChip(
+                              label: 'Critical',
+                              value: 'CRITICAL',
+                              selectedValue: selectedCondition,
+                              color: const Color(0xFFC83E4D),
+                              onTap: isSubmitting
+                                  ? null
+                                  : () => setLocalState(
+                                      () => selectedCondition = 'CRITICAL',
+                                    ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        if (formKey.currentState != null &&
+                            !formKey.currentState!.validate())
+                          const SizedBox.shrink(),
+                        SizedBox(
+                          width: double.infinity,
+                          child: CustomButton(
+                            text: 'Finish & Save',
+                            isLoading: isSubmitting,
+                            onPressed: isSubmitting
+                                ? null
+                                : () async {
+                                    if (!formKey.currentState!.validate())
+                                      return;
+
+                                    setLocalState(() {
+                                      isSubmitting = true;
+                                    });
+
+                                    try {
+                                      final distance =
+                                          double.tryParse(
+                                            distanceController.text.trim(),
+                                          ) ??
+                                          0;
+
+                                      await provider.endUsageSession(
+                                        assetId: asset.id,
+                                        distanceKm: distance,
+                                        issues: issuesController.text.trim(),
+                                        maintenanceNote: maintenanceController
+                                            .text
+                                            .trim(),
+                                        condition: selectedCondition,
+                                      );
+
+                                      if (!dialogContext.mounted) return;
+                                      Navigator.of(dialogContext).pop(true);
+                                    } catch (_) {
+                                      if (!dialogContext.mounted) return;
+                                      setLocalState(() {
+                                        isSubmitting = false;
+                                      });
+                                    }
+                                  },
+                            gradient: selectedCondition == 'CRITICAL'
+                                ? const LinearGradient(
+                                    colors: [
+                                      Color(0xFFC83E4D),
+                                      Color(0xFFE06B74),
+                                    ],
+                                  )
+                                : selectedCondition == 'WARNING'
+                                ? const LinearGradient(
+                                    colors: [
+                                      Color(0xFFE3A77B),
+                                      Color(0xFFF0C38A),
+                                    ],
+                                  )
+                                : AppColors.fieldFreshGradient,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    distanceController.dispose();
+    issuesController.dispose();
+    maintenanceController.dispose();
+
+    return result ?? false;
   }
 
   Widget _brandBadge(String brand) {
@@ -284,30 +600,12 @@ class _AssetListScreenState extends State<AssetListScreen> {
     }
   }
 
-  String _statusLabel(String status) {
-    switch (status) {
-      case 'IN_USE':
-        return 'In use';
-      case 'MAINTENANCE':
-        return 'Maintenance';
-      default:
-        return 'Available';
-    }
-  }
-
-  ImageProvider? _assetImageProvider(AssetItem asset) {
-    return resolveAssetImageProvider(
-      asset.imageUrl,
-      mediaBaseUrl: ApiService.mediaBaseUrl,
-    );
-  }
-
   Widget _assetImage({
     required AssetItem asset,
     required double size,
     BorderRadius? borderRadius,
   }) {
-    final imageProvider = _assetImageProvider(asset);
+    final imageUrl = asset.imageUrl?.trim() ?? '';
     final radius = borderRadius ?? BorderRadius.circular(18);
 
     return ClipRRect(
@@ -323,22 +621,48 @@ class _AssetListScreenState extends State<AssetListScreen> {
           ),
           borderRadius: radius,
         ),
-        child: imageProvider == null
-            ? const Icon(
-                Icons.precision_manufacturing_rounded,
-                color: Colors.white70,
-                size: 30,
-              )
-            : Image(
-                image: imageProvider,
+        child: imageUrl.isEmpty
+            ? Image.asset('assets/images/maskot_chatbot.png', fit: BoxFit.cover)
+            : Image.network(
+                imageUrl.startsWith('http')
+                    ? imageUrl
+                    : '${ApiService.mediaBaseUrl}$imageUrl',
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.precision_manufacturing_rounded,
-                  color: Colors.white70,
-                  size: 30,
+                errorBuilder: (context, error, stackTrace) => Image.asset(
+                  'assets/images/maskot_chatbot.png',
+                  fit: BoxFit.cover,
                 ),
               ),
       ),
+    );
+  }
+
+  Widget _workerSheetSectionTitle(String title) {
+    return Text(
+      title,
+      style: AppTextStyles.h4(color: AppColorPalette.charcoalGreen),
+    );
+  }
+
+  Widget _conditionChip({
+    required String label,
+    required String value,
+    required String selectedValue,
+    required Color color,
+    required VoidCallback? onTap,
+  }) {
+    final isSelected = selectedValue == value;
+
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: onTap == null ? null : (_) => onTap(),
+      selectedColor: color.withValues(alpha: 0.18),
+      backgroundColor: color.withValues(alpha: 0.08),
+      labelStyle: AppTextStyles.bodySmall(
+        color: isSelected ? color : AppColorPalette.charcoalGreen,
+      ),
+      side: BorderSide(color: color.withValues(alpha: 0.32)),
     );
   }
 
@@ -357,7 +681,9 @@ class _AssetListScreenState extends State<AssetListScreen> {
   }
 
   Widget _assetCard(AssetItem asset) {
-    final statusColor = _statusColor(asset.status);
+    final authProvider = context.read<AuthProvider>();
+    final isCurrentUserUsing = _isCurrentUserUsingAsset(asset, authProvider);
+    final isOtherUserUsing = asset.isInUse && !isCurrentUserUsing;
 
     return InkWell(
       borderRadius: BorderRadius.circular(26),
@@ -403,15 +729,15 @@ class _AssetListScreenState extends State<AssetListScreen> {
                       children: [
                         Row(
                           children: [
+                            const Icon(
+                              Icons.precision_manufacturing_rounded,
+                              color: Colors.white70,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
                             _brandBadge(asset.brand),
                             const Spacer(),
-                            _pill(
-                              _statusLabel(asset.status),
-                              backgroundColor: statusColor.withValues(
-                                alpha: 0.16,
-                              ),
-                              textColor: statusColor,
-                            ),
+                            _availabilityBadge(asset),
                           ],
                         ),
                         const SizedBox(height: 10),
@@ -432,6 +758,17 @@ class _AssetListScreenState extends State<AssetListScreen> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        const SizedBox(height: 8),
+                        _usageBanner(asset, authProvider),
+                        if (asset.hasAvailabilityWarning) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Condition requires attention',
+                            style: AppTextStyles.caption(
+                              color: const Color(0xFFF2B35D),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -450,6 +787,11 @@ class _AssetListScreenState extends State<AssetListScreen> {
                     'Category ${asset.category}',
                     backgroundColor: Colors.white.withValues(alpha: 0.08),
                   ),
+                  if (asset.fieldName != null)
+                    _pill(
+                      'Field ${asset.fieldName}',
+                      backgroundColor: Colors.white.withValues(alpha: 0.08),
+                    ),
                   if (asset.assignedToName != null)
                     _pill(
                       'Assigned ${asset.assignedToName}',
@@ -476,6 +818,48 @@ class _AssetListScreenState extends State<AssetListScreen> {
                   Expanded(child: _buildAssetActionButton(asset)),
                 ],
               ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => WorkerAssistantScreen(
+                          assetId: asset.id,
+                          assetBrand: asset.brand,
+                          assetModel: asset.model,
+                          assetCategory: asset.category,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.smart_toy_outlined),
+                  label: const Text('Ask AI Assistant'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.16),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ),
+              if (isOtherUserUsing) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'This machine is already being used by another worker.',
+                    style: AppTextStyles.caption(
+                      color: Colors.white.withValues(alpha: 0.78),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 10),
               SizedBox(
                 width: double.infinity,
@@ -511,9 +895,12 @@ class _AssetListScreenState extends State<AssetListScreen> {
   Widget _overviewCard(AssetProvider provider) {
     int available = 0;
     int inUse = 0;
-    int maintenance = 0;
+    int warning = 0;
 
     for (final asset in provider.assets) {
+      if (asset.hasAvailabilityWarning) {
+        warning += 1;
+      }
       switch (asset.status) {
         case 'AVAILABLE':
           available += 1;
@@ -521,11 +908,11 @@ class _AssetListScreenState extends State<AssetListScreen> {
         case 'IN_USE':
           inUse += 1;
           break;
-        case 'MAINTENANCE':
-          maintenance += 1;
-          break;
       }
     }
+
+    final authProvider = context.read<AuthProvider>();
+    final isWorker = _isWorkerView(authProvider);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -593,13 +980,20 @@ class _AssetListScreenState extends State<AssetListScreen> {
           Row(
             children: [
               Expanded(
-                child: CustomButton(
-                  text: 'Add Asset',
-                  icon: Icons.add_rounded,
-                  onPressed: _openAddAssetForm,
-                  backgroundColor: Colors.white,
-                  textColor: AppColorPalette.charcoalGreen,
-                ),
+                child: isWorker
+                    ? Text(
+                        'Showing only machines in your field or explicitly assigned to you.',
+                        style: AppTextStyles.bodyMedium(
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
+                      )
+                    : CustomButton(
+                        text: 'Add Asset',
+                        icon: Icons.add_rounded,
+                        onPressed: _openAddAssetForm,
+                        backgroundColor: Colors.white,
+                        textColor: AppColorPalette.charcoalGreen,
+                      ),
               ),
             ],
           ),
@@ -614,7 +1008,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
               const SizedBox(width: 10),
               Expanded(child: _statBlock('In use', inUse.toString())),
               const SizedBox(width: 10),
-              Expanded(child: _statBlock('Maint.', maintenance.toString())),
+              Expanded(child: _statBlock('Warning', warning.toString())),
             ],
           ),
         ],
@@ -688,8 +1082,8 @@ class _AssetListScreenState extends State<AssetListScreen> {
   }
 
   void _showQrCode(AssetItem asset) {
-    print('🔍 QR Code button tapped for asset: ${asset.name}');
-    print('📱 Serial Number: ${asset.serialNumber}');
+    debugPrint('🔍 QR Code button tapped for asset: ${asset.name}');
+    debugPrint('📱 Serial Number: ${asset.serialNumber}');
 
     showDialog<void>(
       context: context,
@@ -719,7 +1113,14 @@ class _AssetListScreenState extends State<AssetListScreen> {
                     version: QrVersions.auto,
                     size: 250,
                     backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: Colors.black,
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: Colors.black,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -1134,6 +1535,7 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
     };
     String aiStatus = 'valid';
     String aiMessage = '';
+    final provider = context.read<AssetProvider>();
     try {
       final assetAiService = AssetAiService();
       final aiResult = await assetAiService.validateAsset(aiPayload);
@@ -1165,7 +1567,6 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
     }
 
     // --- Proceed to submit asset ---
-    final provider = context.read<AssetProvider>();
     final success = await provider.addAsset(
       name: _nameController.text.trim(),
       brand: _brandController.text.trim(),
@@ -1182,20 +1583,33 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
       fieldId: _selectedFieldId!,
     );
 
-    if (success && mounted) {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Asset added successfully.')),
-      );
+    if (success) {
+      _showAssetAddSuccess();
       return;
     }
 
-    if (mounted) {
-      final errorMessage = provider.error ?? 'Unable to create asset';
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    _showAssetAddError(provider.error ?? 'Unable to create asset');
+  }
+
+  void _showAssetAddSuccess() {
+    if (!mounted) {
+      return;
     }
+
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Asset added successfully.')));
+  }
+
+  void _showAssetAddError(String message) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -1415,7 +1829,7 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
                     title: 'Smart Details',
                     children: [
                       DropdownButtonFormField<String>(
-                        value: _selectedCategory,
+                        initialValue: _selectedCategory,
                         decoration: InputDecoration(
                           labelText: 'Category',
                           helperText: 'Auto-filled by AI, but editable',
@@ -1571,7 +1985,8 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
                             (field) => DropdownMenuItem<String?>(
                               value: field['id']?.toString(),
                               child: Text(
-                                field['name']?.toString() ?? 'Unknown Field',
+                                field['name']?.toString() ??
+                                    'Field not available',
                               ),
                             ),
                           ),

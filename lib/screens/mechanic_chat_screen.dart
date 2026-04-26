@@ -9,11 +9,13 @@ import '../services/mechanic_chat_service.dart';
 class MechanicChatScreen extends StatefulWidget {
   const MechanicChatScreen({
     super.key,
+    this.assetId,
     this.assetBrand,
     this.assetModel,
     this.assetCategory,
   });
 
+  final String? assetId;
   final String? assetBrand;
   final String? assetModel;
   final String? assetCategory;
@@ -65,16 +67,19 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
   Future<void> _loadConversationMessages(String conversationId) async {
     setState(() => _isLoadingMessages = true);
     try {
-      final conversation =
-          await ConversationService.getConversationById(conversationId);
+      final conversation = await ConversationService.getConversationById(
+        conversationId,
+      );
       if (!mounted) return;
       setState(() {
         _messages = conversation.messages
-            .map((msg) => ChatMessage(
-                  text: msg.content,
-                  isUser: msg.isUserMessage,
-                  timestamp: msg.createdAt,
-                ))
+            .map(
+              (msg) => ChatMessage(
+                text: msg.content,
+                isUser: msg.isUserMessage,
+                timestamp: msg.createdAt,
+              ),
+            )
             .toList();
         _currentConversationId = conversationId;
         _isLoadingMessages = false;
@@ -89,13 +94,22 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
 
   void _addInitialMessage() {
     setState(() {
-      final assetInfo = widget.assetBrand != null || widget.assetModel != null
-          ? '\n\nYou are asking about: ${[widget.assetBrand, widget.assetModel].where((e) => e != null).join(', ')}'
+      final assetInfo = <String>[
+        if (widget.assetBrand != null && widget.assetBrand!.trim().isNotEmpty)
+          widget.assetBrand!.trim(),
+        if (widget.assetModel != null && widget.assetModel!.trim().isNotEmpty)
+          widget.assetModel!.trim(),
+        if (widget.assetCategory != null &&
+            widget.assetCategory!.trim().isNotEmpty)
+          widget.assetCategory!.trim(),
+      ];
+      final assetInfoText = assetInfo.isNotEmpty
+          ? '\n\nYou are asking about: ${assetInfo.join(', ')}'
           : '';
       _messages = [
         ChatMessage(
           text:
-              'Hello! I am your agricultural mechanic assistant. Ask me about machinery repairs, maintenance, diagnostics, and troubleshooting.$assetInfo',
+              'Hello! I am your agricultural mechanic assistant. Ask me about machinery repairs, maintenance, diagnostics, and troubleshooting.$assetInfoText',
           isUser: false,
           timestamp: DateTime.now(),
         ),
@@ -153,8 +167,9 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Conversation'),
-        content:
-            const Text('Are you sure you want to delete this conversation?'),
+        content: const Text(
+          'Are you sure you want to delete this conversation?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -167,8 +182,7 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
                 await ConversationService.deleteConversation(conversationId);
                 if (!mounted) return;
                 setState(() {
-                  _conversations
-                      .removeWhere((c) => c.id == conversationId);
+                  _conversations.removeWhere((c) => c.id == conversationId);
                   if (_currentConversationId == conversationId) {
                     if (_conversations.isNotEmpty) {
                       _currentConversationId = _conversations.first.id;
@@ -202,6 +216,7 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
     try {
       final result = await MechanicChatService.sendMessage(
         message,
+        assetId: widget.assetId,
         brand: widget.assetBrand,
         model: widget.assetModel,
         category: widget.assetCategory,
@@ -211,16 +226,16 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
       if (!mounted) return;
 
       setState(() {
-        _messages.add(ChatMessage(
-          text: message,
-          isUser: true,
-          timestamp: DateTime.now(),
-        ));
-        _messages.add(ChatMessage(
-          text: result['reply'] as String,
-          isUser: false,
-          timestamp: DateTime.now(),
-        ));
+        _messages.add(
+          ChatMessage(text: message, isUser: true, timestamp: DateTime.now()),
+        );
+        _messages.add(
+          ChatMessage(
+            text: result['reply'] as String,
+            isUser: false,
+            timestamp: DateTime.now(),
+          ),
+        );
         if (_currentConversationId == null) {
           _currentConversationId = result['conversationId'] as String?;
           _loadConversations();
@@ -287,8 +302,8 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
             color: const Color(0xFF1a2a1f),
             itemBuilder: (context) => [
               PopupMenuItem(
-                child: const Text('New Chat'),
                 onTap: _createNewConversation,
+                child: const Text('New Chat'),
               ),
             ],
           ),
@@ -296,6 +311,54 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
       ),
       body: Column(
         children: [
+          if (widget.assetId != null ||
+              widget.assetBrand != null ||
+              widget.assetModel != null ||
+              widget.assetCategory != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Machine context enabled',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      [
+                            widget.assetBrand,
+                            widget.assetModel,
+                            widget.assetCategory,
+                          ]
+                          .where(
+                            (value) => value != null && value.trim().isNotEmpty,
+                          )
+                          .map((value) => value!.trim())
+                          .join(' • '),
+                      style: GoogleFonts.poppins(
+                        color: Colors.white.withValues(alpha: 0.75),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           if (_isLoadingConversations)
             Padding(
               padding: const EdgeInsets.all(16),
@@ -321,43 +384,47 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: _conversations
                       .take(5)
-                      .map((conv) => GestureDetector(
-                            onTap: () => _loadConversationMessages(conv.id),
-                            onLongPress: () =>
-                                _deleteConversation(conv.id),
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 4),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
+                      .map(
+                        (conv) => GestureDetector(
+                          onTap: () => _loadConversationMessages(conv.id),
+                          onLongPress: () => _deleteConversation(conv.id),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _currentConversationId == conv.id
+                                  ? const Color(0xFF2F8ED1)
+                                  : Colors.white.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
                                 color: _currentConversationId == conv.id
                                     ? const Color(0xFF2F8ED1)
-                                    : Colors.white.withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: _currentConversationId == conv.id
-                                      ? const Color(0xFF2F8ED1)
-                                      : Colors.white.withValues(alpha: 0.1),
-                                ),
-                              ),
-                              child: Text(
-                                conv.title.length > 15
-                                    ? '${conv.title.substring(0, 15)}...'
-                                    : conv.title,
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                    : Colors.white.withValues(alpha: 0.1),
                               ),
                             ),
-                          ))
+                            child: Text(
+                              conv.title.length > 15
+                                  ? '${conv.title.substring(0, 15)}...'
+                                  : conv.title,
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
                       .toList(),
                 ),
               ),
@@ -395,8 +462,7 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
                                   ),
                           ),
                           constraints: BoxConstraints(
-                            maxWidth:
-                                MediaQuery.of(context).size.width * 0.75,
+                            maxWidth: MediaQuery.of(context).size.width * 0.75,
                           ),
                           child: Text(
                             message.text,
@@ -415,9 +481,7 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.03),
               border: Border(
-                top: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.1),
-                ),
+                top: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
               ),
             ),
             child: Row(

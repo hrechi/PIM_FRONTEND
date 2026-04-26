@@ -28,6 +28,8 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
   String? _error;
   Map<String, dynamic>? _historyResult;
   Map<String, dynamic>? _diagnosticsResult;
+  Map<String, dynamic>? _insightsResult;
+  Map<String, dynamic>? _predictiveResult;
   late String _status;
 
   @override
@@ -163,16 +165,21 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
                     version: QrVersions.auto,
                     size: 220,
                     backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: Colors.black,
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: Colors.black,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
                 Text(
                   widget.asset.name,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -206,12 +213,16 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
       final results = await Future.wait([
         provider.fetchAssetHistory(widget.asset.id),
         provider.fetchAssetDiagnostics(widget.asset.id),
+        provider.fetchAssetInsights(widget.asset.id),
+        provider.fetchPredictiveMaintenance(widget.asset.id),
       ]);
 
       if (!mounted) return;
       setState(() {
         _historyResult = results[0];
         _diagnosticsResult = results[1];
+        _insightsResult = results[2];
+        _predictiveResult = results[3];
         _isLoading = false;
       });
     } catch (_) {
@@ -225,7 +236,8 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final history = (_historyResult?['history'] as List?)
+    final history =
+        (_historyResult?['history'] as List?)
             ?.map((item) => Map<String, dynamic>.from(item as Map))
             .toList() ??
         [];
@@ -235,7 +247,8 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
     final diagnostics = Map<String, dynamic>.from(
       (_diagnosticsResult?['diagnostics'] as Map?) ?? const {},
     );
-    final dynamicReport = (_diagnosticsResult?['dynamicReport']?.toString() ??
+    final dynamicReport =
+        (_diagnosticsResult?['dynamicReport']?.toString() ??
             diagnostics['technicalBulletin']?.toString()) ??
         'AI report unavailable.';
 
@@ -263,7 +276,8 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
                         : Image(
                             image: _assetImageProvider()!,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _assetFallback(),
+                            errorBuilder: (context, error, stackTrace) =>
+                                _assetFallback(),
                           ),
                   ),
                   Container(
@@ -296,7 +310,8 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          widget.asset.model != null && widget.asset.model!.isNotEmpty
+                          widget.asset.model != null &&
+                                  widget.asset.model!.isNotEmpty
                               ? '${widget.asset.model}${widget.asset.modelYear != null ? ' • ${widget.asset.modelYear}' : ''}'
                               : 'Asset details',
                           style: GoogleFonts.poppins(
@@ -360,12 +375,17 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              _detailChip('Status: ${_statusLabel()}', color: _statusColor()),
+                              _detailChip(
+                                'Status: ${_statusLabel()}',
+                                color: _statusColor(),
+                              ),
                               _detailChip('Category: ${widget.asset.category}'),
                               if (widget.asset.fieldName != null)
                                 _detailChip('Field: ${widget.asset.fieldName}'),
                               if (widget.asset.assignedToName != null)
-                                _detailChip('Assigned: ${widget.asset.assignedToName}'),
+                                _detailChip(
+                                  'Assigned: ${widget.asset.assignedToName}',
+                                ),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -407,7 +427,9 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
                                 child: _detailTile(
                                   'Last service',
                                   widget.asset.lastServiceDate != null
-                                      ? DateFormat('dd MMM yyyy').format(widget.asset.lastServiceDate!)
+                                      ? DateFormat(
+                                          'dd MMM yyyy',
+                                        ).format(widget.asset.lastServiceDate!)
                                       : 'Not set',
                                   icon: Icons.handyman_rounded,
                                 ),
@@ -427,9 +449,13 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
                               const SizedBox(width: 10),
                               Expanded(
                                 child: CustomButton(
-                                  text: _status == 'IN_USE' ? 'Mark Available' : 'Mark In Use',
+                                  text: _status == 'IN_USE'
+                                      ? 'Mark Available'
+                                      : 'Mark In Use',
                                   onPressed: () => _setStatus(
-                                    _status == 'IN_USE' ? 'AVAILABLE' : 'IN_USE',
+                                    _status == 'IN_USE'
+                                        ? 'AVAILABLE'
+                                        : 'IN_USE',
                                   ),
                                   backgroundColor: _status == 'IN_USE'
                                       ? const Color(0xFF61C06F)
@@ -442,12 +468,13 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
                           SizedBox(
                             width: double.infinity,
                             child: CustomButton(
-                              text: '🔧 Ask Mechanic',
+                              text: '🔧 Ask about this machine',
                               onPressed: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => MechanicChatScreen(
+                                      assetId: widget.asset.id,
                                       assetBrand: widget.asset.brand,
                                       assetModel: widget.asset.model,
                                       assetCategory: widget.asset.category,
@@ -461,6 +488,10 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 14),
+                    _predictiveMaintenanceCard(_predictiveResult),
+                    const SizedBox(height: 14),
+                    _machineInsightsCard(_insightsResult),
                     const SizedBox(height: 14),
                     _aiInsightCard(dynamicReport, diagnostics),
                     const SizedBox(height: 14),
@@ -538,9 +569,18 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _chip('Risk', '${diagnostics['riskPercentage'] ?? diagnostics['failureProbability'] ?? 'N/A'}%'),
-              _chip('Critical', diagnostics['criticalComponent']?.toString() ?? 'N/A'),
-              _chip('Pro Tip', diagnostics['maintenanceProTip']?.toString() ?? 'N/A'),
+              _chip(
+                'Risk',
+                '${diagnostics['riskPercentage'] ?? diagnostics['failureProbability'] ?? 'N/A'}%',
+              ),
+              _chip(
+                'Critical',
+                diagnostics['criticalComponent']?.toString() ?? 'N/A',
+              ),
+              _chip(
+                'Pro Tip',
+                diagnostics['maintenanceProTip']?.toString() ?? 'N/A',
+              ),
             ],
           ),
         ],
@@ -548,15 +588,268 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
     );
   }
 
+  Widget _machineInsightsCard(Map<String, dynamic>? insights) {
+    final riskLevel = (insights?['riskLevel']?.toString() ?? 'LOW')
+        .toUpperCase();
+    final warnings =
+        (insights?['warnings'] as List?)
+            ?.map((item) => item.toString())
+            .where((item) => item.trim().isNotEmpty)
+            .toList() ??
+        const [];
+    final recommendations =
+        (insights?['recommendations'] as List?)
+            ?.map((item) => item.toString())
+            .where((item) => item.trim().isNotEmpty)
+            .toList() ??
+        const [];
+
+    return _glassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Machine Insights',
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _detailChip(
+            'Risk level: $riskLevel',
+            color: _riskLevelColor(riskLevel),
+          ),
+          const SizedBox(height: 12),
+          if (warnings.isEmpty && recommendations.isEmpty)
+            Text(
+              'No machine insights yet. The asset has not shown enough usage patterns to flag risk.',
+              style: GoogleFonts.poppins(
+                color: Colors.white.withValues(alpha: 0.78),
+                fontSize: 13,
+                height: 1.45,
+              ),
+            )
+          else ...[
+            if (warnings.isNotEmpty) ...[
+              Text(
+                'Warnings',
+                style: GoogleFonts.poppins(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...warnings.map(
+                (warning) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: _bulletRow(
+                    warning,
+                    icon: Icons.warning_amber_rounded,
+                    color: const Color(0xFFE3A77B),
+                  ),
+                ),
+              ),
+            ],
+            if (recommendations.isNotEmpty) ...[
+              if (warnings.isNotEmpty) const SizedBox(height: 10),
+              Text(
+                'Recommendations',
+                style: GoogleFonts.poppins(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...recommendations.map(
+                (recommendation) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: _bulletRow(
+                    recommendation,
+                    icon: Icons.lightbulb_outline_rounded,
+                    color: const Color(0xFF9EE6B7),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _predictiveMaintenanceCard(Map<String, dynamic>? predictive) {
+    final riskLevel = (predictive?['riskLevel']?.toString() ?? 'LOW')
+        .toUpperCase();
+    final canUse = predictive?['canUse'] != false;
+    final predictions =
+        (predictive?['predictions'] as List?)
+            ?.map((item) => item.toString())
+            .where((item) => item.trim().isNotEmpty)
+            .toList() ??
+        const [];
+    final actions =
+        (predictive?['recommendedActions'] as List?)
+            ?.map((item) => item.toString())
+            .where((item) => item.trim().isNotEmpty)
+            .toList() ??
+        const [];
+
+    return _glassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Predicted Maintenance',
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _detailChip(
+            'Risk level: $riskLevel',
+            color: _riskLevelColor(riskLevel),
+          ),
+          const SizedBox(height: 12),
+          if (!canUse)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFC83E4D).withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: const Color(0xFFC83E4D).withValues(alpha: 0.35),
+                ),
+              ),
+              child: Text(
+                '⚠ Machine requires maintenance before use',
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFFFFC7CF),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          if (predictions.isNotEmpty) ...[
+            if (!canUse) const SizedBox(height: 12),
+            Text(
+              'Predictions',
+              style: GoogleFonts.poppins(
+                color: Colors.white.withValues(alpha: 0.9),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...predictions.map(
+              (prediction) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _bulletRow(
+                  prediction,
+                  icon: Icons.trending_up_rounded,
+                  color: const Color(0xFFE3A77B),
+                ),
+              ),
+            ),
+          ],
+          if (actions.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Recommended actions',
+              style: GoogleFonts.poppins(
+                color: Colors.white.withValues(alpha: 0.9),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...actions.map(
+              (action) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _bulletRow(
+                  action,
+                  icon: Icons.build_circle_outlined,
+                  color: const Color(0xFF9EE6B7),
+                ),
+              ),
+            ),
+          ],
+          if (predictions.isEmpty && actions.isEmpty)
+            Text(
+              'No maintenance predictions at the moment.',
+              style: GoogleFonts.poppins(
+                color: Colors.white.withValues(alpha: 0.78),
+                fontSize: 13,
+                height: 1.45,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bulletRow(
+    String text, {
+    required IconData icon,
+    required Color color,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: color, size: 18),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: GoogleFonts.poppins(
+              color: Colors.white.withValues(alpha: 0.82),
+              fontSize: 12,
+              height: 1.45,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _riskLevelColor(String riskLevel) {
+    switch (riskLevel.toUpperCase()) {
+      case 'HIGH':
+        return const Color(0xFFC83E4D);
+      case 'MEDIUM':
+        return const Color(0xFFE3A77B);
+      default:
+        return const Color(0xFF61C06F);
+    }
+  }
+
   Widget _metricsCard(Map<String, dynamic> aggregates) {
     return _glassCard(
       child: Row(
         children: [
-          Expanded(child: _metric('Lifetime Hours', '${aggregates['totalLifetimeHours'] ?? 0}')),
+          Expanded(
+            child: _metric(
+              'Lifetime Hours',
+              '${aggregates['totalLifetimeHours'] ?? 0}',
+            ),
+          ),
           const SizedBox(width: 10),
-          Expanded(child: _metric('Avg Session', '${aggregates['averageSessionLength'] ?? 0} h')),
+          Expanded(
+            child: _metric(
+              'Avg Session',
+              '${aggregates['averageSessionLength'] ?? 0} h',
+            ),
+          ),
           const SizedBox(width: 10),
-          Expanded(child: _metric('Sessions', '${aggregates['sessionCount'] ?? 0}')),
+          Expanded(
+            child: _metric('Sessions', '${aggregates['sessionCount'] ?? 0}'),
+          ),
         ],
       ),
     );
@@ -587,10 +880,19 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
   }
 
   Widget _usageLineChart(List<Map<String, dynamic>> history) {
-    final completed = history.where((item) => item['endTime'] != null).toList().reversed.toList();
+    final completed = history
+        .where((item) => item['endTime'] != null)
+        .toList()
+        .reversed
+        .toList();
     final points = <FlSpot>[];
     for (var i = 0; i < completed.length; i++) {
-      points.add(FlSpot(i.toDouble(), ((completed[i]['durationHours'] as num?)?.toDouble() ?? 0.0)));
+      points.add(
+        FlSpot(
+          i.toDouble(),
+          ((completed[i]['durationHours'] as num?)?.toDouble() ?? 0.0),
+        ),
+      );
     }
 
     return _glassCard(
@@ -615,12 +917,18 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
                   show: true,
                   drawVerticalLine: false,
                   horizontalInterval: 1,
-                  getDrawingHorizontalLine: (_) =>
-                      FlLine(color: Colors.white.withValues(alpha: 0.08), strokeWidth: 1),
+                  getDrawingHorizontalLine: (_) => FlLine(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    strokeWidth: 1,
+                  ),
                 ),
                 titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
@@ -685,7 +993,9 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
         _glassCard(
           child: Text(
             'No usage sessions yet for this asset.',
-            style: GoogleFonts.poppins(color: Colors.white.withValues(alpha: 0.78)),
+            style: GoogleFonts.poppins(
+              color: Colors.white.withValues(alpha: 0.78),
+            ),
           ),
         ),
       ];
@@ -756,10 +1066,7 @@ class _AssetDeepDiveScreenState extends State<AssetDeepDiveScreen> {
       ),
       child: Text(
         '$label: $value',
-        style: GoogleFonts.poppins(
-          color: Colors.white,
-          fontSize: 11,
-        ),
+        style: GoogleFonts.poppins(color: Colors.white, fontSize: 11),
       ),
     );
   }

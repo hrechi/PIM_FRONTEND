@@ -5,6 +5,7 @@ import 'api_service.dart';
 class MechanicChatService {
   static Future<Map<String, dynamic>> sendMessage(
     String message, {
+    String? assetId,
     String? brand,
     String? model,
     String? category,
@@ -18,9 +19,9 @@ class MechanicChatService {
 
     final body = {
       'message': message,
+      if (assetId?.isNotEmpty ?? false) 'assetId': assetId,
       if (assetContext.isNotEmpty) 'asset': assetContext,
-      if (conversationId?.isNotEmpty ?? false)
-        'conversationId': conversationId,
+      if (conversationId?.isNotEmpty ?? false) 'conversationId': conversationId,
     };
 
     final response = await http.post(
@@ -41,6 +42,7 @@ class MechanicChatService {
       await ApiService.refreshToken();
       return sendMessage(
         message,
+        assetId: assetId,
         brand: brand,
         model: model,
         category: category,
