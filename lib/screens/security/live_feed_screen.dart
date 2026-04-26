@@ -12,9 +12,9 @@ import '../../utils/constants.dart';
 /// Displays the live camera feed from the Python AI engine.
 ///
 /// Uses a polling approach: fetches a single JPEG snapshot from Flask every
-/// 200 ms and displays it with [Image.memory]. This works reliably on mobile
-/// because Flutter's [Image.network] cannot decode multipart/x-mixed-replace
-/// MJPEG streams.
+/// ~33 ms (≈30 fps) and displays it with [Image.memory]. This works reliably
+/// on mobile because Flutter's [Image.network] cannot decode
+/// multipart/x-mixed-replace MJPEG streams.
 class LiveFeedScreen extends StatefulWidget {
   const LiveFeedScreen({super.key});
 
@@ -23,7 +23,9 @@ class LiveFeedScreen extends StatefulWidget {
 }
 
 class _LiveFeedScreenState extends State<LiveFeedScreen> {
-  static const _pollInterval = Duration(milliseconds: 200);
+  // ~30 fps polling. The Python engine serves cached annotated frames at the
+  // full source rate, so this is the dominant FPS lever on the client side.
+  static const _pollInterval = Duration(milliseconds: 33);
   static const _prefsKey = 'ai_engine_ip';
 
   bool _isConnected = false;
@@ -35,6 +37,9 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
   DateTime _lastFpsUpdate = DateTime.now();
   String _lastError = '';
   String _customHost = '';
+  // Persistent HTTP client — reuses one TCP connection across polls so we
+  // don't pay handshake latency for every snapshot fetch.
+  final http.Client _httpClient = http.Client();
 
   /// Resolved host: custom override or default from AppConfig
   String get _host =>
@@ -53,7 +58,8 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _stopPolling();
+    _httpClient.close();
     super.dispose();
   }
 
@@ -70,7 +76,7 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
   void _startPolling() {
     if (_isPolling) return;
     _isPolling = true;
-    _timer = Timer.periodic(_pollInterval, (_) => _fetchFrame());
+    _scheduleNextFetch(immediate: true);
   }
 
   void _stopPolling() {
@@ -79,9 +85,22 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
     _timer = null;
   }
 
+  /// Recursive scheduler: fires the next request only after the previous one
+  /// completes, so requests never overlap and we get the highest sustainable
+  /// frame rate without flooding the server.
+  void _scheduleNextFetch({bool immediate = false}) {
+    if (!_isPolling || !mounted) return;
+    final delay = immediate ? Duration.zero : _pollInterval;
+    _timer = Timer(delay, () async {
+      if (!_isPolling || !mounted) return;
+      await _fetchFrame();
+      _scheduleNextFetch();
+    });
+  }
+
   Future<void> _fetchFrame() async {
     try {
-      final response = await http
+      final response = await _httpClient
           .get(Uri.parse(_snapshotUrl))
           .timeout(const Duration(seconds: 2));
 
