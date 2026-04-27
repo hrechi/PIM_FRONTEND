@@ -20,6 +20,7 @@ class CatalogueWizardScreen extends StatefulWidget {
 class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
   int _currentStep = 0;
   final _formKey = GlobalKey<FormState>();
+  String? _savedCatalogueId;
 
   // Step 1: Basic Info
   final _titleController = TextEditingController();
@@ -141,10 +142,10 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
 
   String _getStepTitle(int step) {
     switch (step) {
-      case 0: return 'Infos';
-      case 1: return 'Animaux';
-      case 2: return 'Paramètres';
-      case 3: return 'Aperçu';
+      case 0: return 'Info';
+      case 1: return 'Animals';
+      case 2: return 'Settings';
+      case 3: return 'Preview';
       case 4: return 'Export';
       default: return '';
     }
@@ -477,7 +478,7 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
     // Validate title manually (form may not be in tree at step 2)
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Le titre est obligatoire')),
+        const SnackBar(content: Text('Title is required')),
       );
       setState(() => _currentStep = 0);
       return;
@@ -517,19 +518,14 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
     if (!mounted) return;
 
     if (result != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(widget.catalogue != null
-              ? 'Catalogue mis à jour avec succès'
-              : 'Catalogue créé avec succès'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      Navigator.pop(context, result);
+      // ✅ Store the catalogue ID for later use
+      _savedCatalogueId = result.id;
+      // ✅ Advance to preview step instead of closing
+      setState(() => _currentStep++);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(provider.error ?? 'Erreur lors de la sauvegarde'),
+          content: Text(provider.error ?? 'Failed to save catalogue'),
           backgroundColor: Colors.red,
         ),
       );

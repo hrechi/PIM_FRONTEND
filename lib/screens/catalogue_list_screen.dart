@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/catalogue_provider.dart';
 import '../models/catalogue_models.dart';
-import '../widgets/animal_catalogue_card.dart';
 import '../theme/app_theme.dart';
 import 'catalogue_wizard_screen.dart';
 import 'catalogue_preview_screen.dart';
@@ -267,12 +266,7 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
               title: const Text('Preview'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CataloguePreviewScreen(catalogue: catalogue),
-                  ),
-                );
+                _openPreview(context, catalogue);
               },
             ),
             ListTile(
@@ -327,13 +321,38 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
     );
   }
 
+  /// Load the full catalogue (with animal details) then open preview.
+  Future<void> _openPreview(BuildContext context, SaleCatalogue catalogue) async {
+    final provider = context.read<CatalogueProvider>();
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    await provider.loadCatalogue(catalogue.id);
+
+    if (!context.mounted) return;
+    Navigator.pop(context); // close loading
+
+    final full = provider.currentCatalogue ?? catalogue;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CataloguePreviewScreen(catalogue: full),
+      ),
+    );
+  }
+
   void _publishCatalogue(BuildContext context, SaleCatalogue catalogue) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Publish Catalogue'),
         content: const Text(
-          'Publishing will make this catalogue visible to buyers. Are you sure?'
+          'Publishing will make this catalogue visible to buyers. Continue?',
         ),
         actions: [
           TextButton(
@@ -345,7 +364,7 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
               Navigator.pop(context);
               context.read<CatalogueProvider>().updateCatalogue(
                 catalogue.id,
-                status: 'published',
+                status: 'PUBLISHED',
               );
             },
             child: const Text('Publish'),
@@ -361,7 +380,7 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Delete Catalogue'),
         content: Text(
-          'Are you sure you want to delete "${catalogue.title}"? This action cannot be undone.'
+          'Delete "${catalogue.title}"? This action cannot be undone.',
         ),
         actions: [
           TextButton(

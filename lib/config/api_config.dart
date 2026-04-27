@@ -1,9 +1,11 @@
 /// API Configuration
 /// Centralized configuration for API endpoints and settings
+import '../utils/constants.dart';
+
 class ApiConfig {
   // Base URLs
   // Use the WiFi IP for device, emulator, and simulator testing.
-  static const String _localBaseUrl = 'http://192.168.1.124:3000/api';
+  static String get _localBaseUrl => 'http://${AppConfig.serverHost}:${AppConfig.serverPort}/api';
   static const String _productionBaseUrl =
       'https://your-production-api.com/api';
 

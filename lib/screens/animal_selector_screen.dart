@@ -175,24 +175,24 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
               _buildFilterChip(
                 label: 'Vaccination',
                 value: _vaccinationStatus == 'up_to_date'
-                    ? 'À jour'
+                    ? 'Up to date'
                     : _vaccinationStatus == 'incomplete'
-                        ? 'Incomplet'
+                        ? 'Incomplete'
                         : _vaccinationStatus,
                 onTap: () => _showVaccinationFilter(),
               ),
               _buildFilterChip(
                 label: 'Reproduction',
                 value: _reproductionStatus == 'pregnant'
-                    ? 'Gestante'
+                    ? 'Pregnant'
                     : _reproductionStatus == 'not_pregnant'
-                        ? 'Non gestante'
+                        ? 'Not pregnant'
                         : _reproductionStatus,
                 onTap: () => _showReproductionFilter(),
               ),
               _buildFilterChip(
-                label: 'Engraissement',
-                value: _isFattening == null ? null : (_isFattening! ? 'Oui' : 'Non'),
+                label: 'Fattening',
+                value: _isFattening == null ? null : (_isFattening! ? 'Yes' : 'No'),
                 onTap: () => _showFatteningFilter(),
               ),
             ],
@@ -492,7 +492,7 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
       builder: (context) => _buildFilterBottomSheet(
         title: 'Select Species',
         options: ['cow', 'sheep', 'horse', 'dog'],
-        displayOptions: ['Vache', 'Mouton', 'Cheval', 'Chien'],
+        displayOptions: ['Cattle', 'Sheep', 'Horse', 'Dog'],
         selectedValue: _species,
         onSelected: (value) {
           setState(() => _species = value);
@@ -508,7 +508,7 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
       builder: (context) => _buildFilterBottomSheet(
         title: 'Select Sex',
         options: ['male', 'female'],
-        displayOptions: ['Mâle', 'Femelle'],
+        displayOptions: ['Male', 'Female'],
         selectedValue: _sex,
         onSelected: (value) {
           setState(() => _sex = value);
@@ -581,7 +581,7 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
       builder: (context) => _buildFilterBottomSheet(
         title: 'Vaccination Status',
         options: ['up_to_date', 'incomplete'],
-        displayOptions: ['À jour', 'Incomplet'],
+        displayOptions: ['Up to date', 'Incomplete'],
         selectedValue: _vaccinationStatus,
         onSelected: (value) {
           setState(() => _vaccinationStatus = value);
@@ -597,7 +597,7 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
       builder: (context) => _buildFilterBottomSheet(
         title: 'Reproduction Status',
         options: ['pregnant', 'not_pregnant'],
-        displayOptions: ['Gestante', 'Non gestante'],
+        displayOptions: ['Pregnant', 'Not pregnant'],
         selectedValue: _reproductionStatus,
         onSelected: (value) {
           setState(() => _reproductionStatus = value);
@@ -611,14 +611,15 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
     showModalBottomSheet(
       context: context,
       builder: (context) => _buildFilterBottomSheet(
-        title: 'Engraissement',
-        options: ['Oui', 'Non'],
-        selectedValue: _isFattening == null ? null : (_isFattening! ? 'Oui' : 'Non'),
+        title: 'Fattening',
+        options: ['yes', 'no'],
+        displayOptions: ['Yes', 'No'],
+        selectedValue: _isFattening == null ? null : (_isFattening! ? 'yes' : 'no'),
         onSelected: (value) {
           setState(() {
-            if (value == 'Oui') {
+            if (value == 'yes') {
               _isFattening = true;
-            } else if (value == 'Non') {
+            } else if (value == 'no') {
               _isFattening = false;
             } else {
               _isFattening = null;

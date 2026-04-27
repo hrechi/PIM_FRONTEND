@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../utils/constants.dart';
 
 class AssetAiService {
   final Dio _dio;
@@ -6,7 +7,7 @@ class AssetAiService {
 
   AssetAiService({Dio? dio, String? baseUrl})
     : _dio = dio ?? Dio(),
-      _baseUrl = baseUrl ?? 'http://192.168.1.162:3000/api/ai';
+      _baseUrl = baseUrl ?? 'http://${AppConfig.serverHost}:${AppConfig.serverPort}/api/ai';
 
   Future<Map<String, dynamic>> validateAsset(
     Map<String, dynamic> assetData,

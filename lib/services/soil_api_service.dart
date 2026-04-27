@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import '../config/api_config.dart';
+import '../utils/constants.dart';
 import '../models/soil_measurement.dart';
 import '../models/ai_prediction.dart';
 
@@ -451,7 +452,7 @@ class SoilApiException implements Exception {
   String get userMessage {
     switch (type) {
       case SoilApiExceptionType.network:
-        return 'Cannot connect to server. Please check your internet connection and ensure the backend is running at http://192.168.1.162:3000';
+        return 'Cannot connect to server. Please check your internet connection and ensure the backend is running at http://${AppConfig.serverHost}:${AppConfig.serverPort}';
       case SoilApiExceptionType.timeout:
         return 'Request timed out. Please try again.';
       case SoilApiExceptionType.notFound:
