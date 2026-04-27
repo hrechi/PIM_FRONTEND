@@ -398,8 +398,14 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
   }
 
   Widget _buildPreviewStep() {
+    // Use the saved catalogue from provider if available (has real animal data)
+    final provider = context.read<CatalogueProvider>();
+    final catalogue = (_savedCatalogueId != null && provider.currentCatalogue?.id == _savedCatalogueId)
+        ? provider.currentCatalogue!
+        : _createPreviewCatalogue();
+
     return CataloguePreviewScreen(
-      catalogue: _createPreviewCatalogue(),
+      catalogue: catalogue,
       isPreview: true,
       onBack: () => setState(() => _currentStep = 2),
       onNext: () => setState(() => _currentStep = 4),
@@ -512,6 +518,9 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
       // Add animals to the new catalogue
       if (result != null && _selectedAnimalIds.isNotEmpty) {
         await provider.addAnimals(result.id, _selectedAnimalIds);
+        // Reload full catalogue so CatalogueAnimal entries have nested animal data
+        await provider.loadCatalogue(result.id);
+        result = provider.currentCatalogue ?? result;
       }
     }
 

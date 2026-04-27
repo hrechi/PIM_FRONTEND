@@ -692,20 +692,30 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
   }
 
   Widget _buildCardImage(Animal animal) {
+    // Resolve relative paths like /uploads/animals/xxx.jpg to full URL
+    String? imageUrl;
+    if (animal.profileImage != null && animal.profileImage!.isNotEmpty) {
+      final p = animal.profileImage!;
+      imageUrl = p.startsWith('http')
+          ? p
+          : 'http://${AppConfig.serverHost}:${AppConfig.serverPort}${p.startsWith('/') ? '' : '/'}$p';
+    }
+
     return Container(
       width: 96,
       height: 96,
       decoration: BoxDecoration(
         color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(24), // Shape preserved
+        borderRadius: BorderRadius.circular(24),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
-        child: animal.profileImage != null
+        child: imageUrl != null
             ? Image.network(
-                animal.profileImage!,
+                imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => _buildFallbackIcon(animal.animalType),
+                errorBuilder: (context, error, stackTrace) =>
+                    _buildFallbackIcon(animal.animalType),
               )
             : _buildFallbackIcon(animal.animalType),
       ),

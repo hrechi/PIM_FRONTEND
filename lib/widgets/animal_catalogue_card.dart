@@ -333,7 +333,7 @@ class AnimalCatalogueCard extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  v.vaccineName ?? 'Vaccine',
+                  v.vaccine?.nameEn ?? v.vaccine?.code ?? 'Vaccine',
                   style: const TextStyle(fontSize: 13, color: Color(0xFF212121)),
                 ),
               ),

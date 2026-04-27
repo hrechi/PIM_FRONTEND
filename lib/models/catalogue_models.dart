@@ -128,7 +128,7 @@ class SaleCatalogue {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  const SaleCatalogue({
+  SaleCatalogue({
     required this.id,
     required this.farmerId,
     required this.title,
@@ -141,10 +141,46 @@ class SaleCatalogue {
     this.shareExpiresAt,
     this.shareViewCount = 0,
     this.status = "DRAFT",
-    this.animals = const [],
+    List<CatalogueAnimal>? animals,
     required this.createdAt,
     required this.updatedAt,
-  });
+  }) : animals = animals ?? [];
+
+  SaleCatalogue copyWith({
+    String? id,
+    String? farmerId,
+    String? title,
+    DateTime? saleDate,
+    String? location,
+    String? currency,
+    bool? showPrices,
+    CatalogueSettings? settings,
+    String? shareToken,
+    DateTime? shareExpiresAt,
+    int? shareViewCount,
+    String? status,
+    List<CatalogueAnimal>? animals,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return SaleCatalogue(
+      id: id ?? this.id,
+      farmerId: farmerId ?? this.farmerId,
+      title: title ?? this.title,
+      saleDate: saleDate ?? this.saleDate,
+      location: location ?? this.location,
+      currency: currency ?? this.currency,
+      showPrices: showPrices ?? this.showPrices,
+      settings: settings ?? this.settings,
+      shareToken: shareToken ?? this.shareToken,
+      shareExpiresAt: shareExpiresAt ?? this.shareExpiresAt,
+      shareViewCount: shareViewCount ?? this.shareViewCount,
+      status: status ?? this.status,
+      animals: animals ?? List<CatalogueAnimal>.from(this.animals),
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 
   factory SaleCatalogue.fromJson(Map<String, dynamic> json) {
     return SaleCatalogue(
