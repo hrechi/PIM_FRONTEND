@@ -15,6 +15,8 @@ class AssetItem {
   final String? fieldId;
   final Map<String, dynamic>? field;
   final Map<String, dynamic>? diagnosis;
+  final String? usageCondition;
+  final Map<String, dynamic>? activeSession;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -35,22 +37,37 @@ class AssetItem {
     this.fieldId,
     this.field,
     this.diagnosis,
+    this.usageCondition,
+    this.activeSession,
     this.createdAt,
     this.updatedAt,
   });
 
   String? get assignedToName => assignedTo?['name'] as String?;
   String? get fieldName => field?['name'] as String?;
+  String? get activeUsageWorkerId =>
+      activeSession?['farmerId']?.toString() ??
+      activeSession?['farmer']?['id']?.toString();
+  String? get activeUsageWorkerName =>
+      activeSession?['farmerName']?.toString() ??
+      activeSession?['farmer']?['name']?.toString();
+  bool get hasAvailabilityWarning =>
+      usageCondition == 'WARNING' || usageCondition == 'CRITICAL';
+  bool get isInUse => status == 'IN_USE';
 
   factory AssetItem.fromJson(Map<String, dynamic> json) {
     return AssetItem(
       id: (json['id'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
-        brand: (json['brand'] ?? '').toString(),
-        model: json['model']?.toString(),
-        modelYear: json['modelYear'] is num ? (json['modelYear'] as num).toInt() : null,
-        mileage: json['mileage'] is num ? (json['mileage'] as num).toDouble() : null,
-        operatingHours: json['operatingHours'] is num
+      brand: (json['brand'] ?? '').toString(),
+      model: json['model']?.toString(),
+      modelYear: json['modelYear'] is num
+          ? (json['modelYear'] as num).toInt()
+          : null,
+      mileage: json['mileage'] is num
+          ? (json['mileage'] as num).toDouble()
+          : null,
+      operatingHours: json['operatingHours'] is num
           ? (json['operatingHours'] as num).toDouble()
           : null,
       category: (json['category'] ?? '').toString(),
@@ -67,8 +84,12 @@ class AssetItem {
       field: json['field'] is Map<String, dynamic>
           ? json['field'] as Map<String, dynamic>
           : null,
-        diagnosis: json['diagnosis'] is Map<String, dynamic>
+      diagnosis: json['diagnosis'] is Map<String, dynamic>
           ? json['diagnosis'] as Map<String, dynamic>
+          : null,
+      usageCondition: json['usageCondition']?.toString(),
+      activeSession: json['activeSession'] is Map<String, dynamic>
+          ? json['activeSession'] as Map<String, dynamic>
           : null,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())
@@ -97,6 +118,8 @@ class AssetItem {
       'field_id': fieldId,
       'field': field,
       'diagnosis': diagnosis,
+      'usageCondition': usageCondition,
+      'activeSession': activeSession,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
     };

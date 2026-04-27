@@ -4,11 +4,13 @@ import 'package:http/http.dart' as http;
 import '../utils/constants.dart';
 
 class PlantService {
+
   // Uses the same server host as the rest of the app
   // For Plant Doctor AI service (runs on port 8012)
   static String get baseUrl => 'http://${AppConfig.serverHost}:${AppConfig.plantDoctorPort}';
   @deprecated
   static const String baseUrl = 'http://process.env.API_BASE_URL:8000'; // Deprecated - use getter above
+
   static Future<Map<String, dynamic>> scanPlant(File imageFile) async {
     try {
       var request = http.MultipartRequest(

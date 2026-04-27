@@ -5,7 +5,9 @@ import '../utils/constants.dart';
 class ApiConfig {
   // Base URLs
   // Use the WiFi IP for device, emulator, and simulator testing.
+
   static String get _localBaseUrl => 'http://${AppConfig.serverHost}:${AppConfig.serverPort}/api';
+
   static const String _productionBaseUrl =
       'https://your-production-api.com/api';
 

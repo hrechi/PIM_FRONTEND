@@ -7,7 +7,9 @@ class AssetAiService {
 
   AssetAiService({Dio? dio, String? baseUrl})
     : _dio = dio ?? Dio(),
+
       _baseUrl = baseUrl ?? 'http://${AppConfig.serverHost}:${AppConfig.serverPort}/api/ai';
+
 
   Future<Map<String, dynamic>> validateAsset(
     Map<String, dynamic> assetData,

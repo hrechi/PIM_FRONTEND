@@ -8,10 +8,13 @@ class AssetProvider with ChangeNotifier {
   List<Map<String, dynamic>> _fieldOptions = [];
   List<Map<String, dynamic>> _brandSuggestions = [];
   List<Map<String, dynamic>> _weeklyUsageIntensity = [];
-  Map<String, dynamic> _assetDiagnosticsById = {};
-  Map<String, dynamic> _assetHistoryById = {};
+  final Map<String, dynamic> _assetDiagnosticsById = {};
+  final Map<String, dynamic> _assetHistoryById = {};
+  final Map<String, dynamic> _assetInsightsById = {};
+  final Map<String, dynamic> _predictiveMaintenanceById = {};
   Map<String, dynamic>? _activeUsageSession;
   String? _activeAssetId;
+  final Set<String> _sessionLoadingAssetIds = <String>{};
   bool _isLoading = false;
   String? _error;
 
@@ -22,9 +25,14 @@ class AssetProvider with ChangeNotifier {
   List<Map<String, dynamic>> get weeklyUsageIntensity => _weeklyUsageIntensity;
   Map<String, dynamic> get assetDiagnosticsById => _assetDiagnosticsById;
   Map<String, dynamic> get assetHistoryById => _assetHistoryById;
+  Map<String, dynamic> get assetInsightsById => _assetInsightsById;
+  Map<String, dynamic> get predictiveMaintenanceById =>
+      _predictiveMaintenanceById;
   Map<String, dynamic>? get activeUsageSession => _activeUsageSession;
   bool get isSessionActive => _activeUsageSession != null;
   String? get activeAssetId => _activeAssetId;
+  bool isSessionActionLoading(String assetId) =>
+      _sessionLoadingAssetIds.contains(assetId);
   bool get isLoading => _isLoading;
   String? get error => _error;
 
@@ -45,6 +53,14 @@ class AssetProvider with ChangeNotifier {
           .map((item) => AssetItem.fromJson(item as Map<String, dynamic>))
           .toList();
       _assets = list;
+
+      for (final asset in list) {
+        try {
+          await fetchPredictiveMaintenance(asset.id, notify: false);
+        } catch (_) {
+          // Predictive maintenance should never block the asset list.
+        }
+      }
     } on ApiException catch (e) {
       _error = e.message;
     } catch (e) {
@@ -163,15 +179,18 @@ class AssetProvider with ChangeNotifier {
         'serial_number': serialNumber,
         'field_id': fieldId,
       };
-      if (model != null && model.isNotEmpty) body['model'] = model;
+      if (model != null && model.isNotEmpty) {
+        body['model'] = model;
+      }
       if (modelYear != null) body['modelYear'] = modelYear;
       if (mileage != null) body['mileage'] = mileage;
       if (operatingHours != null) body['operatingHours'] = operatingHours;
       if (resolvedImageUrl != null && resolvedImageUrl.isNotEmpty) {
         body['image_url'] = resolvedImageUrl;
       }
-      if (assignedTo != null && assignedTo.isNotEmpty)
+      if (assignedTo != null && assignedTo.isNotEmpty) {
         body['assignedTo'] = assignedTo;
+      }
       if (lastServiceDate != null) {
         body['last_service_date'] = lastServiceDate.toUtc().toIso8601String();
       }
@@ -259,69 +278,157 @@ class AssetProvider with ChangeNotifier {
 
   Future<Map<String, dynamic>> startUsageSession({
     required String assetId,
-    required double startMileage,
+    double? startMileage,
     double? startOperatingHours,
     String? taskType,
     DateTime? startTime,
     String? notes,
   }) async {
-    final response = await ApiService.post('/assets/session/start', {
-      'assetId': assetId,
-      'startMileage': startMileage,
-      if (startOperatingHours != null)
-        'startOperatingHours': startOperatingHours,
-      if (taskType != null && taskType.trim().isNotEmpty)
-        'taskType': taskType.trim(),
-      if (startTime != null) 'startTime': startTime.toIso8601String(),
-      if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
-    }, withAuth: true);
+    if (_sessionLoadingAssetIds.contains(assetId)) {
+      return {
+        'success': false,
+        'message': 'Session action already in progress',
+      };
+    }
 
-    _activeUsageSession = Map<String, dynamic>.from(response as Map);
-    _activeAssetId = _activeUsageSession?['assetId']?.toString();
+    _sessionLoadingAssetIds.add(assetId);
     notifyListeners();
-    return _activeUsageSession!;
+
+    try {
+      final response = await ApiService.post(
+        '/assets/$assetId/start-session',
+        {},
+        withAuth: true,
+      );
+      final responseMap = Map<String, dynamic>.from(response as Map);
+      final session = Map<String, dynamic>.from(
+        (responseMap['session'] as Map?) ?? responseMap,
+      );
+
+      _activeUsageSession = session;
+      _activeAssetId = assetId;
+      _assets = _assets.map((asset) {
+        if (asset.id != assetId) return asset;
+        final updated = Map<String, dynamic>.from(asset.toJson())
+          ..['status'] = 'IN_USE';
+        return AssetItem.fromJson(updated);
+      }).toList();
+
+      return responseMap;
+    } finally {
+      _sessionLoadingAssetIds.remove(assetId);
+      notifyListeners();
+    }
   }
 
   Future<Map<String, dynamic>> endUsageSession({
-    required String usageLogId,
-    required double endMileage,
+    String? assetId,
+    String? usageLogId,
+    double? distanceKm,
+    String? issues,
+    String? maintenanceNote,
+    String? condition,
+    double? endMileage,
     double? endOperatingHours,
     double? fuelLevel,
     String? conditionNote,
     DateTime? endTime,
-    required bool returnConfirmation,
-    String? issues,
+    bool? returnConfirmation,
     String? notes,
   }) async {
-    final response = await ApiService.post('/assets/session/end', {
-      'usageLogId': usageLogId,
-      'endMileage': endMileage,
-      if (endOperatingHours != null) 'endOperatingHours': endOperatingHours,
-      if (fuelLevel != null) 'fuelLevel': fuelLevel,
-      if (conditionNote != null && conditionNote.trim().isNotEmpty)
-        'conditionNote': conditionNote.trim(),
-      if (endTime != null) 'endTime': endTime.toIso8601String(),
-      'returnConfirmation': returnConfirmation,
-      if (issues != null && issues.trim().isNotEmpty) 'issues': issues.trim(),
-      if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
-    }, withAuth: true);
+    final resolvedAssetId = assetId ?? _activeAssetId;
 
-    final responseMap = Map<String, dynamic>.from(response as Map);
-    final updatedAssetId = responseMap['assetId']?.toString();
-    _activeUsageSession = null;
-    _activeAssetId = null;
-    _assets = _assets.map((asset) {
-      if (updatedAssetId == null || asset.id != updatedAssetId) {
-        return asset;
+    if (resolvedAssetId != null &&
+        _sessionLoadingAssetIds.contains(resolvedAssetId)) {
+      return {
+        'success': false,
+        'message': 'Session action already in progress',
+      };
+    }
+
+    if (resolvedAssetId != null) {
+      _sessionLoadingAssetIds.add(resolvedAssetId);
+    }
+    notifyListeners();
+
+    try {
+      late final dynamic response;
+      if (resolvedAssetId != null && resolvedAssetId.isNotEmpty) {
+        final payload = <String, dynamic>{
+          'distanceKm': distanceKm ?? 0,
+          'condition': (condition ?? 'GOOD').toUpperCase(),
+        };
+        if (issues != null && issues.trim().isNotEmpty) {
+          payload['issues'] = issues.trim();
+        }
+        if (maintenanceNote != null && maintenanceNote.trim().isNotEmpty) {
+          payload['maintenanceNote'] = maintenanceNote.trim();
+        }
+
+        response = await ApiService.post(
+          '/assets/$resolvedAssetId/end-session',
+          payload,
+          withAuth: true,
+        );
+      } else {
+        if (usageLogId == null || usageLogId.isEmpty) {
+          throw ApiException('No active session to finish', 400);
+        }
+        final payload = <String, dynamic>{'usageLogId': usageLogId};
+        if (endMileage != null) {
+          payload['endMileage'] = endMileage;
+        }
+        if (endOperatingHours != null) {
+          payload['endOperatingHours'] = endOperatingHours;
+        }
+        if (fuelLevel != null) {
+          payload['fuelLevel'] = fuelLevel;
+        }
+        if (conditionNote != null && conditionNote.trim().isNotEmpty) {
+          payload['conditionNote'] = conditionNote.trim();
+        }
+        if (endTime != null) {
+          payload['endTime'] = endTime.toIso8601String();
+        }
+        if (returnConfirmation != null) {
+          payload['returnConfirmation'] = returnConfirmation;
+        }
+        if (issues != null && issues.trim().isNotEmpty) {
+          payload['issues'] = issues.trim();
+        }
+        if (notes != null && notes.trim().isNotEmpty) {
+          payload['notes'] = notes.trim();
+        }
+
+        response = await ApiService.post('/assets/session/end', {
+          ...payload,
+        }, withAuth: true);
       }
 
-      final updatedAsset = Map<String, dynamic>.from(asset.toJson())
-        ..['mileage'] = endMileage
-        ..['operatingHours'] = endOperatingHours ?? asset.operatingHours;
-      return AssetItem.fromJson(updatedAsset);
-    }).toList();
-    notifyListeners();
-    return responseMap;
+      final responseMap = Map<String, dynamic>.from(response as Map);
+      _activeUsageSession = null;
+      _activeAssetId = null;
+      _assets = _assets.map((asset) {
+        final updatedAssetId =
+            resolvedAssetId ??
+            responseMap['assetId']?.toString() ??
+            (responseMap['session'] as Map?)?['assetId']?.toString();
+        if (updatedAssetId == null || asset.id != updatedAssetId) {
+          return asset;
+        }
+
+        final updatedAsset = Map<String, dynamic>.from(asset.toJson())
+          ..['status'] = 'AVAILABLE';
+        return AssetItem.fromJson(updatedAsset);
+      }).toList();
+
+      return responseMap;
+    } finally {
+      if (resolvedAssetId != null) {
+        _sessionLoadingAssetIds.remove(resolvedAssetId);
+      }
+      notifyListeners();
+    }
   }
 
   Future<List<Map<String, dynamic>>> fetchWeeklyUsageIntensity() async {
@@ -356,11 +463,48 @@ class AssetProvider with ChangeNotifier {
     return result;
   }
 
+  Future<Map<String, dynamic>> fetchAssetInsights(String assetId) async {
+    final response = await ApiService.get(
+      '/assets/$assetId/insights',
+      withAuth: true,
+    );
+    final result = Map<String, dynamic>.from(response as Map);
+    _assetInsightsById[assetId] = result;
+    notifyListeners();
+    return result;
+  }
+
+  Future<Map<String, dynamic>> fetchPredictiveMaintenance(
+    String assetId, {
+    bool notify = false,
+  }) async {
+    try {
+      final response = await ApiService.get(
+        '/assets/$assetId/predictive-maintenance',
+        withAuth: true,
+      );
+      final result = Map<String, dynamic>.from(response as Map);
+      _predictiveMaintenanceById[assetId] = result;
+      notifyListeners();
+      return result;
+    } catch (_) {
+      final fallback = <String, dynamic>{
+        'predictions': <String>[],
+        'riskLevel': 'LOW',
+        'recommendedActions': <String>[],
+        'canUse': true,
+      };
+      _predictiveMaintenanceById[assetId] = fallback;
+      notifyListeners();
+      return fallback;
+    }
+  }
+
   Future<Map<String, dynamic>?> getByQrValue(String rawValue) async {
     final qrData = rawValue.trim();
     if (qrData.isEmpty) return null;
 
-    print('🔍 Scanning QR code: $qrData');
+    debugPrint('🔍 Scanning QR code: $qrData');
 
     // First, try to find locally by serial number
     try {
@@ -386,7 +530,7 @@ class AssetProvider with ChangeNotifier {
         'aiMessage': response['aiMessage']?.toString() ?? '',
       };
     } catch (e) {
-      print('❌ Asset not found with serial: $qrData ($e)');
+      debugPrint('❌ Asset not found with serial: $qrData ($e)');
       return null;
     }
   }

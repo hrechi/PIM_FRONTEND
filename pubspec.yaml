@@ -62,6 +62,21 @@ dependencies:
   qr_flutter: ^4.1.0
   pdf: ^3.11.1
   path_provider: ^2.1.5
+  # Robot remote control (JetRacer over rosbridge + MJPEG video)
+  roslibdart: ^0.0.1-dev+4
+  flutter_mjpeg: ^2.0.4
+  flutter_secure_storage: ^9.2.2
+  # Robot live capture: pure-dart zip for video frame batches and player
+  # for MP4 playback in the soil details screen.
+  archive: ^3.6.1
+  video_player: ^2.9.2
+
+# flutter_mjpeg 2.0.4 pins http <1.0.0, but the rest of the app uses http ^1.x.
+# The package only relies on http.Client APIs that are stable across the 0.13/1.x
+# boundary, so this override is safe.
+dependency_overrides:
+  http: ^1.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

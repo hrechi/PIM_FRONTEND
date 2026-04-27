@@ -23,7 +23,9 @@ class _AiAgronomistScreenState extends State<AiAgronomistScreen> {
 
     try {
       // Uses the project WiFi IP for backend access from physical devices.
+
       final url = Uri.parse('http://${AppConfig.serverHost}:${AppConfig.serverPort}/api/agronomist/advice/${widget.parcelId}');
+
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
