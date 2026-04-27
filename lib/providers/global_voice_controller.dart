@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../main.dart';
 import '../services/chat_service.dart';
+import '../services/robot_voice_controller.dart';
 import '../services/voice_navigation_service.dart';
 import '../services/voice_page_action_registry.dart';
 import '../services/voice_service.dart';
@@ -218,6 +219,14 @@ class GlobalVoiceController with ChangeNotifier {
         return;
       }
 
+      // Robot motion / emergency-stop commands. Mirrors voice_assistant_screen
+      // so the floating mic responds to "forward", "stop", "turn left",
+      // "advance for 30 cm", etc., exactly like the Hold-to-Drive buttons.
+      if (localCommand.type == VoiceCommandType.robotCommand) {
+        await _handleRobotVoiceCommand(localCommand, transcript);
+        return;
+      }
+
       if (VoicePageActionRegistry.hasActiveHandler) {
         final result = await VoicePageActionRegistry.dispatch(transcript);
         if (result.handled) {
@@ -284,6 +293,78 @@ class GlobalVoiceController with ChangeNotifier {
       notifyListeners();
       await _speak('I could not complete that request.', transcript: transcript);
     }
+  }
+
+  Future<void> _handleRobotVoiceCommand(
+    VoiceCommandResult command,
+    String transcript,
+  ) async {
+    final action = command.robotAction;
+    if (action == null) {
+      _state = GlobalVoiceState.idle;
+      notifyListeners();
+      return;
+    }
+
+    final controller = RobotVoiceController.instance;
+
+    // Stop is highest priority and must work even if we never connected to a
+    // robot — try to publish a zero-Twist anyway.
+    if (action == RobotVoiceAction.stop) {
+      final ok = await controller.emergencyStop();
+      await _speak(
+        ok
+            ? 'Emergency stop sent.'
+            : 'No robot is connected, but I tried to send a stop anyway.',
+        transcript: transcript,
+      );
+      return;
+    }
+
+    final connected = await controller.ensureConnected();
+    if (!connected) {
+      await _speak(
+        'No robot is connected. Open the Control Room and connect first.',
+        transcript: transcript,
+      );
+      return;
+    }
+
+    bool ok = false;
+    String successMessage = 'Done.';
+    switch (action) {
+      case RobotVoiceAction.forward:
+        ok = await controller.moveForward();
+        successMessage = 'Moving forward.';
+        break;
+      case RobotVoiceAction.backward:
+        ok = await controller.moveBackward();
+        successMessage = 'Moving backward.';
+        break;
+      case RobotVoiceAction.left:
+        ok = await controller.turnLeft();
+        successMessage = 'Turning left.';
+        break;
+      case RobotVoiceAction.right:
+        ok = await controller.turnRight();
+        successMessage = 'Turning right.';
+        break;
+      case RobotVoiceAction.distance:
+        final meters = command.distanceMeters ?? 0;
+        ok = await controller.driveDistance(meters: meters);
+        final cm = (meters.abs() * 100).round();
+        final dir = meters >= 0 ? 'forward' : 'backward';
+        successMessage = 'Driving $dir for $cm centimeters.';
+        break;
+      case RobotVoiceAction.stop:
+        // handled above
+        return;
+    }
+
+    await _speak(
+      ok ? successMessage : 'I could not send the command to the robot.',
+      transcript: transcript,
+    );
   }
 
   Future<void> _speak(
