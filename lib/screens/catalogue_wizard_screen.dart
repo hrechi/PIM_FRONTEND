@@ -4,9 +4,9 @@ import '../providers/catalogue_provider.dart';
 import '../models/catalogue_models.dart';
 import '../models/animal.dart';
 import '../widgets/animal_catalogue_card.dart';
+import '../utils/currency_converter.dart';
 import 'animal_selector_screen.dart';
 import 'catalogue_preview_screen.dart';
-import 'catalogue_export_screen.dart';
 
 class CatalogueWizardScreen extends StatefulWidget {
   final SaleCatalogue? catalogue;
@@ -98,7 +98,7 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
         border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
       ),
       child: Row(
-        children: List.generate(5, (index) {
+        children: List.generate(4, (index) {
           return Expanded(
             child: Column(
               children: [
@@ -146,7 +146,6 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
       case 1: return 'Animals';
       case 2: return 'Settings';
       case 3: return 'Preview';
-      case 4: return 'Export';
       default: return '';
     }
   }
@@ -157,7 +156,6 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
       case 1: return _buildAnimalSelectionStep();
       case 2: return _buildSettingsStep();
       case 3: return _buildPreviewStep();
-      case 4: return _buildExportStep();
       default: return const SizedBox.shrink();
     }
   }
@@ -217,18 +215,14 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     initialValue: _currency,
-                    decoration: const InputDecoration(
-                      labelText: 'Currency',
-                    ),
-                    items: ['TND', 'USD', 'EUR'].map((currency) {
+                    decoration: const InputDecoration(labelText: 'Currency'),
+                    items: CurrencyConverter.supported.map((c) {
                       return DropdownMenuItem(
-                        value: currency,
-                        child: Text(currency),
+                        value: c,
+                        child: Text('$c  ${CurrencyConverter.symbol(c)}'),
                       );
                     }).toList(),
-                    onChanged: (value) {
-                      setState(() => _currency = value!);
-                    },
+                    onChanged: (value) => setState(() => _currency = value!),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -398,24 +392,21 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
   }
 
   Widget _buildPreviewStep() {
-    // Use the saved catalogue from provider if available (has real animal data)
-    final provider = context.read<CatalogueProvider>();
-    final catalogue = (_savedCatalogueId != null && provider.currentCatalogue?.id == _savedCatalogueId)
-        ? provider.currentCatalogue!
-        : _createPreviewCatalogue();
+    // Use Consumer so we don't call context.read() directly inside build().
+    return Consumer<CatalogueProvider>(
+      builder: (context, provider, _) {
+        final catalogue =
+            (_savedCatalogueId != null && provider.currentCatalogue?.id == _savedCatalogueId)
+                ? provider.currentCatalogue!
+                : _createPreviewCatalogue();
 
-    return CataloguePreviewScreen(
-      catalogue: catalogue,
-      isPreview: true,
-      onBack: () => setState(() => _currentStep = 2),
-      onNext: () => setState(() => _currentStep = 4),
-    );
-  }
-
-  Widget _buildExportStep() {
-    return CatalogueExportScreen(
-      catalogue: _createPreviewCatalogue(),
-      isPreview: true,
+        return CataloguePreviewScreen(
+          catalogue: catalogue,
+          isPreview: true,
+          onBack: () => setState(() => _currentStep = 2),
+          // No onNext — export is accessible from the list screen
+        );
+      },
     );
   }
 
@@ -449,13 +440,10 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
 
   bool _canProceed() {
     switch (_currentStep) {
-      case 0:
-        // Allow proceeding if title is not empty (validate on attempt)
-        return _titleController.text.trim().isNotEmpty;
+      case 0: return _titleController.text.trim().isNotEmpty;
       case 1: return _selectedAnimals.isNotEmpty;
       case 2: return true;
-      case 3: return true;
-      case 4: return true;
+      case 3: return true; // Done button on preview
       default: return false;
     }
   }
@@ -465,17 +453,18 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
       case 0: return 'Select Animals';
       case 1: return 'Settings';
       case 2: return widget.catalogue != null ? 'Update' : 'Create';
-      case 3: return 'Preview';
-      case 4: return 'Export';
+      case 3: return 'Done';
       default: return 'Next';
     }
   }
 
   void _handleNext() async {
     if (_currentStep == 2) {
-      // Step 2 → save the catalogue before going to preview
       await _saveCatalogue();
-    } else if (_currentStep < 4) {
+    } else if (_currentStep == 3) {
+      // Preview is the last step — close wizard and return to list
+      if (mounted) Navigator.pop(context, true);
+    } else {
       setState(() => _currentStep++);
     }
   }
@@ -494,7 +483,7 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
     SaleCatalogue? result;
 
     if (widget.catalogue != null) {
-      // Update existing
+      // Update existing catalogue metadata
       result = await provider.updateCatalogue(
         widget.catalogue!.id,
         title: _titleController.text.trim(),
@@ -504,6 +493,27 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
         showPrices: _showPrices,
         settings: _settings,
       );
+
+      if (result != null) {
+        // Sync animal changes: compute diff between original and current selection
+        final existingIds =
+            widget.catalogue!.animals.map((a) => a.animalId).toSet();
+        final newIds = _selectedAnimalIds.toSet();
+
+        final toAdd = newIds.difference(existingIds).toList();
+        final toRemove = existingIds.difference(newIds).toList();
+
+        if (toAdd.isNotEmpty) {
+          await provider.addAnimals(result.id, toAdd);
+        }
+        for (final id in toRemove) {
+          await provider.removeAnimal(result.id, id);
+        }
+
+        // Reload to get fresh animal data
+        await provider.loadCatalogue(result.id);
+        result = provider.currentCatalogue ?? result;
+      }
     } else {
       // Create new
       result = await provider.createCatalogue(
@@ -527,10 +537,8 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
     if (!mounted) return;
 
     if (result != null) {
-      // ✅ Store the catalogue ID for later use
       _savedCatalogueId = result.id;
-      // ✅ Advance to preview step instead of closing
-      setState(() => _currentStep++);
+      setState(() => _currentStep++); // → step 3 (Preview)
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

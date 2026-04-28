@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart'; // for MediaType
 import '../utils/constants.dart';
 
 class AnimalService {
@@ -176,7 +177,11 @@ class AnimalService {
 
     final request = http.MultipartRequest('POST', uri)
       ..headers['Authorization'] = 'Bearer $token'
-      ..files.add(await http.MultipartFile.fromPath('photo', imageFile.path));
+      ..files.add(await http.MultipartFile.fromPath(
+        'photo',
+        imageFile.path,
+        contentType: MediaType('image', 'jpeg'), // explicit MIME type
+      ));
 
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
@@ -208,6 +213,7 @@ class AnimalService {
         'photo',
         bytes,
         filename: 'animal_photo.jpg',
+        contentType: MediaType('image', 'jpeg'), // explicit MIME type
       ));
 
     final streamed = await request.send();

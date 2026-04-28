@@ -27,7 +27,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
   late Animal _animal;
   bool _isDeleting = false;
   final DateFormat _df = DateFormat('MMM dd, yyyy');
-  final NumberFormat _nf = NumberFormat.currency(symbol: r'$', decimalDigits: 2);
+  final NumberFormat _nf = NumberFormat.currency(symbol: 'TND ', decimalDigits: 0);
 
   @override
   void initState() {

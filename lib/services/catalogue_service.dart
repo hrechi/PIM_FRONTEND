@@ -154,9 +154,9 @@ class CatalogueService {
     return SaleCatalogue.fromJson(response);
   }
 
-  // Get public catalogue (no auth required)
+  // Get public catalogue (no auth required) — JSON endpoint used by the app
   Future<SaleCatalogue> getPublicCatalogue(String shareToken) async {
-    final response = await ApiService.get('/public/catalogues/$shareToken', withAuth: false);
+    final response = await ApiService.get('/public/catalogues/$shareToken/data', withAuth: false);
     return SaleCatalogue.fromJson(response);
   }
 

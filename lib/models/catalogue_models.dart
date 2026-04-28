@@ -291,7 +291,14 @@ class CatalogueAnimal {
   // Helper getters for catalogue display
   String? get species => animal?.animalType;
   String? get color => null; // Not available in current model
-  DateTime? get birthDate => animal?.createdAt; // Using createdAt as approximation
+
+  /// Approximate birth date derived from the animal's age in months.
+  /// Uses 30.44 days/month (average). Returns null if age is unavailable or zero.
+  DateTime? get birthDate {
+    if (animal?.age == null || animal!.age <= 0) return null;
+    return DateTime.now().subtract(Duration(days: (animal!.age * 30.44).round()));
+  }
+
   double? get price => priceOverride ?? animal?.estimatedValue ?? animal?.salePrice;
   String? get imageUrl => animal?.profileImage;
 }
