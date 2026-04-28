@@ -21,8 +21,12 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
   static const double _joystickRadius = 54;
   static const double _maxSpeed = 3.2;
   static const double _floatingPreviewThreshold = 220;
+  // Twist limits — kept conservative so an over-eager finger can't slam the
+  // JetBot into a wall. Tune per-robot if needed.
+  static const double _maxLinearMs = 0.35;
+  static const double _maxAngularRad = 1.5;
+  static const Duration _joystickPublishPeriod = Duration(milliseconds: 50);
 
-  Timer? _mockTimer;
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _robotViewAnchorKey = GlobalKey();
   final GlobalKey _scrollViewportKey = GlobalKey();
@@ -35,20 +39,21 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
   RobotService? _robot;
   RobotDescriptor? _activeRobot;
   StreamSubscription<RobotConnectionState>? _robotStateSub;
+  StreamSubscription<RobotTelemetry>? _telemetrySub;
+  Timer? _joyTicker;
+  DateTime _lastJoyAuditAt = DateTime.fromMillisecondsSinceEpoch(0);
   String? _robotError;
   bool _loadingRobots = true;
 
   bool _isConnected = false;
-  double _batteryLevel = 88;
-  int _signalStrength = 91;
+  // -1 means "unknown" — we'll render an em-dash until /voltage publishes.
+  double _batteryLevel = -1;
+  int _signalStrength = 0;
   double _speed = 0;
   double _heading = 0;
   String _direction = 'Idle';
   Offset _joystickOffset = Offset.zero;
   String _lastDirectionLog = 'Idle';
-
-  int _frameIndex = 0;
-  DateTime _lastHeartbeat = DateTime.now();
 
   final List<_ControlEvent> _events = <_ControlEvent>[
     _ControlEvent(
@@ -62,21 +67,6 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_handleScroll);
-    _mockTimer = Timer.periodic(const Duration(milliseconds: 900), (_) {
-      if (!mounted) return;
-      setState(() {
-        _frameIndex++;
-        _lastHeartbeat = DateTime.now();
-
-        if (_isConnected) {
-          _batteryLevel = (_batteryLevel - 0.08).clamp(10, 100);
-          _signalStrength = 65 + (_frameIndex % 30);
-        } else {
-          _signalStrength = 0;
-          _speed = 0;
-        }
-      });
-    });
     _bootstrapRobot();
   }
 
@@ -105,18 +95,38 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
           _isConnected = connected;
           if (!connected) {
             _speed = 0;
+            _signalStrength = 0;
             _direction = 'Disconnected';
             _joystickOffset = Offset.zero;
           } else {
             _direction = 'Idle';
           }
         });
+        if (!connected) {
+          _joyTicker?.cancel();
+          _joyTicker = null;
+        }
         _appendEvent(
           connected
               ? 'Robot link connected (${robot.name})'
               : 'Robot link ${state.name}',
           connected ? AppColorPalette.success : AppColorPalette.warning,
         );
+      });
+      _telemetrySub = svc.telemetryStream.listen((t) {
+        if (!mounted) return;
+        setState(() {
+          _batteryLevel = t.batteryPercent ?? _batteryLevel;
+          _signalStrength = t.signalPercent;
+          // Only let odom drive the speed gauge when the joystick is centred —
+          // otherwise the operator sees command intent, not robot reality, on
+          // the gauge. This keeps it responsive while still showing real m/s
+          // when idle.
+          if (_joystickOffset.distance < 4) {
+            _speed = t.linearSpeed.abs();
+            _heading = t.headingDeg;
+          }
+        });
       });
       await svc.connect();
       if (!mounted) {
@@ -140,10 +150,11 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
 
   @override
   void dispose() {
-    _mockTimer?.cancel();
+    _joyTicker?.cancel();
     _scrollController.removeListener(_handleScroll);
     _scrollController.dispose();
     _robotStateSub?.cancel();
+    _telemetrySub?.cancel();
     // Fire-and-forget; we can't await in dispose, but RobotService.dispose()
     // is internally idempotent and sends a final stop().
     _robot?.dispose();
@@ -226,23 +237,36 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
       return;
     }
     if (svc.isConnected) {
+      _joyTicker?.cancel();
+      _joyTicker = null;
       await svc.dispose();
       // After explicit disconnect we tear down the service and let the user
       // re-bootstrap to reconnect.
       _robotStateSub?.cancel();
       _robotStateSub = null;
+      _telemetrySub?.cancel();
+      _telemetrySub = null;
       if (!mounted) return;
       setState(() {
         _robot = null;
         _isConnected = false;
+        _signalStrength = 0;
+        _speed = 0;
       });
     } else {
       await svc.connect();
     }
   }
 
-  void _emergencyStop() {
-    _robot?.stop();
+  Future<void> _emergencyStop() async {
+    _joyTicker?.cancel();
+    _joyTicker = null;
+    final robot = _robot;
+    // Triple-tap stop in case a single Twist gets dropped on a flaky link.
+    for (var i = 0; i < 3; i++) {
+      await robot?.stop();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
     if (_activeRobot != null) {
       _robotApi.logCommand(
         robotId: _activeRobot!.id,
@@ -251,6 +275,7 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
         angular: 0,
       );
     }
+    if (!mounted) return;
     setState(() {
       _speed = 0;
       _joystickOffset = Offset.zero;
@@ -293,22 +318,70 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
 
       if (_joystickOffset.distance < 8) {
         _direction = 'Idle';
-        return;
-      }
+      } else {
+        final radians = math.atan2(_joystickOffset.dy, _joystickOffset.dx);
+        final degrees = (radians * 180 / math.pi + 360) % 360;
+        _heading = degrees;
+        _direction = _directionFromHeading(_heading);
 
-      final radians = math.atan2(_joystickOffset.dy, _joystickOffset.dx);
-      final degrees = (radians * 180 / math.pi + 360) % 360;
-      _heading = degrees;
-      _direction = _directionFromHeading(_heading);
-
-      if (_direction != _lastDirectionLog) {
-        _appendEvent('Joystick: $_direction', AppColorPalette.info);
-        _lastDirectionLog = _direction;
+        if (_direction != _lastDirectionLog) {
+          _appendEvent('Joystick: $_direction', AppColorPalette.info);
+          _lastDirectionLog = _direction;
+        }
       }
     });
+
+    // Kick off the periodic publisher the first time the stick moves. The
+    // ticker reads the current `_joystickOffset` on every tick so we don't
+    // need to push deltas through it.
+    _joyTicker ??= Timer.periodic(_joystickPublishPeriod, (_) {
+      _publishJoystick();
+    });
+    // Also publish immediately for responsiveness on the very first event.
+    _publishJoystick();
+  }
+
+  void _publishJoystick() {
+    final robot = _robot;
+    if (robot == null || !_isConnected) return;
+
+    // Map the joystick offset to a Twist:
+    //  - up on screen (negative dy) → forward (+linear.x)
+    //  - right on screen (positive dx) → clockwise turn (-angular.z)
+    final nx = (_joystickOffset.dx / _joystickRadius).clamp(-1.0, 1.0);
+    final ny = (-_joystickOffset.dy / _joystickRadius).clamp(-1.0, 1.0);
+    final linear = ny * _maxLinearMs;
+    final angular = -nx * _maxAngularRad;
+
+    robot.drive(linear: linear, angular: angular);
+
+    // Throttle the audit-log + REST round-trip to ~4 Hz so we don't spam the
+    // backend at 20 Hz while the stick is held.
+    final now = DateTime.now();
+    if (now.difference(_lastJoyAuditAt).inMilliseconds >= 250 &&
+        _activeRobot != null) {
+      _lastJoyAuditAt = now;
+      _robotApi.logCommand(
+        robotId: _activeRobot!.id,
+        command: _commandFor(linear, angular),
+        linear: linear,
+        angular: angular,
+      );
+    }
   }
 
   void _onJoystickPanEnd(DragEndDetails details) {
+    _joyTicker?.cancel();
+    _joyTicker = null;
+    _robot?.stop();
+    if (_activeRobot != null) {
+      _robotApi.logCommand(
+        robotId: _activeRobot!.id,
+        command: RobotCommand.stop,
+        linear: 0,
+        angular: 0,
+      );
+    }
     if (!_isConnected) return;
 
     setState(() {
@@ -779,7 +852,7 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          if (!canDrive || robot == null)
+          if (!canDrive)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
@@ -858,11 +931,15 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
     final cards = <_MetricData>[
       _MetricData(
         label: 'Battery',
-        value: '${_batteryLevel.toStringAsFixed(1)} %',
+        value: _batteryLevel < 0
+            ? '—'
+            : '${_batteryLevel.toStringAsFixed(1)} %',
         icon: Icons.battery_full_rounded,
-        color: _batteryLevel > 35
-            ? AppColorPalette.success
-            : AppColorPalette.warning,
+        color: _batteryLevel < 0
+            ? AppColorPalette.softSlate
+            : (_batteryLevel > 35
+                  ? AppColorPalette.success
+                  : AppColorPalette.warning),
       ),
       _MetricData(
         label: 'Signal',
@@ -917,7 +994,7 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
               ),
               const Spacer(),
               Text(
-                'Mock data',
+                _isConnected ? 'Live' : 'Offline',
                 style: AppTextStyles.caption(color: AppColorPalette.softSlate),
               ),
             ],

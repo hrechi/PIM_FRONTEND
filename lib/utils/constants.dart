@@ -5,7 +5,12 @@ import 'package:flutter/material.dart';
 // physical device. Run `ipconfig` (Windows) or `ifconfig` (Mac/Linux)
 // and use the IPv4 address from your WiFi adapter.
 class AppConfig {
+<<<<<<< HEAD
   static const String serverHost = '172.20.10.10'; // your PC's WiFi IP
+=======
+
+  static const String serverHost = '192.168.1.118'; // your PC's WiFi IP
+>>>>>>> 5feebeb189b0dbaeb8860c9cda7d6ca5aea8e5b7
   static const int serverPort = 3000;
   static const int plantDoctorPort = 8012;
 

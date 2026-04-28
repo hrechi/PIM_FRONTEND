@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/voice_access_mode_provider.dart';
 import '../services/chat_service.dart';
+import '../services/robot_voice_controller.dart';
 import '../services/voice_navigation_service.dart';
 import '../services/voice_service.dart';
 import '../utils/constants.dart';
@@ -476,7 +477,89 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
           transcript: transcript,
         );
         return true;
+      case VoiceCommandType.robotCommand:
+        return _handleRobotVoiceCommand(command, transcript);
     }
+  }
+
+  Future<bool> _handleRobotVoiceCommand(
+    VoiceCommandResult command,
+    String transcript,
+  ) async {
+    if (!_isFullAccessEnabled) {
+      await _speakLocalFeedback(
+        message:
+            'I heard a robot command, but full access mode is off. Say give me full access first.',
+        transcript: transcript,
+      );
+      return true;
+    }
+
+    final action = command.robotAction;
+    if (action == null) return true;
+
+    final controller = RobotVoiceController.instance;
+
+    // Stop is highest-priority and must work even if we never connected.
+    if (action == RobotVoiceAction.stop) {
+      final ok = await controller.emergencyStop();
+      await _speakLocalFeedback(
+        message: ok
+            ? 'Emergency stop sent.'
+            : 'No robot is connected, but I tried to send a stop anyway.',
+        transcript: transcript,
+      );
+      return true;
+    }
+
+    final connected = await controller.ensureConnected();
+    if (!connected) {
+      await _speakLocalFeedback(
+        message:
+            'I cannot reach the robot right now. Please check that it is online and try again.',
+        transcript: transcript,
+      );
+      return true;
+    }
+
+    bool dispatched = false;
+    String spoken = '';
+    switch (action) {
+      case RobotVoiceAction.forward:
+        dispatched = await controller.moveForward();
+        spoken = 'Moving forward.';
+        break;
+      case RobotVoiceAction.backward:
+        dispatched = await controller.moveBackward();
+        spoken = 'Moving backward.';
+        break;
+      case RobotVoiceAction.left:
+        dispatched = await controller.turnLeft();
+        spoken = 'Turning left.';
+        break;
+      case RobotVoiceAction.right:
+        dispatched = await controller.turnRight();
+        spoken = 'Turning right.';
+        break;
+      case RobotVoiceAction.distance:
+        final meters = command.distanceMeters ?? 0;
+        dispatched = await controller.driveDistance(meters: meters);
+        final cm = (meters.abs() * 100).round();
+        final dir = meters >= 0 ? 'forward' : 'backward';
+        spoken = 'Driving $dir for $cm centimeters.';
+        break;
+      case RobotVoiceAction.stop:
+        // handled above
+        break;
+    }
+
+    await _speakLocalFeedback(
+      message: dispatched
+          ? spoken
+          : 'The robot did not accept the command. Please try again.',
+      transcript: transcript,
+    );
+    return true;
   }
 
   Future<void> _discardListening() async {
