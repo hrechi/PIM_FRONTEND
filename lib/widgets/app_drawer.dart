@@ -1,698 +1,967 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../screens/agricultural_news_screen.dart';
+
+import '../providers/auth_provider.dart';
+import '../services/api_service.dart';
+import '../theme/color_palette.dart';
+import '../theme/text_styles.dart';
+
+// Top-level / Account
+import '../screens/home_screen.dart';
+import '../screens/farmer_home_screen_v2.dart';
+import '../screens/profile_screen.dart';
+import '../screens/signin_screen.dart';
+
+// Farm
+import '../screens/parcel_list_screen.dart';
+import '../screens/soil/soil_measurements_list_screen.dart';
+import '../screens/plant_doctor_screen.dart';
 import '../screens/harvest_analytics_screen.dart';
 import '../screens/aerotwin_screen.dart';
 import '../screens/crop_calendar_screen.dart';
-import '../providers/auth_provider.dart';
-import '../theme/color_palette.dart';
-import '../theme/text_styles.dart';
-import '../screens/home_screen.dart';
-import '../screens/farmer_home_screen_v2.dart';
+import '../screens/weather_screen.dart';
+import '../screens/irrigation_scheduler_screen.dart';
+import '../screens/agricultural_news_screen.dart';
+import '../screens/shorts_screen.dart';
+import '../screens/community_feed_screen.dart';
+import '../screens/farm_quiz_screen.dart';
+
+// Animals
 import '../screens/animals/animal_list_screen.dart';
 import '../screens/animals/add_animal_screen.dart';
 import '../screens/animals/planned_sales_screen.dart';
 import '../screens/animals/milk_production_screen.dart';
 import '../screens/animals/milk_analytics_screen.dart';
+
+// Health
 import '../screens/vaccines/vaccine_dashboard_screen.dart';
-import '../screens/profile_screen.dart';
-import '../screens/parcel_list_screen.dart';
-import '../screens/plant_doctor_screen.dart';
-import '../screens/staff_list_screen.dart';
-import '../screens/add_staff_screen.dart';
-import '../screens/weather_screen.dart';
-import '../screens/irrigation_scheduler_screen.dart';
-import '../screens/live_feed_screen.dart';
-import '../screens/soil/soil_measurements_list_screen.dart';
-import '../screens/security/incident_history_screen.dart';
-import '../screens/shorts_screen.dart';
-import '../screens/community_feed_screen.dart';
+
+// Finance & Catalogue
 import '../screens/finance/finance_dashboard_screen.dart';
 import '../screens/catalogue_list_screen.dart';
-import '../screens/signin_screen.dart';
 
-class AppDrawer extends StatelessWidget {
+// Security
+import '../screens/staff_list_screen.dart';
+import '../screens/add_staff_screen.dart';
+import '../screens/security/incident_history_screen.dart';
+import '../screens/live_feed_screen.dart';
+import '../screens/security/daily_report_screen.dart';
+import '../screens/security/acoustic_monitor_screen.dart';
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Models
+// ─────────────────────────────────────────────────────────────────────────
+
+class _DrawerItem {
+  final IconData icon;
+  final String title;
+  final WidgetBuilder? builder;
+  final String? routeName;
+
+  const _DrawerItem({
+    required this.icon,
+    required this.title,
+    this.builder,
+    this.routeName,
+  });
+}
+
+class _DrawerCategory {
+  final IconData icon;
+  final String title;
+  final List<_DrawerItem> items;
+
+  const _DrawerCategory({
+    required this.icon,
+    required this.title,
+    required this.items,
+  });
+}
+
+class _DrawerGroup {
+  final String label; // e.g. "General", "Profile"
+  final List<_DrawerCategory> categories;
+  final List<_DrawerItem> flatItems;
+
+  const _DrawerGroup({
+    required this.label,
+    this.categories = const [],
+    this.flatItems = const [],
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Drawer
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Unified application drawer.
+///
+/// • Curved gradient header with avatar / name / tagline.
+/// • Section labels (no harsh dividers) — categories collapse so children
+///   only appear after a tap.
+/// • Staggered slide-in animation each time the drawer opens.
+class AppDrawer extends StatefulWidget {
   const AppDrawer({super.key});
+
+  @override
+  State<AppDrawer> createState() => _AppDrawerState();
+}
+
+class _AppDrawerState extends State<AppDrawer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  static const _bgColor = Color(0xFFFAFAF7);
+  static const _hairline = Color(0xFFEEEAE2);
+  static const _muted = Color(0xFF9AA0A6);
+  static const _ink = Color(0xFF1F2933);
+  static const _selectedFill = Color(0xFFF4EFE7);
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1900),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final role = auth.user?.role.toUpperCase() ?? 'OWNER';
+    final user = auth.user;
+    final role = user?.role.toUpperCase() ?? 'OWNER';
     final isWorker = role == 'WORKER';
 
-    if (isWorker) {
-      return Drawer(
-        backgroundColor: Colors.white,
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: const BoxDecoration(
-                  gradient: AppColorPalette.fieldFreshGradient,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.asset(
-                        'assets/images/agricole_icon2.gif',
-                        width: 60,
-                        height: 60,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Fieldly Worker',
-                      style: AppTextStyles.h2(color: AppColorPalette.white),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Material operations',
-                      style: AppTextStyles.bodySmall(
-                        color: AppColorPalette.white.withValues(alpha: 0.9),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ListView(
-                  children: [
-                    _buildDrawerSection('Worker'),
-                    _buildDrawerItem(
-                      icon: Icons.home_rounded,
-                      title: 'Home',
-                      subtitle: 'Worker Dashboard',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const FarmerHomeScreenV2(),
-                          ),
-                          (route) => false,
-                        );
-                      },
-                    ),
-                    _buildDrawerItem(
-                      icon: Icons.person_outline_rounded,
-                      title: 'Profile',
-                      subtitle: 'My account',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ProfileScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildDrawerItem(
-                      icon: Icons.videogame_asset_rounded,
-                      iconColor: AppColorPalette.robotTechStart,
-                      title: 'Control Room',
-                      subtitle: 'Control robot and monitor view',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.pushNamed(context, '/control_room');
-                      },
-                    ),
-                    _buildDrawerItem(
-                      icon: Icons.workspace_premium_rounded,
-                      iconColor: const Color(0xFF0A7E52),
-                      title: 'Skill Certification',
-                      subtitle: 'Micro-lessons and quizzes',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.pushNamed(context, '/skill_certification');
-                      },
-                    ),
-                    const Divider(height: 1),
-                    _buildDrawerItem(
-                      icon: Icons.logout_rounded,
-                      iconColor: AppColorPalette.alertError,
-                      title: 'Sign Out',
-                      subtitle: 'End worker session',
-                      onTap: () async {
-                        Navigator.pop(context);
-                        await context.read<AuthProvider>().signOut();
-                        if (!context.mounted) return;
-                        Navigator.of(context).pushAndRemoveUntil(
-                          MaterialPageRoute(
-                            builder: (_) => const SignInScreen(),
-                          ),
-                          (route) => false,
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+    final groups = isWorker ? _workerGroups() : _ownerGroups();
+
+    final mediaWidth = MediaQuery.of(context).size.width;
+    final drawerWidth = mediaWidth * 0.84;
 
     return Drawer(
-      backgroundColor: Colors.white,
+      backgroundColor: _bgColor,
+      elevation: 24,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(28),
+          bottomRight: Radius.circular(28),
+        ),
+      ),
+      width: drawerWidth.clamp(280, 360),
       child: SafeArea(
+        bottom: false,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            _buildHeader(
+              context,
+              displayName: user?.name ?? (isWorker ? 'Worker' : 'Farmer'),
+              tagline: isWorker
+                  ? 'Material operations'
+                  : ((user?.farmName.isNotEmpty ?? false)
+                      ? user!.farmName
+                      : 'Smart Farm System'),
+              avatar: user?.profilePicture,
+            ),
             Expanded(
               child: ListView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 children: [
-                  // Header
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: const BoxDecoration(
-                      gradient: AppColorPalette.fieldFreshGradient,
+                  for (var g = 0; g < groups.length; g++) ...[
+                    _animatedRow(
+                      index: g * 5,
+                      child: _sectionLabel(groups[g].label),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Image.asset(
-                            'assets/images/agricole_icon2.gif',
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
-                          ),
+                    for (var i = 0;
+                        i < groups[g].categories.length;
+                        i++)
+                      _animatedRow(
+                        index: g * 5 + i + 1,
+                        child: _CollapsibleCategory(
+                          category: groups[g].categories[i],
+                          onItemTap: (item) => _navigate(item),
+                          ink: _ink,
+                          muted: _muted,
+                          selectedFill: _selectedFill,
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Fieldly',
-                          style: AppTextStyles.h2(color: AppColorPalette.white),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Smart Farm System',
-                          style: AppTextStyles.bodySmall(
-                            color: AppColorPalette.white.withValues(alpha: 0.9),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Home
-                  _buildDrawerItem(
-                    icon: Icons.home_rounded,
-                    title: 'Home',
-                    subtitle: 'Main Dashboard',
-                    onTap: () {
-                      final role = context
-                          .read<AuthProvider>()
-                          .user
-                          ?.role
-                          .toUpperCase();
-                      Navigator.pop(context);
-                      // Navigate to the role-specific dashboard.
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => role == 'WORKER'
-                              ? const FarmerHomeScreenV2()
-                              : const HomeScreen(),
-                        ),
-                        (route) => false,
-                      );
-                    },
-                  ),
-
-                  const Divider(height: 1),
-
-                  // Farm
-                  _buildDrawerSection('Farm'),
-                  _buildDrawerItem(
-                    icon: Icons.grass,
-                    title: 'My Parcels',
-                    subtitle: 'View farm parcels',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ParcelListScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.science_rounded,
-                    title: 'Soil Health',
-                    subtitle: 'Measurements & Analytics',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const SoilMeasurementsListScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.medical_services,
-                    iconColor: AppColorPalette.alertError,
-                    title: 'AI Plant Doctor',
-                    subtitle: 'Diagnose plant issues',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const PlantDoctorScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.bar_chart_rounded,
-                    iconColor: const Color(0xFF2E7D32),
-                    title: 'Harvest Analytics',
-                    subtitle: 'Yield trends & insights',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const HarvestAnalyticsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.map_rounded,
-                    iconColor: Colors.deepPurpleAccent,
-                    title: 'Aero-Twin NDVI',
-                    subtitle: 'Digital Twin & NDVI Maps',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const AeroTwinScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.calendar_month_rounded,
-                    iconColor: AppColorPalette.mistyBlue,
-                    title: 'Crop Calendar',
-                    subtitle: 'Planting & Harvest timeline',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const CropCalendarScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.cloud,
-                    iconColor: const Color(0xFF57A0D3),
-                    title: 'Weather & Advice',
-                    subtitle: 'Forecast & recommendations',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const WeatherScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.water_drop,
-                    iconColor: const Color(0xFF2196F3),
-                    title: 'Irrigation Scheduler',
-                    subtitle: 'Smart 7-day irrigation plan',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const IrrigationSchedulerScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.newspaper,
-                    iconColor: Colors.orange,
-                    title: 'Agricultural News',
-                    subtitle: 'Latest farming updates',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => AgriculturalNewsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.play_circle_filled,
-                    iconColor: const Color(0xFFFF6B6B),
-                    title: 'Farm Reels',
-                    subtitle: 'Agriculture video feed',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const ShortsScreen()),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.forum_rounded,
-                    iconColor: const Color(0xFF0E7A43),
-                    title: 'Community Feed',
-                    subtitle: 'Posts, votes, and discussions',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const CommunityFeedScreen(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const Divider(height: 1),
-
-                  // Animals
-                  _buildDrawerSection('Animals'),
-                  _buildDrawerItem(
-                    icon: Icons.pets,
-                    iconColor: const Color(0xFFFB923C),
-                    title: 'Planned Sales',
-                    subtitle: 'Animals in fattening',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const PlannedSalesScreen(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const Divider(height: 1),
-
-                  // Finance
-                  _buildDrawerSection('Finance'),
-                  _buildDrawerItem(
-                    icon: Icons.attach_money_rounded,
-                    iconColor: const Color(0xFF2E7D32),
-                    title: 'Finance Dashboard',
-                    subtitle: 'Financial overview & reports',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const FinanceDashboardScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  
-                  const Divider(height: 1),
-
-                  // Catalogue
-                  _buildDrawerSection('Catalogue'),
-                  _buildDrawerItem(
-                    icon: Icons.library_books_rounded,
-                    iconColor: const Color(0xFFFF6B6B),
-                    title: 'Product Catalogue',
-                    subtitle: 'Browse & manage products',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const CatalogueListScreen(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const Divider(height: 1),
-
-                  _buildDrawerItem(
-                    icon: Icons.vaccines_rounded,
-                    title: 'Vaccination',
-                    subtitle: 'Herd Health & Planning',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const VaccineDashboardScreen(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const Divider(height: 1),
-
-                  // Security
-                  _buildDrawerSection('Security'),
-                  _buildDrawerItem(
-                    icon: Icons.shield_rounded,
-                    title: 'Security Whitelist',
-                    subtitle: 'View authorized staff',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const StaffListScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.person_add_rounded,
-                    title: 'Add Staff',
-                    subtitle: 'Add to whitelist',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const AddStaffScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.history_rounded,
-                    title: 'Incident History',
-                    subtitle: 'View security logs',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const IncidentHistoryScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.videocam_rounded,
-                    iconColor: const Color(0xFF10B981),
-                    title: 'Live Feed',
-                    subtitle: 'View live camera',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LiveFeedScreen(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const Divider(height: 1),
-
-                  _buildDrawerSection('Operations'),
-                  _buildDrawerItem(
-                    icon: Icons.videogame_asset_rounded,
-                    iconColor: AppColorPalette.robotTechStart,
-                    title: 'Control Room',
-                    subtitle: 'Control robot and monitor view',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/control_room');
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.workspace_premium_rounded,
-                    iconColor: const Color(0xFF0A7E52),
-                    title: 'Skill Certification',
-                    subtitle: 'Micro-lessons and quizzes',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/skill_certification');
-                    },
-                  ),
-
-                  const Divider(height: 1),
-
-                  // Account
-                  _buildDrawerSection('Account'),
-                  _buildDrawerItem(
-                    icon: Icons.person_outline_rounded,
-                    title: 'Profile',
-                    subtitle: 'Manage account',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ProfileScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.settings_outlined,
-                    title: 'Settings',
-                    subtitle: 'App preferences',
-                    onTap: () => Navigator.pop(context),
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'Version 1.0.0',
-                      style: AppTextStyles.caption(
-                        color: AppColorPalette.softSlate,
                       ),
-                    ),
+                    for (var i = 0; i < groups[g].flatItems.length; i++)
+                      _animatedRow(
+                        index: g * 5 + groups[g].categories.length + i + 1,
+                        child: _LeafTile(
+                          item: groups[g].flatItems[i],
+                          onTap: () => _navigate(groups[g].flatItems[i]),
+                          ink: _ink,
+                          muted: _muted,
+                          danger: groups[g].flatItems[i].title == 'Sign Out',
+                        ),
+                      ),
+                    if (g != groups.length - 1)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Container(height: 1, color: _hairline),
+                      ),
+                  ],
+                  const SizedBox(height: 16),
+                  _animatedRow(
+                    index: 30,
+                    child: _SignOutTile(onTap: () => _signOut(context)),
                   ),
+                  const SizedBox(height: 12),
                 ],
               ),
             ),
+            _buildFooter(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDrawerSection(String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Text(
-        title.toUpperCase(),
-        style: AppTextStyles.caption(
-          color: AppColorPalette.softSlate,
-        ).copyWith(fontWeight: FontWeight.bold, letterSpacing: 1.2),
-      ),
-    );
+  // ───────────────────────────── Helpers ───────────────────────────────────
+
+  String _resolveAvatarUrl(String raw) {
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+    final base = ApiService.mediaBaseUrl;
+    return raw.startsWith('/') ? '$base$raw' : '$base/$raw';
   }
 
-  Widget _buildDrawerItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    Color? iconColor,
-  }) {
-    final color = iconColor ?? AppColorPalette.fieldFreshStart;
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, color: color, size: 24),
-      ),
-      title: Text(
-        title,
-        style: AppTextStyles.bodyLarge(color: AppColorPalette.charcoalGreen),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate),
-      ),
-      onTap: onTap,
-    );
-  }
+  // ───────────────────────────── Animation helpers ─────────────────────────
 
-  Widget _buildExpansionDrawerItem({
-    required BuildContext context,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required List<Widget> children,
-    Color? iconColor,
-  }) {
-    final color = iconColor ?? AppColorPalette.fieldFreshStart;
-    return Theme(
-      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-      child: ExpansionTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
+  Widget _animatedRow({required int index, required Widget child}) {
+    // Slower stagger so each row's bounce is clearly visible.
+    final start = (0.15 + index * 0.06).clamp(0.0, 0.7);
+    final end = (start + 0.6).clamp(0.0, 1.0);
+
+    final fade = CurvedAnimation(
+      parent: _controller,
+      curve: Interval(start, end, curve: Curves.easeOut),
+    );
+    final slide = CurvedAnimation(
+      parent: _controller,
+      curve: Interval(start, end, curve: Curves.elasticOut),
+    );
+    final scale = CurvedAnimation(
+      parent: _controller,
+      curve: Interval(start, end, curve: Curves.easeOutBack),
+    );
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, c) {
+        final dx = -64 * (1 - slide.value);
+        final s = 0.92 + 0.08 * scale.value.clamp(0.0, 1.2);
+        return Opacity(
+          opacity: fade.value.clamp(0.0, 1.0),
+          child: Transform.translate(
+            offset: Offset(dx, 0),
+            child: Transform.scale(
+              scale: s,
+              alignment: Alignment.centerLeft,
+              child: c,
+            ),
           ),
-          child: Icon(icon, color: color, size: 24),
+        );
+      },
+      child: child,
+    );
+  }
+
+  // ───────────────────────────── Header ────────────────────────────────────
+
+  Widget _buildHeader(
+    BuildContext context, {
+    required String displayName,
+    required String tagline,
+    String? avatar,
+  }) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        // Stretch the elastic header drop over the first ~60% of the timeline.
+        final raw = (_controller.value / 0.6).clamp(0.0, 1.0);
+        final bounce = Curves.elasticOut.transform(raw);
+        final fade = Curves.easeOut.transform(
+          (_controller.value / 0.4).clamp(0.0, 1.0),
+        );
+        final scale = 0.9 + 0.1 * bounce.clamp(0.0, 1.2);
+        return Opacity(
+          opacity: fade,
+          child: Transform.translate(
+            offset: Offset(0, -34 * (1 - bounce)),
+            child: Transform.scale(
+              scale: scale,
+              alignment: Alignment.topCenter,
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: ClipPath(
+        clipper: _HeaderClipper(),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
+          decoration: const BoxDecoration(
+            gradient: AppColorPalette.fieldFreshGradient,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset(
+                      'assets/images/agricole_icon2.gif', // logo asset
+                      width: 28,
+                      height: 28,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Fieldly',
+                    style: AppTextStyles.bodyLarge(
+                      color: AppColorPalette.white,
+                    ).copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    splashRadius: 18,
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: AppColorPalette.white,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Center(
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColorPalette.white.withValues(alpha: 0.6),
+                      width: 2,
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(2),
+                  child: CircleAvatar(
+                    radius: 30,
+                    backgroundColor:
+                        AppColorPalette.white.withValues(alpha: 0.2),
+                    backgroundImage: (avatar != null && avatar.isNotEmpty)
+                        ? NetworkImage(_resolveAvatarUrl(avatar))
+                        : null,
+                    child: (avatar == null || avatar.isEmpty)
+                        ? const Icon(
+                            Icons.person,
+                            color: AppColorPalette.white,
+                            size: 32,
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Center(
+                child: Text(
+                  displayName,
+                  style: AppTextStyles.h3(color: AppColorPalette.white)
+                      .copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Center(
+                child: Text(
+                  tagline,
+                  style: AppTextStyles.bodySmall(
+                    color: AppColorPalette.white.withValues(alpha: 0.85),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-        title: Text(
-          title,
-          style: AppTextStyles.bodyLarge(color: AppColorPalette.charcoalGreen),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate),
-        ),
-        childrenPadding: const EdgeInsets.only(left: 64),
-        children: children,
       ),
     );
   }
 
-  Widget _buildDrawerSubItem({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      dense: true,
-      leading: Icon(
-        icon,
-        size: 18,
-        color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.7),
+  // ───────────────────────────── Footer ────────────────────────────────────
+
+  Widget _buildFooter(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ProfileScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.workspace_premium_rounded, size: 18),
+              label: const Text('Go Pro'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColorPalette.fieldFreshStart,
+                foregroundColor: AppColorPalette.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => Navigator.pop(context),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _ink,
+                side: const BorderSide(color: _hairline),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+              ),
+              child: const Text('Rate App'),
+            ),
+          ),
+        ],
       ),
-      title: Text(
-        title,
-        style: AppTextStyles.bodyMedium(color: AppColorPalette.charcoalGreen),
+    );
+  }
+
+  Widget _sectionLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 14, 8, 6),
+      child: Text(
+        text,
+        style: AppTextStyles.bodySmall(color: _muted)
+            .copyWith(fontWeight: FontWeight.w600, letterSpacing: 0.4),
       ),
-      onTap: onTap,
+    );
+  }
+
+  // ───────────────────────────── Navigation ────────────────────────────────
+
+  void _navigate(_DrawerItem item) {
+    Navigator.pop(context);
+    if (item.routeName != null) {
+      Navigator.pushNamed(context, item.routeName!);
+      return;
+    }
+    if (item.builder != null) {
+      Navigator.push(context, MaterialPageRoute(builder: item.builder!));
+    }
+  }
+
+  Future<void> _signOut(BuildContext context) async {
+    Navigator.pop(context);
+    await context.read<AuthProvider>().signOut();
+    if (!context.mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const SignInScreen()),
+      (route) => false,
+    );
+  }
+
+  // ───────────────────────────── Content ───────────────────────────────────
+
+  List<_DrawerGroup> _ownerGroups() => [
+        _DrawerGroup(
+          label: 'General',
+          flatItems: [
+            _DrawerItem(
+              icon: Icons.home_outlined,
+              title: 'Home',
+              builder: (_) => const HomeScreen(),
+            ),
+          ],
+          categories: [
+            _DrawerCategory(
+              icon: Icons.agriculture_outlined,
+              title: 'Farm',
+              items: [
+                _DrawerItem(
+                  icon: Icons.grass_outlined,
+                  title: 'My Parcels',
+                  builder: (_) => const ParcelListScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.science_outlined,
+                  title: 'Soil Health',
+                  builder: (_) => const SoilMeasurementsListScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.local_florist_outlined,
+                  title: 'AI Plant Doctor',
+                  builder: (_) => const PlantDoctorScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.bar_chart_outlined,
+                  title: 'Harvest Analytics',
+                  builder: (_) => const HarvestAnalyticsScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.map_outlined,
+                  title: 'Aero-Twin NDVI',
+                  builder: (_) => const AeroTwinScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.calendar_month_outlined,
+                  title: 'Crop Calendar',
+                  builder: (_) => const CropCalendarScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.cloud_outlined,
+                  title: 'Weather & Advice',
+                  builder: (_) => const WeatherScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.water_drop_outlined,
+                  title: 'Irrigation Scheduler',
+                  builder: (_) => const IrrigationSchedulerScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.article_outlined,
+                  title: 'Agricultural News',
+                  builder: (_) => AgriculturalNewsScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.play_circle_outline,
+                  title: 'Farm Reels',
+                  builder: (_) => const ShortsScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.forum_outlined,
+                  title: 'Community Feed',
+                  builder: (_) => const CommunityFeedScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.quiz_outlined,
+                  title: 'Farm Quiz',
+                  builder: (_) => const FarmQuizScreen(),
+                ),
+              ],
+            ),
+            _DrawerCategory(
+              icon: Icons.pets_outlined,
+              title: 'Animals',
+              items: [
+                _DrawerItem(
+                  icon: Icons.list_alt_outlined,
+                  title: 'Animal List',
+                  builder: (_) => const AnimalListScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.add_circle_outline,
+                  title: 'Add Animal',
+                  builder: (_) => const AddAnimalScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.sell_outlined,
+                  title: 'Planned Sales',
+                  builder: (_) => const PlannedSalesScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.water_drop_outlined,
+                  title: 'Milk Production',
+                  builder: (_) => const MilkProductionScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.show_chart_outlined,
+                  title: 'Milk Analytics',
+                  builder: (_) => const MilkAnalyticsScreen(),
+                ),
+              ],
+            ),
+            _DrawerCategory(
+              icon: Icons.health_and_safety_outlined,
+              title: 'Health',
+              items: [
+                _DrawerItem(
+                  icon: Icons.vaccines_outlined,
+                  title: 'Vaccination',
+                  builder: (_) => const VaccineDashboardScreen(),
+                ),
+              ],
+            ),
+            _DrawerCategory(
+              icon: Icons.payments_outlined,
+              title: 'Finance & Catalogue',
+              items: [
+                _DrawerItem(
+                  icon: Icons.attach_money_rounded,
+                  title: 'Finance Dashboard',
+                  builder: (_) => const FinanceDashboardScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.menu_book_outlined,
+                  title: 'Product Catalogue',
+                  builder: (_) => const CatalogueListScreen(),
+                ),
+              ],
+            ),
+            _DrawerCategory(
+              icon: Icons.shield_outlined,
+              title: 'Security',
+              items: [
+                _DrawerItem(
+                  icon: Icons.shield_outlined,
+                  title: 'Security Whitelist',
+                  builder: (_) => const StaffListScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.person_add_outlined,
+                  title: 'Add Staff',
+                  builder: (_) => const AddStaffScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.history_outlined,
+                  title: 'Incident History',
+                  builder: (_) => const IncidentHistoryScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.videocam_outlined,
+                  title: 'Live Feed',
+                  builder: (_) => const LiveFeedScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.assessment_outlined,
+                  title: 'Daily Reports',
+                  builder: (_) => const DailyReportScreen(),
+                ),
+                _DrawerItem(
+                  icon: Icons.graphic_eq_outlined,
+                  title: 'Acoustic Monitor',
+                  builder: (_) => const AcousticMonitorScreen(),
+                ),
+              ],
+            ),
+            const _DrawerCategory(
+              icon: Icons.precision_manufacturing_outlined,
+              title: 'Operations',
+              items: [
+                _DrawerItem(
+                  icon: Icons.videogame_asset_outlined,
+                  title: 'Control Room',
+                  routeName: '/control_room',
+                ),
+                _DrawerItem(
+                  icon: Icons.workspace_premium_outlined,
+                  title: 'Skill Certification',
+                  routeName: '/skill_certification',
+                ),
+              ],
+            ),
+          ],
+        ),
+        _DrawerGroup(
+          label: 'Profile',
+          flatItems: [
+            _DrawerItem(
+              icon: Icons.settings_outlined,
+              title: 'Settings',
+              builder: (_) => const ProfileScreen(),
+            ),
+            _DrawerItem(
+              icon: Icons.account_circle_outlined,
+              title: 'Account',
+              builder: (_) => const ProfileScreen(),
+            ),
+          ],
+        ),
+      ];
+
+  List<_DrawerGroup> _workerGroups() => [
+        _DrawerGroup(
+          label: 'General',
+          flatItems: [
+            _DrawerItem(
+              icon: Icons.home_outlined,
+              title: 'Home',
+              builder: (_) => const FarmerHomeScreenV2(),
+            ),
+          ],
+          categories: const [
+            _DrawerCategory(
+              icon: Icons.precision_manufacturing_outlined,
+              title: 'Operations',
+              items: [
+                _DrawerItem(
+                  icon: Icons.videogame_asset_outlined,
+                  title: 'Control Room',
+                  routeName: '/control_room',
+                ),
+                _DrawerItem(
+                  icon: Icons.workspace_premium_outlined,
+                  title: 'Skill Certification',
+                  routeName: '/skill_certification',
+                ),
+              ],
+            ),
+          ],
+        ),
+        _DrawerGroup(
+          label: 'Profile',
+          flatItems: [
+            _DrawerItem(
+              icon: Icons.account_circle_outlined,
+              title: 'Account',
+              builder: (_) => const ProfileScreen(),
+            ),
+          ],
+        ),
+      ];
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Header curve
+// ─────────────────────────────────────────────────────────────────────────
+
+class _HeaderClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final p = Path();
+    p.lineTo(0, size.height - 28);
+    p.quadraticBezierTo(
+      size.width / 2,
+      size.height + 24,
+      size.width,
+      size.height - 28,
+    );
+    p.lineTo(size.width, 0);
+    p.close();
+    return p;
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Tiles
+// ─────────────────────────────────────────────────────────────────────────
+
+class _LeafTile extends StatelessWidget {
+  final _DrawerItem item;
+  final VoidCallback onTap;
+  final Color ink;
+  final Color muted;
+  final bool danger;
+
+  const _LeafTile({
+    required this.item,
+    required this.onTap,
+    required this.ink,
+    required this.muted,
+    this.danger = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = danger ? AppColorPalette.alertError : ink;
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(28),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(28),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Icon(item.icon, size: 22, color: color),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  item.title,
+                  style: AppTextStyles.bodyLarge(color: color)
+                      .copyWith(fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CollapsibleCategory extends StatefulWidget {
+  final _DrawerCategory category;
+  final ValueChanged<_DrawerItem> onItemTap;
+  final Color ink;
+  final Color muted;
+  final Color selectedFill;
+
+  const _CollapsibleCategory({
+    required this.category,
+    required this.onItemTap,
+    required this.ink,
+    required this.muted,
+    required this.selectedFill,
+  });
+
+  @override
+  State<_CollapsibleCategory> createState() => _CollapsibleCategoryState();
+}
+
+class _CollapsibleCategoryState extends State<_CollapsibleCategory>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _turn;
+
+  bool _open = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+    );
+    _turn = Tween<double>(begin: 0, end: 0.5).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    setState(() {
+      _open = !_open;
+      if (_open) {
+        _ctrl.forward();
+      } else {
+        _ctrl.reverse();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(28),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(28),
+            onTap: _toggle,
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                children: [
+                  Icon(widget.category.icon, size: 22, color: widget.ink),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      widget.category.title,
+                      style: AppTextStyles.bodyLarge(color: widget.ink)
+                          .copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  RotationTransition(
+                    turns: _turn,
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: widget.muted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        ClipRect(
+          child: AnimatedAlign(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            heightFactor: _open ? 1.0 : 0.0,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 220),
+              opacity: _open ? 1 : 0,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 18, top: 2, bottom: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final item in widget.category.items)
+                      _LeafTile(
+                        item: item,
+                        onTap: () => widget.onItemTap(item),
+                        ink: widget.ink,
+                        muted: widget.muted,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SignOutTile extends StatelessWidget {
+  final VoidCallback onTap;
+  const _SignOutTile({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(28),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(28),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.logout_rounded,
+                size: 22,
+                color: AppColorPalette.alertError,
+              ),
+              const SizedBox(width: 14),
+              Text(
+                'Sign Out',
+                style: AppTextStyles.bodyLarge(
+                  color: AppColorPalette.alertError,
+                ).copyWith(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
