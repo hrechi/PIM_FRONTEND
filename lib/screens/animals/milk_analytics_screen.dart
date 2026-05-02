@@ -124,7 +124,7 @@ class _MilkAnalyticsScreenState extends State<MilkAnalyticsScreen> with SingleTi
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F8F6),
+      backgroundColor: AppColors.wheatWarmClay,
       drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: Colors.white,

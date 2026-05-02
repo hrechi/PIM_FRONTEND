@@ -339,7 +339,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.sageTint,
+      backgroundColor: AppColors.wheatWarmClay,
       body: Container(
         color: AppColors.sageTint,
         child: Stack(

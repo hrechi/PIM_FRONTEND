@@ -1009,7 +1009,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFE8F3FB),
+      backgroundColor: AppColors.wheatWarmClay,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

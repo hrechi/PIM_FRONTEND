@@ -272,7 +272,7 @@ class _PlantDoctorScreenState extends State<PlantDoctorScreen> {
           'AI Plant Doctor 🌿',
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: AppColorPalette.emeraldGreen,
+        backgroundColor: AppColorPalette.mistyBlue,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
@@ -408,7 +408,7 @@ class _PlantDoctorScreenState extends State<PlantDoctorScreen> {
                   style: TextStyle(fontSize: 18, color: Colors.white),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColorPalette.emeraldGreen,
+                  backgroundColor: AppColorPalette.mistyBlue,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

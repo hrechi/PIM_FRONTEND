@@ -265,7 +265,7 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColorPalette.wheatWarmClay,
       appBar: AppBar(
         title: Row(
           mainAxisSize: MainAxisSize.min,

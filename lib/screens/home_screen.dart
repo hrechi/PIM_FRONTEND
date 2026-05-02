@@ -27,7 +27,6 @@ import '../services/soil_intelligence_service.dart';
 import '../widgets/metric_card.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/security_alert_overlay.dart';
-import '../widgets/unified_farm_status_card.dart';
 import 'asset_list_screen.dart';
 import 'animals/animal_list_screen.dart';
 import 'animals/milk_production_screen.dart';
@@ -49,10 +48,14 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   late WeatherInfo? weatherInfo;
   late List<AlertItem> alerts;
   late List<Animal> animals;
+
+  // Staggered intro animation (mirrors AppDrawer's drawer-open animation)
+  late final AnimationController _intro;
 
   final AnimalService _animalService = AnimalService();
   final SoilRepository _soilRepository = SoilRepository();
@@ -105,6 +108,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _intro = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1900),
+    )..forward();
     _selectedBackgroundIndex = 0;
     weatherInfo = null;
     alerts = [];
@@ -130,8 +137,23 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  bool _backgroundsPrecached = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_backgroundsPrecached) {
+      _backgroundsPrecached = true;
+      // Preload all hero backgrounds so there's no green flash on first paint.
+      for (final slide in _backgroundSlides) {
+        precacheImage(AssetImage(slide.imageAsset), context);
+      }
+    }
+  }
+
   @override
   void dispose() {
+    _intro.dispose();
     _soilAlertPollTimer?.cancel();
     _socket.disconnect();
     _socket.dispose();
@@ -617,8 +639,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Sections rendered as a flat list so they can be staggered on intro.
+    final sections = <Widget>[
+      _buildParcelSelectorButton(),
+      _buildUnifiedFarmStatus(),
+      _buildQuickAccessButtons(),
+      _buildWeatherSoilCard(),
+      _buildFarmReelsCard(),
+      if (_isLoadingStats)
+        const Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(child: CircularProgressIndicator(color: Colors.white)),
+        )
+      else ...[
+        _buildAnimalStatsGrid(),
+        _buildMilkProductionBanner(),
+        _buildLiveHealthMetrics(),
+      ],
+    ];
+
     return Scaffold(
-      backgroundColor: AppColors.sageTint,
+      backgroundColor: const Color(0xFF12211A),
       drawer: const AppDrawer(),
       body: Stack(
         children: [
@@ -627,23 +668,14 @@ class _HomeScreenState extends State<HomeScreen> {
             child: CustomScrollView(
               slivers: [
                 _buildHeader(),
-                SliverToBoxAdapter(child: _buildParcelSelectorButton()),
-                SliverToBoxAdapter(child: _buildUnifiedFarmStatus()),
-                SliverToBoxAdapter(child: _buildQuickAccessButtons()),
-                SliverToBoxAdapter(child: _buildWeatherSoilCard()),
-                SliverToBoxAdapter(child: _buildFarmReelsCard()),
-                if (_isLoadingStats)
-                  const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(child: CircularProgressIndicator()),
+                for (var i = 0; i < sections.length; i++)
+                  SliverToBoxAdapter(
+                    child: _FadeSlideIn(
+                      index: i,
+                      controller: _intro,
+                      child: sections[i],
                     ),
-                  )
-                else ...[
-                  SliverToBoxAdapter(child: _buildAnimalStatsGrid()),
-                  SliverToBoxAdapter(child: _buildMilkProductionBanner()),
-                  SliverToBoxAdapter(child: _buildLiveHealthMetrics()),
-                ],
+                  ),
                 const SliverToBoxAdapter(child: SizedBox(height: 100)),
               ],
             ),
@@ -661,7 +693,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHeaderBackground() {
     return Positioned.fill(
       child: Container(
-        color: AppColorPalette.fieldFreshStart,
+        // Neutral dark slate (not bright green) so any first-paint flash is invisible
+        // against the dark gradient overlay above.
+        color: const Color(0xFF12211A),
         child: Stack(
           children: [
             _buildAssetBackgroundImage(
@@ -672,10 +706,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
+                  stops: const [0.0, 0.35, 1.0],
                   colors: [
-                    Colors.black.withValues(alpha: 0.3),
-                    Colors.black.withValues(alpha: 0.5),
-                    Colors.black.withValues(alpha: 0.6),
+                    Colors.black.withValues(alpha: 0.45),
+                    Colors.black.withValues(alpha: 0.55),
+                    Colors.black.withValues(alpha: 0.78),
                   ],
                 ),
               ),
@@ -692,8 +727,20 @@ class _HomeScreenState extends State<HomeScreen> {
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,
+      gaplessPlayback: true,
+      // Fade the image in over the dark slate base — eliminates any visible
+      // colour flash while the asset is being decoded on first paint.
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        if (wasSynchronouslyLoaded) return child;
+        return AnimatedOpacity(
+          opacity: frame == null ? 0 : 1,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          child: child,
+        );
+      },
       errorBuilder: (context, error, stackTrace) => Container(
-        color: slide.fallbackColor,
+        color: const Color(0xFF12211A),
         width: double.infinity,
         height: double.infinity,
       ),
@@ -825,42 +872,68 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: _showParcelSelector,
         child: Container(
           padding: EdgeInsets.symmetric(
-            horizontal: isSmall ? 12 : 16,
-            vertical: isSmall ? 8 : 10,
+            horizontal: isSmall ? 14 : 18,
+            vertical: isSmall ? 10 : 12,
           ),
           decoration: BoxDecoration(
-            color: AppColorPalette.white.withValues(alpha: 0.95),
-            borderRadius: BorderRadius.circular(24),
+            color: Colors.white.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.22),
+              width: 1,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 8,
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.location_on_rounded,
-                color: AppColorPalette.fieldFreshStart,
-                size: isSmall ? 16 : 18,
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.location_on_rounded,
+                  color: Colors.white,
+                  size: isSmall ? 14 : 16,
+                ),
               ),
-              SizedBox(width: isSmall ? 6 : 8),
+              SizedBox(width: isSmall ? 8 : 10),
               if (_selectedFieldName != null)
                 Flexible(
                   child: Text(
                     _selectedFieldName!,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.bodyMedium(
-                      color: AppColorPalette.charcoalGreen,
-                    ).copyWith(fontSize: isSmall ? 12 : 14),
+                      color: Colors.white,
+                    ).copyWith(
+                      fontSize: isSmall ? 12 : 14,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                )
+              else
+                Text(
+                  'Select a field',
+                  style: AppTextStyles.bodyMedium(
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ).copyWith(
+                    fontSize: isSmall ? 12 : 14,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              SizedBox(width: isSmall ? 6 : 8),
+              SizedBox(width: isSmall ? 8 : 10),
               Icon(
                 Icons.swap_horiz_rounded,
-                color: AppColorPalette.fieldFreshStart,
+                color: Colors.white.withValues(alpha: 0.85),
                 size: isSmall ? 16 : 18,
               ),
             ],
@@ -1015,79 +1088,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildUnifiedFarmStatus() {
     if (_isLoadingSoilCrop) {
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+      return _GlassCard(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: SizedBox(
+                height: 22,
+                child: LinearProgressIndicator(
+                  backgroundColor: Color(0x22FFFFFF),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Color(0xFF4CC2A0),
+                  ),
+                ),
+              ),
             ),
           ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          height: 12,
-                          width: 100,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 24,
-                          width: 150,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Container(
-                height: 8,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                height: 60,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ],
-          ),
         ),
       );
     }
@@ -1096,11 +1122,165 @@ class _HomeScreenState extends State<HomeScreen> {
       return const SizedBox.shrink();
     }
 
-    return UnifiedFarmStatusCard(
-      farmScore: _farmMoodData!.score,
-      mood: _farmMoodData!.mood,
-      emoji: _farmMoodData!.emoji,
-      message: _plantMessage!,
+    final mood = _farmMoodData!;
+    final accent = switch (mood.mood.toLowerCase()) {
+      'happy' || 'great' || 'excellent' => const Color(0xFF34D399),
+      'good' => const Color(0xFF60A5FA),
+      'okay' || 'fair' => const Color(0xFFFBBF24),
+      'concerned' || 'critical' || 'bad' => const Color(0xFFF87171),
+      _ => const Color(0xFF34D399),
+    };
+
+    return _GlassCard(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.all(18),
+      tint: accent,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [accent, accent.withValues(alpha: 0.7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.45),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    mood.emoji,
+                    style: const TextStyle(fontSize: 28),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'FARM STATUS',
+                          style: AppTextStyles.caption(
+                            color: Colors.white.withValues(alpha: 0.70),
+                          ).copyWith(
+                            letterSpacing: 1.4,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 10,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: 0.20),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: accent.withValues(alpha: 0.55),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 5,
+                                height: 5,
+                                decoration: BoxDecoration(
+                                  color: accent,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'LIVE',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: accent,
+                                  letterSpacing: 0.6,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      mood.mood,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${mood.score.round()}',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: accent,
+                      height: 1,
+                    ),
+                  ),
+                  Text(
+                    '/ 100',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.white.withValues(alpha: 0.65),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: (mood.score / 100).clamp(0.0, 1.0),
+              minHeight: 7,
+              backgroundColor: Colors.white.withValues(alpha: 0.12),
+              valueColor: AlwaysStoppedAnimation<Color>(accent),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _plantMessage!,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.88),
+              fontSize: 13,
+              height: 1.4,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1114,9 +1294,61 @@ class _HomeScreenState extends State<HomeScreen> {
     final isSmall = Responsive.isMobile(context);
     final weatherProvider = context.watch<WeatherProvider>();
     final displayedWeather = weatherProvider.forecast?.current ?? weatherInfo;
-    final buttonPadding = isSmall ? 8.0 : 12.0;
-    final fontSize = isSmall ? 12.0 : 14.0;
-    final iconSize = isSmall ? 18.0 : 20.0;
+
+    final actions = <_QuickAction>[
+      _QuickAction(
+        label: 'Fields',
+        icon: Icons.landscape_rounded,
+        gradient: const [Color(0xFF309448), Color(0xFF1F7A38)],
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const FieldsManagementScreen(),
+          ),
+        ),
+      ),
+      _QuickAction(
+        label: 'Missions',
+        icon: Icons.task_alt_rounded,
+        gradient: const [Color(0xFF3DBE6E), Color(0xFF227A47)],
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const MissionListScreen()),
+        ),
+      ),
+      _QuickAction(
+        label: 'Assistant',
+        icon: Icons.smart_toy_rounded,
+        gradient: const [Color(0xFF4CC2A0), Color(0xFF1F8C72)],
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const ChatAssistantScreen(),
+          ),
+        ),
+      ),
+      _QuickAction(
+        label: 'Assets',
+        icon: Icons.construction_rounded,
+        gradient: const [Color(0xFF5BB55F), Color(0xFF2E7D32)],
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const AssetListScreen()),
+        ),
+      ),
+      _QuickAction(
+        label: 'Skill Path',
+        icon: Icons.workspace_premium_rounded,
+        gradient: const [Color(0xFF1FB07A), Color(0xFF0A7E52)],
+        onTap: () => Navigator.pushNamed(context, '/skill_certification'),
+      ),
+      _QuickAction(
+        label: 'Control',
+        icon: Icons.videogame_asset_rounded,
+        gradient: const [Color(0xFF6A8FE0), Color(0xFF3955A8)],
+        onTap: () => Navigator.pushNamed(context, '/control_room'),
+      ),
+    ];
 
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -1125,157 +1357,28 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const FieldsManagementScreen(),
+          // ── Stylish glass quick-action grid ────────────────────────────────
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const spacing = 10.0;
+              final tileWidth = (constraints.maxWidth - spacing * 2) / 3;
+              return Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
+                children: [
+                  for (final a in actions)
+                    SizedBox(
+                      width: tileWidth,
+                      child: _QuickActionTile(action: a, compact: isSmall),
                     ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColorPalette.mistyBlue,
-                    padding: EdgeInsets.symmetric(
-                      vertical: buttonPadding,
-                      horizontal: 4,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: Icon(Icons.landscape, size: iconSize),
-                  label: Text('Fields', style: TextStyle(fontSize: fontSize)),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MissionListScreen(),
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColorPalette.mistyBlue,
-                    padding: EdgeInsets.symmetric(
-                      vertical: buttonPadding,
-                      horizontal: 4,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: Icon(Icons.task, size: iconSize),
-                  label: Text('Missions', style: TextStyle(fontSize: fontSize)),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ChatAssistantScreen(),
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColorPalette.mistyBlue,
-                    padding: EdgeInsets.symmetric(
-                      vertical: buttonPadding,
-                      horizontal: 4,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: Icon(Icons.chat_bubble_outline, size: iconSize),
-                  label: Text(
-                    'Assistant',
-                    style: TextStyle(fontSize: fontSize),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AssetListScreen(),
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColorPalette.success,
-                    padding: EdgeInsets.symmetric(
-                      vertical: buttonPadding,
-                      horizontal: 4,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: Icon(Icons.construction, size: iconSize),
-                  label: Text('Assets', style: TextStyle(fontSize: fontSize)),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () =>
-                      Navigator.pushNamed(context, '/skill_certification'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0A7E52),
-                    padding: EdgeInsets.symmetric(
-                      vertical: buttonPadding,
-                      horizontal: 4,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: Icon(Icons.workspace_premium_rounded, size: iconSize),
-                  label: Text(
-                    'Skill Path',
-                    style: TextStyle(fontSize: fontSize),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () =>
-                      Navigator.pushNamed(context, '/control_room'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColorPalette.robotTechStart,
-                    padding: EdgeInsets.symmetric(
-                      vertical: buttonPadding,
-                      horizontal: 4,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: Icon(Icons.videogame_asset_rounded, size: iconSize),
-                  label: Text(
-                    'Control Room',
-                    style: TextStyle(fontSize: fontSize),
-                  ),
-                ),
-              ),
-            ],
+                ],
+              );
+            },
           ),
 
           // Weather Strip
           if (displayedWeather != null) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -1306,7 +1409,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ],
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           Row(
             children: [
@@ -1327,18 +1430,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColorPalette.fieldFreshStart,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                backgroundColor: AppColorPalette.mistyBlue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
+                elevation: 4,
+                shadowColor: AppColorPalette.mistyBlue.withValues(alpha: 0.35),
               ),
-              icon: const Icon(Icons.map, color: Colors.white),
+              icon: const Icon(Icons.map_rounded, color: Colors.white),
               label: const Text(
                 'See Map',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
+                  letterSpacing: 0.3,
                 ),
               ),
             ),
@@ -1389,140 +1496,63 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildSoilHealthCard() {
     if (_isLoadingSoilCrop) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-            ),
-          ],
-        ),
-        child: Center(
+      return _GlassCard(
+        padding: const EdgeInsets.all(14),
+        child: const Center(
           child: SizedBox(
-            width: 24,
-            height: 24,
+            width: 22,
+            height: 22,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                AppColorPalette.fieldFreshStart.withOpacity(0.6),
-              ),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4CC2A0)),
             ),
           ),
         ),
       );
     }
 
-    if (_soilPh == null) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.grass,
-                  color: AppColorPalette.fieldFreshStart,
-                  size: 20,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'Soil Health',
-                  style: AppTextStyles.bodyMedium(
-                    color: AppColorPalette.charcoalGreen,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'pH: No data',
-              style: AppTextStyles.bodyLarge(
-                color: Colors.grey.shade600,
-              ).copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Not recorded',
-                style: AppTextStyles.caption(
-                  color: Colors.grey.shade600,
-                ).copyWith(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+    final hasPh = _soilPh != null;
+    final phValue = _soilPh ?? 0;
+    final isOptimal = hasPh && phValue >= 6.0 && phValue <= 7.5;
+    final accent = const Color(0xFF4CC2A0);
 
-    final phValue = _soilPh!;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8),
-        ],
-      ),
+    return _GlassCard(
+      padding: const EdgeInsets.all(14),
+      tint: accent,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                Icons.grass,
-                color: AppColorPalette.fieldFreshStart,
-                size: 20,
-              ),
+              Icon(Icons.grass_rounded, color: accent, size: 20),
               const SizedBox(width: 6),
               Text(
                 'Soil Health',
-                style: AppTextStyles.bodyMedium(
-                  color: AppColorPalette.charcoalGreen,
+                style: AppTextStyles.bodyMedium(color: Colors.white).copyWith(
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
-            'pH: ${phValue.toStringAsFixed(1)}',
-            style: AppTextStyles.bodyLarge(
-              color: AppColorPalette.charcoalGreen,
-            ).copyWith(fontWeight: FontWeight.bold),
+            hasPh ? 'pH ${phValue.toStringAsFixed(1)}' : 'pH —',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.3,
+            ),
           ),
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFF4ECDC4).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              phValue >= 6.0 && phValue <= 7.5 ? 'Optimal' : 'Adjust',
-              style: AppTextStyles.caption(
-                color: const Color(0xFF4ECDC4),
-              ).copyWith(fontWeight: FontWeight.bold),
-            ),
+          const SizedBox(height: 8),
+          _GlassChip(
+            label: !hasPh
+                ? 'Not recorded'
+                : (isOptimal ? 'Optimal' : 'Adjust'),
+            color: !hasPh
+                ? Colors.white.withValues(alpha: 0.55)
+                : (isOptimal ? accent : const Color(0xFFFBBF24)),
           ),
         ],
       ),
@@ -1531,77 +1561,59 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCropHealthCard() {
     if (_isLoadingSoilCrop) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-            ),
-          ],
-        ),
-        child: Center(
+      return _GlassCard(
+        padding: const EdgeInsets.all(14),
+        child: const Center(
           child: SizedBox(
-            width: 24,
-            height: 24,
+            width: 22,
+            height: 22,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Colors.green.withOpacity(0.6),
-              ),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF34D399)),
             ),
           ),
         ),
       );
     }
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8),
-        ],
-      ),
+    const accent = Color(0xFF34D399);
+    return _GlassCard(
+      padding: const EdgeInsets.all(14),
+      tint: accent,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.local_florist, color: Colors.green.shade700, size: 20),
+              const Icon(Icons.local_florist_rounded,
+                  color: accent, size: 20),
               const SizedBox(width: 6),
               Text(
-                'Crops Count',
-                style: AppTextStyles.bodyMedium(
-                  color: AppColorPalette.charcoalGreen,
+                'Crops',
+                style: AppTextStyles.bodyMedium(color: Colors.white).copyWith(
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
             '$_totalCrops',
-            style: AppTextStyles.h2(
-              color: Colors.green.shade700,
-            ).copyWith(fontWeight: FontWeight.bold, fontSize: 32),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              height: 1,
+              letterSpacing: -0.5,
+            ),
           ),
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              _totalCrops > 0 ? 'Active' : 'No crops',
-              style: AppTextStyles.caption(
-                color: Colors.green.shade700,
-              ).copyWith(fontWeight: FontWeight.bold),
-            ),
+          const SizedBox(height: 8),
+          _GlassChip(
+            label: _totalCrops > 0 ? 'Active' : 'No crops',
+            color: _totalCrops > 0
+                ? accent
+                : Colors.white.withValues(alpha: 0.55),
           ),
         ],
       ),
@@ -2076,59 +2088,86 @@ class _HomeScreenState extends State<HomeScreen> {
     final isSmall = Responsive.isMobile(context);
     final cardPadding = Responsive.cardPadding(context);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(cardPadding),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          padding: EdgeInsets.all(cardPadding),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.18),
+              width: 1,
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: EdgeInsets.all(isSmall ? 6 : 8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
               ),
-              child: Icon(icon, color: color, size: isSmall ? 16 : 20),
-            ),
-            SizedBox(height: isSmall ? 8 : 12),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: isSmall ? 18 : 22,
-                fontWeight: FontWeight.w900,
-                color: const Color(0xFF1E293B),
+              BoxShadow(
+                color: color.withValues(alpha: 0.18),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
               ),
-            ),
-            SizedBox(height: isSmall ? 1 : 2),
-            Text(
-              title,
-              style: TextStyle(
-                color: const Color(0xFF64748B),
-                fontWeight: FontWeight.bold,
-                fontSize: isSmall ? 10 : 11,
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: EdgeInsets.all(isSmall ? 8 : 10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [color, color.withValues(alpha: 0.7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.45),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: Colors.white, size: isSmall ? 16 : 20),
               ),
-            ),
-            SizedBox(height: isSmall ? 1 : 2),
-            Text(
-              subtitle,
-              style: TextStyle(
-                color: const Color(0xFF94A3B8),
-                fontSize: isSmall ? 9 : 10,
+              SizedBox(height: isSmall ? 10 : 14),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: isSmall ? 20 : 24,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  letterSpacing: -0.5,
+                ),
               ),
-            ),
-          ],
+              SizedBox(height: isSmall ? 2 : 4),
+              Text(
+                title,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  fontWeight: FontWeight.w700,
+                  fontSize: isSmall ? 11 : 12,
+                  letterSpacing: 0.1,
+                ),
+              ),
+              SizedBox(height: isSmall ? 1 : 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.62),
+                  fontSize: isSmall ? 10 : 11,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -2353,4 +2392,244 @@ class BackgroundSlide {
   final Color fallbackColor;
 
   BackgroundSlide({required this.imageAsset, required this.fallbackColor});
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// QUICK ACTION TILE
+// Stylish glass-style tile used in the Home quick-access grid.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _QuickAction {
+  final String label;
+  final IconData icon;
+  final List<Color> gradient;
+  final VoidCallback onTap;
+
+  const _QuickAction({
+    required this.label,
+    required this.icon,
+    required this.gradient,
+    required this.onTap,
+  });
+}
+
+class _QuickActionTile extends StatelessWidget {
+  final _QuickAction action;
+  final bool compact;
+
+  const _QuickActionTile({required this.action, this.compact = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final iconBox = compact ? 42.0 : 48.0;
+    final iconSize = compact ? 22.0 : 24.0;
+    final fontSize = compact ? 11.5 : 12.5;
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: action.onTap,
+        borderRadius: BorderRadius.circular(20),
+        splashColor: action.gradient.first.withValues(alpha: 0.25),
+        highlightColor: action.gradient.last.withValues(alpha: 0.10),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 8 : 10,
+            vertical: compact ? 14 : 16,
+          ),
+          decoration: BoxDecoration(
+            // Dark translucent "glass" — no white card.
+            color: Colors.white.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.20),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.30),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: action.gradient.first.withValues(alpha: 0.22),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: iconBox,
+                height: iconBox,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: action.gradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: action.gradient.last.withValues(alpha: 0.55),
+                      blurRadius: 12,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Icon(action.icon, size: iconSize, color: Colors.white),
+              ),
+              SizedBox(height: compact ? 9 : 11),
+              Text(
+                action.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: 0.2,
+                  shadows: const [
+                    Shadow(
+                      color: Color(0x66000000),
+                      blurRadius: 6,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHARED GLASS PRIMITIVES
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Translucent dark "glass" card. White text reads cleanly on top of the
+/// home-screen hero image thanks to the dark gradient overlay.
+class _GlassCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry? margin;
+  final EdgeInsetsGeometry padding;
+  final Color? tint;
+  final double radius;
+
+  const _GlassCard({
+    required this.child,
+    this.margin,
+    this.padding = const EdgeInsets.all(16),
+    this.tint,
+    this.radius = 20,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = tint ?? Colors.white;
+    return Container(
+      margin: margin,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.18),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.28),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+          if (tint != null)
+            BoxShadow(
+              color: accent.withValues(alpha: 0.18),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+/// Small pill used inside glass cards.
+class _GlassChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _GlassChip({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: color.withValues(alpha: 0.55),
+          width: 0.8,
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w800,
+          fontSize: 10.5,
+          letterSpacing: 0.4,
+        ),
+      ),
+    );
+  }
+}
+
+/// Staggered fade + slide-in for each home-screen section.
+/// Mirrors the per-row intro used in [AppDrawer].
+class _FadeSlideIn extends StatelessWidget {
+  final int index;
+  final AnimationController controller;
+  final Widget child;
+
+  const _FadeSlideIn({
+    required this.index,
+    required this.controller,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Each row enters slightly later than the previous one.
+    final start = (index * 0.06).clamp(0.0, 0.6);
+    final end = (start + 0.55).clamp(0.0, 1.0);
+    final curve = CurvedAnimation(
+      parent: controller,
+      curve: Interval(start, end, curve: Curves.easeOutCubic),
+    );
+
+    return AnimatedBuilder(
+      animation: curve,
+      builder: (context, child) {
+        final t = curve.value;
+        return Opacity(
+          opacity: t,
+          child: Transform.translate(
+            offset: Offset(0, (1 - t) * 22),
+            child: child,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
 }

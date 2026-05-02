@@ -45,7 +45,7 @@ class _AnimalDashboardScreenState extends State<AnimalDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.sageTint,
+      backgroundColor: AppColors.wheatWarmClay,
       drawer: const AppDrawer(),
       body: Container(
         color: AppColors.sageTint,

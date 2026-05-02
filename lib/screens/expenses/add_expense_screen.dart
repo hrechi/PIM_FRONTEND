@@ -155,9 +155,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.wheatWarmClay,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.wheatWarmClay,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Symbols.close, color: Color(0xFF1F2937)),

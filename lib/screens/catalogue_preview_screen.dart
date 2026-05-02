@@ -11,7 +11,7 @@ import 'catalogue_export_screen.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 const _kGreen = Color(0xFF309448);
 const _kGreenLight = Color(0xFFE8F5E9);
-const _kBg = Color(0xFFF5F7F5);
+const _kBg = Color(0xFFFAF7F2);
 
 class CataloguePreviewScreen extends StatefulWidget {
   final SaleCatalogue catalogue;
@@ -56,7 +56,7 @@ class _CataloguePreviewScreenState extends State<CataloguePreviewScreen> {
     return Scaffold(
       backgroundColor: _kBg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _kBg,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(

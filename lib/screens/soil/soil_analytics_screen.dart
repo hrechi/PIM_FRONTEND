@@ -463,7 +463,7 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
                     icon: const Icon(Icons.refresh),
                     label: const Text('Retry'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColorPalette.charcoalGreen,
+                      backgroundColor: AppColorPalette.mistyBlue,
                     ),
                   ),
                 ],

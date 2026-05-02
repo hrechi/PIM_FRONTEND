@@ -58,7 +58,7 @@ class _VaccinePlanningScreenState extends State<VaccinePlanningScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.sageTint,
+      backgroundColor: AppColors.wheatWarmClay,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,

@@ -41,7 +41,7 @@ class _AnimalFinanceScreenState extends State<AnimalFinanceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.sageTint,
+      backgroundColor: AppColors.wheatWarmClay,
       appBar: AppBar(
         title: Text('Finance: ${widget.animal.name}', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,

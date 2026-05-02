@@ -18,6 +18,7 @@ class VaccineDashboardScreen extends StatefulWidget {
 
 class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
   final _animalService = AnimalService();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   List<Animal> _animals = [];
   bool _loading = true;
   bool _selectionMode = false;
@@ -99,7 +100,8 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.sageTint,
+      key: _scaffoldKey,
+      backgroundColor: AppColors.wheatWarmClay,
       drawer: const AppDrawer(),
       floatingActionButton: _selectedAnimalIds.isNotEmpty
           ? FloatingActionButton.extended(
@@ -210,7 +212,7 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
         children: [
           Row(
             children: [
-              _buildCircleIconButton(Icons.menu_rounded, onPressed: () => Scaffold.of(context).openDrawer()),
+              _buildCircleIconButton(Icons.menu_rounded, onPressed: () => _scaffoldKey.currentState?.openDrawer()),
               const SizedBox(width: 16),
               const Expanded(
                 child: Text(

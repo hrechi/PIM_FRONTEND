@@ -161,7 +161,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.sageTint,
+      backgroundColor: AppColors.wheatWarmClay,
       drawer: const AppDrawer(),
       body: Container(
         color: AppColors.sageTint,

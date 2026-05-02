@@ -190,7 +190,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
           'My Materials & Equipment',
           style: AppTextStyles.h3(color: AppColorPalette.charcoalGreen),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppColorPalette.wheatWarmClay,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         actions: [

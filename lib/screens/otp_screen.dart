@@ -318,7 +318,11 @@ class _OtpScreenState extends State<OtpScreen> {
               // Verify button
               CustomButton(
                 text: 'Verify Code',
-                gradient: AppColors.fieldFreshGradient,
+                gradient: const LinearGradient(
+                  colors: [AppColors.mistyBlue, AppColors.fieldFreshStart],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 isLoading: _isLoading,
                 onPressed: _handleVerify,
               ),

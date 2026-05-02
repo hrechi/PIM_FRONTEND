@@ -17,7 +17,7 @@ class MilkRecordSuccessScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.sageTint,
+      backgroundColor: AppColors.wheatWarmClay,
       body: SafeArea(
         child: Column(
           children: [

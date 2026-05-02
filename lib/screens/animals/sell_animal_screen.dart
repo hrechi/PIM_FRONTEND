@@ -63,7 +63,7 @@ class _SellAnimalScreenState extends State<SellAnimalScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.sageTint,
+      backgroundColor: AppColors.wheatWarmClay,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

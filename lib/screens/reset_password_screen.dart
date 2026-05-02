@@ -203,7 +203,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 // Reset button
                 CustomButton(
                   text: 'Reset Password',
-                  gradient: AppColors.fieldFreshGradient,
+                  gradient: const LinearGradient(
+                    colors: [AppColors.mistyBlue, AppColors.fieldFreshStart],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   isLoading: _isLoading,
                   onPressed: _handleReset,
                 ),
