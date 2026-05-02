@@ -5,8 +5,8 @@ import '../models/catalogue_models.dart';
 import '../models/animal.dart';
 import '../widgets/animal_catalogue_card.dart';
 import '../utils/currency_converter.dart';
-import 'animal_selector_screen.dart';
-import 'catalogue_preview_screen.dart';
+import '../animal_selector_screen.dart';
+import '../catalogue/catalogue_preview_screen.dart';
 
 class CatalogueWizardScreen extends StatefulWidget {
   final SaleCatalogue? catalogue;

@@ -6,7 +6,7 @@ import '../providers/catalogue_provider.dart';
 import '../models/catalogue_models.dart';
 import '../theme/app_theme.dart';
 import '../utils/constants.dart';
-import 'catalogue_book_screen.dart';
+import '../catalogue/catalogue_book_screen.dart';
 
 const _kGreen = Color(0xFF309448);
 const _kGreenLight = Color(0xFFE8F5E9);

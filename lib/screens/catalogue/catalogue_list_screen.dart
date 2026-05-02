@@ -3,9 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/catalogue_provider.dart';
 import '../models/catalogue_models.dart';
-import 'catalogue_wizard_screen.dart';
-import 'catalogue_preview_screen.dart';
-import 'catalogue_export_screen.dart';
+import '../catalogue/catalogue_wizard_screen.dart';
+import '../catalogue/catalogue_preview_screen.dart';
+import '../catalogue/catalogue_export_screen.dart';
 
 const _kGreen = Color(0xFF309448);
 const _kGreenLight = Color(0xFFE8F5E9);

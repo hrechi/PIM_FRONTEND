@@ -38,7 +38,7 @@ import '../screens/vaccines/vaccine_dashboard_screen.dart';
 
 // Finance & Catalogue
 import '../screens/finance/finance_dashboard_screen.dart';
-import '../screens/catalogue_list_screen.dart';
+import '../screens/catalogue/catalogue_list_screen.dart';
 
 // Security
 import '../screens/staff_list_screen.dart';
