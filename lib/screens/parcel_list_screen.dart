@@ -248,7 +248,7 @@ class _ParcelListScreenState extends State<ParcelListScreen>
           context, MaterialPageRoute(builder: (_) => const AddParcelScreen())),
       icon: const Icon(Icons.add),
       label: const Text('Add Parcel'),
-      backgroundColor: const Color(0xFF2ECC71),
+      backgroundColor: AppColorPalette.mistyBlue,
     );
   }
 }

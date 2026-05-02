@@ -77,7 +77,7 @@ class _VaccineCalendarScreenState extends State<VaccineCalendarScreen> {
     final calDays = _buildCalendarDays();
 
     return Scaffold(
-      backgroundColor: AppColors.sageTint,
+      backgroundColor: AppColors.wheatWarmClay,
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.mistBlue,
         elevation: 6,

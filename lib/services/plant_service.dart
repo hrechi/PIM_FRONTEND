@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import '../utils/constants.dart';
 
 class PlantService {
   // 🚨 REPLACE THIS WITH YOUR MAC'S IP ADDRESS 🚨

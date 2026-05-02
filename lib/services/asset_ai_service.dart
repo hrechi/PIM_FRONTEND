@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../utils/constants.dart';
 
 class AssetAiService {
   final Dio _dio;

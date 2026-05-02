@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:image_picker/image_picker.dart';
 import '../../models/animal.dart';
 import '../../services/animal_service.dart';
 import '../../utils/constants.dart';
@@ -75,6 +79,12 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
 
   bool get isEditMode => widget.animal != null;
 
+  // ── Photo picker state ──
+  File? _selectedImage;
+  Uint8List? _webImageBytes; // web-only: bytes for Image.memory
+  String? _existingImageUrl;
+  final ImagePicker _picker = ImagePicker();
+
   @override
   void initState() {
     super.initState();
@@ -89,6 +99,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
       _selectedSex = a.sex.toLowerCase();
       _ageInMonths = a.age.toDouble();
       _isVaccinated = a.vaccination;
+      _existingImageUrl = a.profileImage;
 
       // Financials
       _selectedOrigin = a.origin;
@@ -245,6 +256,33 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         animal = await _animalService.createAnimal(animalData);
       }
 
+      // ── Upload photo ──
+      if (_selectedImage != null || _webImageBytes != null) {
+        try {
+          debugPrint('📸 Uploading photo for animal ${animal.nodeId}...');
+          if (kIsWeb && _webImageBytes != null) {
+            animal = await _animalService.uploadAnimalPhotoBytes(
+                animal.nodeId, _webImageBytes!);
+            debugPrint('✅ Photo uploaded (web): ${animal.profileImage}');
+          } else if (_selectedImage != null) {
+            animal = await _animalService.uploadAnimalPhoto(
+                animal.nodeId, _selectedImage!);
+            debugPrint('✅ Photo uploaded (mobile): ${animal.profileImage}');
+          }
+        } catch (e) {
+          debugPrint('❌ Photo upload failed: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Warning: Photo upload failed - $e'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+        }
+      }
+
       // ── Record selected vaccinations ──
       final checkedSelections = _vaccineSelections.entries.where((e) => e.value['checked'] == true).toList();
       for (var entry in checkedSelections) {
@@ -301,7 +339,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.sageTint,
+      backgroundColor: AppColors.wheatWarmClay,
       body: Container(
         color: AppColors.sageTint,
         child: Stack(
@@ -513,9 +551,202 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     }
   }
 
+  // ─── Photo picker ────────────────────────────────────────────────────────────
+
+  Future<void> _pickImage(ImageSource source) async {
+    final XFile? picked = await _picker.pickImage(
+      source: source,
+      maxWidth: 1200,
+      maxHeight: 1200,
+      imageQuality: 85,
+    );
+    if (picked != null) {
+      if (kIsWeb) {
+        final bytes = await picked.readAsBytes();
+        setState(() {
+          _webImageBytes = bytes;
+          _selectedImage = null; // not used on web
+        });
+      } else {
+        setState(() {
+          _selectedImage = File(picked.path);
+          _webImageBytes = null;
+        });
+      }
+    }
+  }
+
+  void _showImageSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take a photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+            if (_selectedImage != null || _existingImageUrl != null)
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Remove photo',
+                    style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _selectedImage = null;
+                    _webImageBytes = null;
+                    _existingImageUrl = null;
+                  });
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoPickerSection() {
+    final hasImage =
+        _selectedImage != null || _webImageBytes != null || _existingImageUrl != null;
+    return GestureDetector(
+      onTap: _showImageSourceSheet,
+      child: Container(
+        height: 180,
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 32),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: hasImage ? AppColors.mistyBlue : const Color(0xFFE2E8F0),
+            width: hasImage ? 2 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(19),
+          child: hasImage
+              ? Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _buildSelectedImageWidget(),
+                    Positioned(
+                      bottom: 10,
+                      right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.edit, color: Colors.white, size: 14),
+                            SizedBox(width: 4),
+                            Text('Edit',
+                                style: TextStyle(
+                                    color: Colors.white, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : _buildPhotoPlaceholder(),
+        ),
+      ),
+    );
+  }
+
+  /// Returns the correct image widget depending on platform and source.
+  Widget _buildSelectedImageWidget() {
+    // Web: newly picked image → use bytes
+    if (kIsWeb && _webImageBytes != null) {
+      return Image.memory(_webImageBytes!, fit: BoxFit.cover);
+    }
+    // Mobile: newly picked image → use File
+    if (!kIsWeb && _selectedImage != null) {
+      return Image.file(_selectedImage!, fit: BoxFit.cover);
+    }
+    // Existing image from server (both platforms)
+    if (_existingImageUrl != null) {
+      return Image.network(
+        'http://${AppConfig.serverHost}:${AppConfig.serverPort}$_existingImageUrl',
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _buildPhotoPlaceholder(),
+      );
+    }
+    return _buildPhotoPlaceholder();
+  }
+
+  Widget _buildPhotoPlaceholder() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
+            color: Color(0xFFF1F5F9),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.add_a_photo_outlined,
+              size: 32, color: Color(0xFF94A3B8)),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Add a photo',
+          style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+              color: Color(0xFF475569)),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Camera or gallery',
+          style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+        ),
+      ],
+    );
+  }
+
   // ─── Step 1: Species & Gender ───────────────────────────────────────────────
-  Widget _buildStep1() {
-    final types = [
+  Widget _buildStep1() {    final types = [
       {'id': 'cow',   'label': 'Cow',   'emoji': '🐄', 'icon': Symbols.cruelty_free},
       {'id': 'sheep', 'label': 'Sheep', 'emoji': '🐑', 'icon': Symbols.pest_control_rodent},
       {'id': 'horse', 'label': 'Horse', 'emoji': '🐎', 'icon': Symbols.emoji_nature},
@@ -525,6 +756,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildPhotoPickerSection(),
         _buildLabel('Select Farm / Field'),
         const SizedBox(height: 12),
         Container(

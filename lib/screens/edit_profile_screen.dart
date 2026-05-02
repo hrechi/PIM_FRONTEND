@@ -58,18 +58,53 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
 
     final auth = context.read<AuthProvider>();
-    final picked = await _imagePicker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 800,
-      maxHeight: 800,
-      imageQuality: 85,
-    );
-    if (picked == null) return;
 
-    setState(() => _isUploadingPicture = true);
-    await auth.uploadProfilePicture(picked.path);
-    if (!mounted) return;
-    setState(() => _isUploadingPicture = false);
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        // Don't pre-resize: lets the picker accept any image format
+        // (jpg/jpeg/png/webp/gif/heic/bmp/…) without re-encoding failures.
+        imageQuality: 90,
+      );
+      if (picked == null) return;
+
+      setState(() => _isUploadingPicture = true);
+      final ok = await auth.uploadProfilePicture(picked.path);
+      if (!mounted) return;
+      setState(() => _isUploadingPicture = false);
+
+      if (!ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              auth.errorMessage ?? 'Upload failed. Please try another image.',
+              style: GoogleFonts.inter(),
+            ),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isUploadingPicture = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not load image: $e',
+            style: GoogleFonts.inter(),
+          ),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _handleSave() async {

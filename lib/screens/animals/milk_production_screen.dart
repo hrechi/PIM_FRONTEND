@@ -430,7 +430,7 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.sageTint,
+      backgroundColor: AppColors.wheatWarmClay,
       drawer: const AppDrawer(),
       body: Stack(
         children: [

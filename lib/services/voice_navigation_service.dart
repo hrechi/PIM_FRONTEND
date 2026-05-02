@@ -27,6 +27,7 @@ import '../screens/profile_screen.dart';
 import '../screens/fields_management_screen.dart';
 import '../screens/mission_list_screen.dart';
 import '../screens/chat_assistant_screen.dart';
+import '../screens/control_room_screen.dart';
 
 enum VoiceCommandType {
   none,
@@ -34,7 +35,11 @@ enum VoiceCommandType {
   deactivateFullAccess,
   navigate,
   unknownNavigate,
+  robotCommand,
 }
+
+/// Discrete robot motion intents recognised by the voice layer.
+enum RobotVoiceAction { forward, backward, left, right, stop, distance }
 
 enum VoicePage {
   home,
@@ -64,6 +69,7 @@ enum VoicePage {
   fields,
   missions,
   assistant,
+  controlRoom,
 }
 
 class VoiceCommandResult {
@@ -72,12 +78,18 @@ class VoiceCommandResult {
     this.page,
     this.target,
     this.suggestions = const <String>[],
+    this.robotAction,
+    this.distanceMeters,
   });
 
   final VoiceCommandType type;
   final VoicePage? page;
   final String? target;
   final List<String> suggestions;
+  final RobotVoiceAction? robotAction;
+  /// Signed metres for [RobotVoiceAction.distance] (positive = forward,
+  /// negative = backward).
+  final double? distanceMeters;
 }
 
 class VoiceNavigationService {
@@ -154,6 +166,7 @@ class VoiceNavigationService {
     VoicePage.fields: 'Fields',
     VoicePage.missions: 'Missions',
     VoicePage.assistant: 'Assistant',
+    VoicePage.controlRoom: 'Control Room',
   };
 
   static final Map<VoicePage, List<String>> _aliases =
@@ -185,6 +198,21 @@ class VoiceNavigationService {
     VoicePage.fields: <String>['fields', 'field management', 'gestion des champs', 'ادارة الحقول'],
     VoicePage.missions: <String>['missions', 'tasks', 'taches', 'المهام'],
     VoicePage.assistant: <String>['assistant', 'chat assistant', 'assistant vocal', 'المساعد'],
+    VoicePage.controlRoom: <String>[
+      'control room',
+      'robot control',
+      'robot control room',
+      'control center',
+      'controls',
+      'salle de controle',
+      'salle de contrôle',
+      'centre de controle',
+      'controle robot',
+      'pilotage robot',
+      'غرفة التحكم',
+      'التحكم',
+      'غرفة التحكم في الروبوت',
+    ],
   };
 
   static String _normalize(String text) {
@@ -202,12 +230,36 @@ class VoiceNavigationService {
       return const VoiceCommandResult(type: VoiceCommandType.none);
     }
 
+    final result = _parseInternal(normalized);
+    // Lightweight diagnostic so it's obvious in `flutter run` whether a
+    // transcript was caught locally (robot/navigation) or forwarded to the
+    // backend chat assistant. Safe in release because `print` is a no-op for
+    // most release pipelines but cheap enough to keep.
+    // ignore: avoid_print
+    print(
+      '[VoiceNavigationService] transcript="$transcript" '
+      'normalized="$normalized" -> ${result.type.name}'
+      '${result.robotAction != null ? ' robot=${result.robotAction!.name}' : ''}'
+      '${result.distanceMeters != null ? ' distM=${result.distanceMeters}' : ''}'
+      '${result.page != null ? ' page=${result.page!.name}' : ''}',
+    );
+    return result;
+  }
+
+  static VoiceCommandResult _parseInternal(String normalized) {
     if (_activatePhrases.any((phrase) => normalized.contains(_normalize(phrase)))) {
       return const VoiceCommandResult(type: VoiceCommandType.activateFullAccess);
     }
 
     if (_deactivatePhrases.any((phrase) => normalized.contains(_normalize(phrase)))) {
       return const VoiceCommandResult(type: VoiceCommandType.deactivateFullAccess);
+    }
+
+    // Robot motion intents are checked BEFORE navigation so phrases like
+    // "go forward" don't get swallowed by the "go to ..." navigation prefix.
+    final robot = _parseRobotCommand(normalized);
+    if (robot != null) {
+      return robot;
     }
 
     final target = _extractNavigationTarget(normalized);
@@ -242,6 +294,193 @@ class VoiceNavigationService {
       }
     }
 
+    return null;
+  }
+
+  // ---------------------------------------------------------------------
+  // Robot voice commands
+  // ---------------------------------------------------------------------
+
+  static const List<String> _stopPhrases = <String>[
+    'stop',
+    'stop now',
+    'stop the robot',
+    'stop robot',
+    'stop please',
+    'halt',
+    'halt now',
+    'emergency stop',
+    'emergency',
+    'freeze',
+    'arret',
+    "arret d'urgence",
+    'arrete',
+    'arrete toi',
+    'arrete le robot',
+    'stoppe',
+    'stoppe le robot',
+    '\u0642\u0641',
+    '\u062a\u0648\u0642\u0641',
+    '\u0627\u0648\u0642\u0641',
+    '\u0627\u0648\u0642\u0641 \u0627\u0644\u0631\u0648\u0628\u0648\u062a',
+  ];
+
+  static const List<String> _forwardPhrases = <String>[
+    'forward',
+    'forwards',
+    'move forward',
+    'move forwards',
+    'go forward',
+    'go forwards',
+    'go ahead',
+    'ahead',
+    'straight',
+    'go straight',
+    'advance',
+    'drive forward',
+    'drive ahead',
+    'avance',
+    'avancer',
+    'avance toi',
+    'en avant',
+    'va en avant',
+    '\u062a\u0642\u062f\u0645',
+    '\u0627\u0645\u0634\u064a',
+    '\u0644\u0644\u0627\u0645\u0627\u0645',
+  ];
+
+  static const List<String> _backwardPhrases = <String>[
+    'backward',
+    'backwards',
+    'go backward',
+    'go backwards',
+    'go back',
+    'reverse',
+    'move back',
+    'move backward',
+    'move backwards',
+    'back up',
+    'drive back',
+    'drive backward',
+    'recule',
+    'reculer',
+    'en arriere',
+    'en arri\u00e8re',
+    'va en arriere',
+    '\u0627\u0631\u062c\u0639',
+    '\u0644\u0644\u0648\u0631\u0627\u0621',
+    '\u062a\u0631\u0627\u062c\u0639',
+  ];
+
+  static const List<String> _leftPhrases = <String>[
+    'turn left',
+    'go left',
+    'rotate left',
+    'move left',
+    'left',
+    'tourne a gauche',
+    'tourner a gauche',
+    'a gauche',
+    'gauche',
+    '\u062f\u0648\u0631 \u064a\u0633\u0627\u0631',
+    '\u064a\u0633\u0627\u0631',
+  ];
+
+  static const List<String> _rightPhrases = <String>[
+    'turn right',
+    'go right',
+    'rotate right',
+    'move right',
+    'right',
+    'tourne a droite',
+    'tourner a droite',
+    'a droite',
+    'droite',
+    '\u062f\u0648\u0631 \u064a\u0645\u064a\u0646',
+    '\u064a\u0645\u064a\u0646',
+  ];
+
+  /// Match any of [phrases] as a word-start occurrence inside [normalized].
+  /// Allows trailing letters/punctuation so 'forward' also matches 'forwards'
+  /// and 'forward.' / 'forward!' (common with STT output).
+  static bool _containsPhrase(String normalized, List<String> phrases) {
+    for (final phrase in phrases) {
+      final p = _normalize(phrase);
+      if (p.isEmpty) continue;
+      // Require a word boundary (start of string or whitespace) BEFORE the
+      // phrase, but allow anything after — covers plurals, punctuation, and
+      // STT artefacts like "forwards please". Right-side word-boundary is
+      // intentionally dropped because it was causing false negatives.
+      final pattern = RegExp('(^|\\s)' + RegExp.escape(p));
+      if (pattern.hasMatch(normalized)) return true;
+    }
+    return false;
+  }
+
+  /// Parse a distance phrase like "advance for 30 cm" / "avance de 50 cm" /
+  /// "go back 1 m". Returns signed metres (negative = backward) or null.
+  static double? _extractSignedDistanceMeters(String normalized) {
+    // Look for a number + unit anywhere in the utterance.
+    final match = RegExp(
+      r'(-?\d+(?:\.\d+)?)\s*(centimeters?|centimetres?|centim|cm|c m|meters?|metres?|metre|meter|m\b|\u0633\u0645|\u0645\u062a\u0631)',
+    ).firstMatch(normalized);
+    if (match == null) return null;
+
+    final value = double.tryParse(match.group(1) ?? '');
+    if (value == null) return null;
+
+    final unit = (match.group(2) ?? '').trim();
+    final isCm = unit.startsWith('c') ||
+        unit.contains('centi') ||
+        unit == '\u0633\u0645';
+    final meters = isCm ? value / 100.0 : value;
+
+    // Default: forward. If a backward phrase is present, flip the sign.
+    final goingBack = _containsPhrase(normalized, _backwardPhrases);
+    return goingBack ? -meters.abs() : meters.abs();
+  }
+
+  static VoiceCommandResult? _parseRobotCommand(String normalized) {
+    if (_containsPhrase(normalized, _stopPhrases)) {
+      return const VoiceCommandResult(
+        type: VoiceCommandType.robotCommand,
+        robotAction: RobotVoiceAction.stop,
+      );
+    }
+
+    final distance = _extractSignedDistanceMeters(normalized);
+    if (distance != null && distance != 0) {
+      return VoiceCommandResult(
+        type: VoiceCommandType.robotCommand,
+        robotAction: RobotVoiceAction.distance,
+        distanceMeters: distance,
+      );
+    }
+
+    if (_containsPhrase(normalized, _forwardPhrases)) {
+      return const VoiceCommandResult(
+        type: VoiceCommandType.robotCommand,
+        robotAction: RobotVoiceAction.forward,
+      );
+    }
+    if (_containsPhrase(normalized, _backwardPhrases)) {
+      return const VoiceCommandResult(
+        type: VoiceCommandType.robotCommand,
+        robotAction: RobotVoiceAction.backward,
+      );
+    }
+    if (_containsPhrase(normalized, _leftPhrases)) {
+      return const VoiceCommandResult(
+        type: VoiceCommandType.robotCommand,
+        robotAction: RobotVoiceAction.left,
+      );
+    }
+    if (_containsPhrase(normalized, _rightPhrases)) {
+      return const VoiceCommandResult(
+        type: VoiceCommandType.robotCommand,
+        robotAction: RobotVoiceAction.right,
+      );
+    }
     return null;
   }
 
@@ -392,6 +631,9 @@ class VoiceNavigationService {
         break;
       case VoicePage.assistant:
         destination = const ChatAssistantScreen();
+        break;
+      case VoicePage.controlRoom:
+        destination = const ControlRoomScreen();
         break;
     }
 

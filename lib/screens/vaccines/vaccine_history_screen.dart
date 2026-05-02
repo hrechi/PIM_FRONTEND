@@ -28,7 +28,7 @@ class _VaccineHistoryScreenState extends State<VaccineHistoryScreen> {
     final fmt = DateFormat('dd MMM yyyy', 'en_US');
 
     return Scaffold(
-      backgroundColor: AppColors.sageTint,
+      backgroundColor: AppColors.wheatWarmClay,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,

@@ -4,9 +4,9 @@ import '../providers/catalogue_provider.dart';
 import '../models/catalogue_models.dart';
 import '../models/animal.dart';
 import '../widgets/animal_catalogue_card.dart';
+import '../utils/currency_converter.dart';
 import 'animal_selector_screen.dart';
 import 'catalogue_preview_screen.dart';
-import 'catalogue_export_screen.dart';
 
 class CatalogueWizardScreen extends StatefulWidget {
   final SaleCatalogue? catalogue;
@@ -20,6 +20,7 @@ class CatalogueWizardScreen extends StatefulWidget {
 class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
   int _currentStep = 0;
   final _formKey = GlobalKey<FormState>();
+  String? _savedCatalogueId;
 
   // Step 1: Basic Info
   final _titleController = TextEditingController();
@@ -97,7 +98,7 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
         border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
       ),
       child: Row(
-        children: List.generate(5, (index) {
+        children: List.generate(4, (index) {
           return Expanded(
             child: Column(
               children: [
@@ -141,11 +142,10 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
 
   String _getStepTitle(int step) {
     switch (step) {
-      case 0: return 'Basic Info';
-      case 1: return 'Select Animals';
+      case 0: return 'Info';
+      case 1: return 'Animals';
       case 2: return 'Settings';
       case 3: return 'Preview';
-      case 4: return 'Export';
       default: return '';
     }
   }
@@ -156,7 +156,6 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
       case 1: return _buildAnimalSelectionStep();
       case 2: return _buildSettingsStep();
       case 3: return _buildPreviewStep();
-      case 4: return _buildExportStep();
       default: return const SizedBox.shrink();
     }
   }
@@ -216,18 +215,14 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     initialValue: _currency,
-                    decoration: const InputDecoration(
-                      labelText: 'Currency',
-                    ),
-                    items: ['TND', 'USD', 'EUR'].map((currency) {
+                    decoration: const InputDecoration(labelText: 'Currency'),
+                    items: CurrencyConverter.supported.map((c) {
                       return DropdownMenuItem(
-                        value: currency,
-                        child: Text(currency),
+                        value: c,
+                        child: Text('$c  ${CurrencyConverter.symbol(c)}'),
                       );
                     }).toList(),
-                    onChanged: (value) {
-                      setState(() => _currency = value!);
-                    },
+                    onChanged: (value) => setState(() => _currency = value!),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -397,18 +392,21 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
   }
 
   Widget _buildPreviewStep() {
-    return CataloguePreviewScreen(
-      catalogue: _createPreviewCatalogue(),
-      isPreview: true,
-      onBack: () => setState(() => _currentStep = 2),
-      onNext: () => setState(() => _currentStep = 4),
-    );
-  }
+    // Use Consumer so we don't call context.read() directly inside build().
+    return Consumer<CatalogueProvider>(
+      builder: (context, provider, _) {
+        final catalogue =
+            (_savedCatalogueId != null && provider.currentCatalogue?.id == _savedCatalogueId)
+                ? provider.currentCatalogue!
+                : _createPreviewCatalogue();
 
-  Widget _buildExportStep() {
-    return CatalogueExportScreen(
-      catalogue: _createPreviewCatalogue(),
-      isPreview: true,
+        return CataloguePreviewScreen(
+          catalogue: catalogue,
+          isPreview: true,
+          onBack: () => setState(() => _currentStep = 2),
+          // No onNext — export is accessible from the list screen
+        );
+      },
     );
   }
 
@@ -442,11 +440,10 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
 
   bool _canProceed() {
     switch (_currentStep) {
-      case 0: return _formKey.currentState?.validate() ?? false;
+      case 0: return _titleController.text.trim().isNotEmpty;
       case 1: return _selectedAnimals.isNotEmpty;
       case 2: return true;
-      case 3: return true;
-      case 4: return true;
+      case 3: return true; // Done button on preview
       default: return false;
     }
   }
@@ -455,42 +452,72 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
     switch (_currentStep) {
       case 0: return 'Select Animals';
       case 1: return 'Settings';
-      case 2: return 'Preview';
-      case 3: return 'Export';
-      case 4: return widget.catalogue != null ? 'Update' : 'Create';
+      case 2: return widget.catalogue != null ? 'Update' : 'Create';
+      case 3: return 'Done';
       default: return 'Next';
     }
   }
 
   void _handleNext() async {
-    if (_currentStep == 4) {
+    if (_currentStep == 2) {
       await _saveCatalogue();
+    } else if (_currentStep == 3) {
+      // Preview is the last step — close wizard and return to list
+      if (mounted) Navigator.pop(context, true);
     } else {
       setState(() => _currentStep++);
     }
   }
 
   Future<void> _saveCatalogue() async {
-    if (!_formKey.currentState!.validate()) return;
+    // Validate title manually (form may not be in tree at step 2)
+    if (_titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Title is required')),
+      );
+      setState(() => _currentStep = 0);
+      return;
+    }
 
     final provider = context.read<CatalogueProvider>();
     SaleCatalogue? result;
 
     if (widget.catalogue != null) {
-      // Update existing
+      // Update existing catalogue metadata
       result = await provider.updateCatalogue(
         widget.catalogue!.id,
-        title: _titleController.text,
+        title: _titleController.text.trim(),
         saleDate: _saleDate,
         location: _locationController.text.isEmpty ? null : _locationController.text,
         currency: _currency,
         showPrices: _showPrices,
         settings: _settings,
       );
+
+      if (result != null) {
+        // Sync animal changes: compute diff between original and current selection
+        final existingIds =
+            widget.catalogue!.animals.map((a) => a.animalId).toSet();
+        final newIds = _selectedAnimalIds.toSet();
+
+        final toAdd = newIds.difference(existingIds).toList();
+        final toRemove = existingIds.difference(newIds).toList();
+
+        if (toAdd.isNotEmpty) {
+          await provider.addAnimals(result.id, toAdd);
+        }
+        for (final id in toRemove) {
+          await provider.removeAnimal(result.id, id);
+        }
+
+        // Reload to get fresh animal data
+        await provider.loadCatalogue(result.id);
+        result = provider.currentCatalogue ?? result;
+      }
     } else {
       // Create new
       result = await provider.createCatalogue(
-        title: _titleController.text,
+        title: _titleController.text.trim(),
         saleDate: _saleDate,
         location: _locationController.text.isEmpty ? null : _locationController.text,
         currency: _currency,
@@ -501,11 +528,24 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
       // Add animals to the new catalogue
       if (result != null && _selectedAnimalIds.isNotEmpty) {
         await provider.addAnimals(result.id, _selectedAnimalIds);
+        // Reload full catalogue so CatalogueAnimal entries have nested animal data
+        await provider.loadCatalogue(result.id);
+        result = provider.currentCatalogue ?? result;
       }
     }
 
-    if (result != null && mounted) {
-      Navigator.pop(context, result);
+    if (!mounted) return;
+
+    if (result != null) {
+      _savedCatalogueId = result.id;
+      setState(() => _currentStep++); // → step 3 (Preview)
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(provider.error ?? 'Failed to save catalogue'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 

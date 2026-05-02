@@ -221,7 +221,7 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Incident deleted'),
-            backgroundColor: AppColorPalette.emeraldGreen,
+            backgroundColor: AppColorPalette.mistyBlue,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -327,7 +327,7 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColorPalette.wheatWarmClay,
       appBar: AppBar(
         title: Text(
           'Incident History',

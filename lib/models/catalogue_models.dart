@@ -128,7 +128,7 @@ class SaleCatalogue {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  const SaleCatalogue({
+  SaleCatalogue({
     required this.id,
     required this.farmerId,
     required this.title,
@@ -141,10 +141,46 @@ class SaleCatalogue {
     this.shareExpiresAt,
     this.shareViewCount = 0,
     this.status = "DRAFT",
-    this.animals = const [],
+    List<CatalogueAnimal>? animals,
     required this.createdAt,
     required this.updatedAt,
-  });
+  }) : animals = animals ?? [];
+
+  SaleCatalogue copyWith({
+    String? id,
+    String? farmerId,
+    String? title,
+    DateTime? saleDate,
+    String? location,
+    String? currency,
+    bool? showPrices,
+    CatalogueSettings? settings,
+    String? shareToken,
+    DateTime? shareExpiresAt,
+    int? shareViewCount,
+    String? status,
+    List<CatalogueAnimal>? animals,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return SaleCatalogue(
+      id: id ?? this.id,
+      farmerId: farmerId ?? this.farmerId,
+      title: title ?? this.title,
+      saleDate: saleDate ?? this.saleDate,
+      location: location ?? this.location,
+      currency: currency ?? this.currency,
+      showPrices: showPrices ?? this.showPrices,
+      settings: settings ?? this.settings,
+      shareToken: shareToken ?? this.shareToken,
+      shareExpiresAt: shareExpiresAt ?? this.shareExpiresAt,
+      shareViewCount: shareViewCount ?? this.shareViewCount,
+      status: status ?? this.status,
+      animals: animals ?? List<CatalogueAnimal>.from(this.animals),
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 
   factory SaleCatalogue.fromJson(Map<String, dynamic> json) {
     return SaleCatalogue(
@@ -255,7 +291,14 @@ class CatalogueAnimal {
   // Helper getters for catalogue display
   String? get species => animal?.animalType;
   String? get color => null; // Not available in current model
-  DateTime? get birthDate => animal?.createdAt; // Using createdAt as approximation
+
+  /// Approximate birth date derived from the animal's age in months.
+  /// Uses 30.44 days/month (average). Returns null if age is unavailable or zero.
+  DateTime? get birthDate {
+    if (animal?.age == null || animal!.age <= 0) return null;
+    return DateTime.now().subtract(Duration(days: (animal!.age * 30.44).round()));
+  }
+
   double? get price => priceOverride ?? animal?.estimatedValue ?? animal?.salePrice;
   String? get imageUrl => animal?.profileImage;
 }

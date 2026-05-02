@@ -5,6 +5,11 @@ import 'package:share_plus/share_plus.dart';
 import '../providers/catalogue_provider.dart';
 import '../models/catalogue_models.dart';
 import '../theme/app_theme.dart';
+import '../utils/constants.dart';
+import 'catalogue_book_screen.dart';
+
+const _kGreen = Color(0xFF309448);
+const _kGreenLight = Color(0xFFE8F5E9);
 
 class CatalogueExportScreen extends StatefulWidget {
   final SaleCatalogue catalogue;
@@ -29,8 +34,15 @@ class _CatalogueExportScreenState extends State<CatalogueExportScreen> {
   @override
   void initState() {
     super.initState();
+    // Restore share link from existing token without an API call,
+    // but only if the token is not expired.
     if (widget.catalogue.shareToken != null) {
-      _generateShareLink();
+      final isExpired = widget.catalogue.shareExpiresAt != null &&
+          widget.catalogue.shareExpiresAt!.isBefore(DateTime.now());
+      if (!isExpired) {
+        _shareLink = AppConfig.publicCatalogueUrl(widget.catalogue.shareToken!);
+      }
+      // If expired, _shareLink stays null — user must generate a new one.
     }
   }
 
@@ -130,9 +142,9 @@ class _CatalogueExportScreenState extends State<CatalogueExportScreen> {
             ),
             const SizedBox(height: 16),
             _buildExportButton(
-              icon: Icons.picture_as_pdf,
-              title: 'Generate PDF',
-              subtitle: 'Create a professional PDF catalogue',
+              icon: Icons.auto_stories,
+              title: 'View as Book',
+              subtitle: 'Browse catalogue page by page — cover, animals, back cover',
               onPressed: _generatePdf,
               isLoading: _isGeneratingPdf,
             ),
@@ -408,26 +420,14 @@ class _CatalogueExportScreenState extends State<CatalogueExportScreen> {
       return;
     }
 
-    setState(() => _isGeneratingPdf = true);
-
-    try {
-      final provider = context.read<CatalogueProvider>();
-      final pdfUrl = await provider.getCataloguePdf(widget.catalogue.id);
-
-      if (pdfUrl != null && mounted) {
-        setState(() => _pdfUrl = pdfUrl);
-        _showPdfSuccess(pdfUrl);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to generate PDF: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isGeneratingPdf = false);
-      }
+    // Open the book-style PDF viewer
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CatalogueBookScreen(catalogue: widget.catalogue),
+        ),
+      );
     }
   }
 
@@ -469,7 +469,7 @@ class _CatalogueExportScreenState extends State<CatalogueExportScreen> {
 
       if (updatedCatalogue != null && mounted) {
         setState(() {
-          _shareLink = 'https://yourapp.com/public/catalogues/${updatedCatalogue.shareToken}';
+          _shareLink = AppConfig.publicCatalogueUrl(updatedCatalogue.shareToken!);
         });
       }
     } catch (e) {

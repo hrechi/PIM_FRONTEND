@@ -106,7 +106,7 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.sageTint,
+      backgroundColor: AppColors.wheatWarmClay,
       appBar: AppBar(
         title: const Text('Ventes Saisonnières'),
         backgroundColor: AppColors.mistBlue,

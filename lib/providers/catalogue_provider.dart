@@ -166,7 +166,9 @@ class CatalogueProvider with ChangeNotifier {
       final addedAnimals = await _catalogueService.addAnimals(catalogueId, animalIds);
 
       if (_currentCatalogue?.id == catalogueId) {
-        _currentCatalogue!.animals.addAll(addedAnimals);
+        final updated = List<CatalogueAnimal>.from(_currentCatalogue!.animals)
+          ..addAll(addedAnimals);
+        _currentCatalogue = _currentCatalogue!.copyWith(animals: updated);
       }
 
       return addedAnimals;
@@ -189,7 +191,10 @@ class CatalogueProvider with ChangeNotifier {
       await _catalogueService.removeAnimal(catalogueId, animalId);
 
       if (_currentCatalogue?.id == catalogueId) {
-        _currentCatalogue!.animals.removeWhere((a) => a.animalId == animalId);
+        final updated = _currentCatalogue!.animals
+            .where((a) => a.animalId != animalId)
+            .toList();
+        _currentCatalogue = _currentCatalogue!.copyWith(animals: updated);
       }
 
       return true;
@@ -224,10 +229,10 @@ class CatalogueProvider with ChangeNotifier {
       );
 
       if (_currentCatalogue?.id == catalogueId) {
-        final index = _currentCatalogue!.animals.indexWhere((a) => a.animalId == animalId);
-        if (index != -1) {
-          _currentCatalogue!.animals[index] = updatedAnimal;
-        }
+        final updated = _currentCatalogue!.animals.map((a) {
+          return a.animalId == animalId ? updatedAnimal : a;
+        }).toList();
+        _currentCatalogue = _currentCatalogue!.copyWith(animals: updated);
       }
 
       return updatedAnimal;
@@ -252,6 +257,7 @@ class CatalogueProvider with ChangeNotifier {
     String? vaccinationStatus,
     String? reproductionStatus,
     String? tagNumber,
+    bool? isFattening,
   }) async {
     _isLoading = true;
     _error = null;
@@ -269,6 +275,7 @@ class CatalogueProvider with ChangeNotifier {
         vaccinationStatus: vaccinationStatus,
         reproductionStatus: reproductionStatus,
         tagNumber: tagNumber,
+        isFattening: isFattening,
       );
     } catch (e) {
       _error = e.toString();

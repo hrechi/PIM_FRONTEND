@@ -15,11 +15,18 @@ class ApiService {
     final port = AppConfig.serverPort;
 
     if (kIsWeb) {
+<<<<<<< HEAD
       return 'http://192.168.1.4:$port/api';
+=======
+
+      return 'http://$host:$port/api';
+
+>>>>>>> integration
     }
     if (Platform.isAndroid) {
       // Emulator and localhost fallback both use the configured project WiFi IP
       final isEmulator = host == 'localhost' || host == '127.0.0.1';
+
       return isEmulator
           ? 'http://192.168.1.4:$port/api'
           : 'http://$host:$port/api';
@@ -28,6 +35,7 @@ class ApiService {
     if (host == 'localhost' || host == '127.0.0.1') {
       return 'http://192.168.1.4:$port/api';
     }
+
     return 'http://$host:$port/api';
   }
 
@@ -35,7 +43,12 @@ class ApiService {
   static String get mediaBaseUrl {
     final host = AppConfig.serverHost;
     final port = AppConfig.serverPort;
+<<<<<<< HEAD
     if (kIsWeb) return 'http://192.168.1.4:$port';
+=======
+
+    if (kIsWeb) return 'http://192.168.1.115:$port';
+>>>>>>> integration
     if (Platform.isAndroid) {
       final isEmulator = host == 'localhost' || host == '127.0.0.1';
       return isEmulator ? 'http://192.168.1.4:$port' : 'http://$host:$port';

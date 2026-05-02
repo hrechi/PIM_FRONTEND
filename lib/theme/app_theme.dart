@@ -8,12 +8,14 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      scaffoldBackgroundColor: AppColors.sageTint,
+      scaffoldBackgroundColor: AppColors.wheatWarmClay,
+      canvasColor: AppColors.wheatWarmClay,
       primaryColor: AppColors.mistyBlue,
       colorScheme: ColorScheme.light(
         primary: AppColors.mistyBlue,
         secondary: AppColors.fieldFreshStart,
-        surface: AppColors.wheatWarmClay,
+        surface: Colors.white,
+        surfaceContainerHighest: AppColors.wheatWarmClay,
         error: AppColors.error,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
@@ -92,23 +94,113 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.mistyBlue,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          minimumSize: const Size(64, 48),
+          elevation: 2,
+          shadowColor: AppColors.mistyBlue.withValues(alpha: 0.25),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
           textStyle: GoogleFonts.inter(
             fontWeight: FontWeight.w600,
-            fontSize: 16,
+            fontSize: 15,
           ),
         ),
       ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.mistyBlue,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          minimumSize: const Size(64, 48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.mistyBlue,
+          textStyle: GoogleFonts.inter(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.mistyBlue,
+          side: const BorderSide(color: AppColors.mistyBlue, width: 1.5),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+          minimumSize: const Size(64, 48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          textStyle: GoogleFonts.inter(
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+          ),
+        ),
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.mistyBlue,
+        foregroundColor: Colors.white,
+        elevation: 4,
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.mistyBlue,
+      ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: AppColors.mistyBlue,
+        unselectedLabelColor: AppColors.secondaryText,
+        indicatorColor: AppColors.mistyBlue,
+        labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+        unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 14),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: Colors.white,
+        selectedColor: AppColors.mistyBlue.withValues(alpha: 0.12),
+        labelStyle: GoogleFonts.inter(color: AppColors.primaryText, fontSize: 13, fontWeight: FontWeight.w500),
+        secondaryLabelStyle: GoogleFonts.inter(color: AppColors.mistyBlue, fontSize: 13, fontWeight: FontWeight.w600),
+        side: BorderSide(color: AppColors.secondaryText.withValues(alpha: 0.18)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) =>
+            states.contains(WidgetState.selected) ? AppColors.mistyBlue : Colors.white),
+        trackColor: WidgetStateProperty.resolveWith((states) =>
+            states.contains(WidgetState.selected)
+                ? AppColors.mistyBlue.withValues(alpha: 0.45)
+                : AppColors.secondaryText.withValues(alpha: 0.3)),
+      ),
+      cardTheme: CardThemeData(
+        color: Colors.white,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      dividerTheme: DividerThemeData(
+        color: AppColors.secondaryText.withValues(alpha: 0.15),
+        thickness: 1,
+        space: 1,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: AppColors.primaryText,
+        contentTextStyle: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.wheatWarmClay,
+        surfaceTintColor: AppColors.wheatWarmClay,
+        scrolledUnderElevation: 0,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: GoogleFonts.inter(
           color: AppColors.primaryText,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
           fontSize: 20,
         ),
         iconTheme: const IconThemeData(color: AppColors.primaryText),
