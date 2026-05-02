@@ -452,7 +452,7 @@ class SoilApiException implements Exception {
   String get userMessage {
     switch (type) {
       case SoilApiExceptionType.network:
-        return 'Cannot connect to server. Please check your internet connection and ensure the backend is running at http://192.168.1.4:3000';
+        return 'Cannot connect to server. Please check your internet connection and ensure the backend is running at http://192.168.1.19:3000';
       case SoilApiExceptionType.timeout:
         return 'Request timed out. Please try again.';
       case SoilApiExceptionType.notFound:

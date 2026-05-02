@@ -15,25 +15,19 @@ class ApiService {
     final port = AppConfig.serverPort;
 
     if (kIsWeb) {
-<<<<<<< HEAD
-      return 'http://192.168.1.4:$port/api';
-=======
-
       return 'http://$host:$port/api';
-
->>>>>>> integration
     }
     if (Platform.isAndroid) {
       // Emulator and localhost fallback both use the configured project WiFi IP
       final isEmulator = host == 'localhost' || host == '127.0.0.1';
 
       return isEmulator
-          ? 'http://192.168.1.4:$port/api'
+          ? 'http://192.168.1.19:$port/api'
           : 'http://$host:$port/api';
     }
     // iOS simulator can use localhost; real iPhone uses WiFi IP
     if (host == 'localhost' || host == '127.0.0.1') {
-      return 'http://192.168.1.4:$port/api';
+      return 'http://192.168.1.19:$port/api';
     }
 
     return 'http://$host:$port/api';
@@ -43,18 +37,13 @@ class ApiService {
   static String get mediaBaseUrl {
     final host = AppConfig.serverHost;
     final port = AppConfig.serverPort;
-<<<<<<< HEAD
-    if (kIsWeb) return 'http://192.168.1.4:$port';
-=======
-
-    if (kIsWeb) return 'http://192.168.1.115:$port';
->>>>>>> integration
+    if (kIsWeb) return 'http://$host:$port';
     if (Platform.isAndroid) {
       final isEmulator = host == 'localhost' || host == '127.0.0.1';
-      return isEmulator ? 'http://192.168.1.4:$port' : 'http://$host:$port';
+      return isEmulator ? 'http://192.168.1.19:$port' : 'http://$host:$port';
     }
     if (host == 'localhost' || host == '127.0.0.1')
-      return 'http://192.168.1.4:$port';
+      return 'http://192.168.1.19:$port';
     return 'http://$host:$port';
   }
 
