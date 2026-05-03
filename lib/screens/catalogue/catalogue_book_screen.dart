@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../models/catalogue_models.dart';
-import '../models/user_model.dart';
-import '../providers/auth_provider.dart';
-import '../widgets/animal_catalogue_card.dart';
-import '../utils/constants.dart';
-import '../utils/currency_converter.dart';
+import '../../models/catalogue_models.dart';
+import '../../models/user_model.dart';
+import '../../providers/auth_provider.dart';
+import '../../widgets/animal_catalogue_card.dart';
+import '../../utils/constants.dart';
+import '../../utils/currency_converter.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Palette
