@@ -8,7 +8,7 @@ import '../utils/constants.dart';
 class CreateMissionScreen extends StatefulWidget {
   final String? fieldId;
 
-  const CreateMissionScreen({Key? key, this.fieldId}) : super(key: key);
+  const CreateMissionScreen({super.key, this.fieldId});
 
   @override
   State<CreateMissionScreen> createState() => _CreateMissionScreenState();
@@ -158,7 +158,7 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: selectedFieldId,
+            initialValue: selectedFieldId,
             decoration: const InputDecoration(
               labelText: 'Select Field *',
               border: OutlineInputBorder(),
@@ -194,7 +194,7 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: selectedType,
+            initialValue: selectedType,
             decoration: const InputDecoration(
               labelText: 'Mission Type *',
               border: OutlineInputBorder(),
@@ -211,7 +211,7 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: selectedPriority,
+            initialValue: selectedPriority,
             decoration: const InputDecoration(
               labelText: 'Priority *',
               border: OutlineInputBorder(),

@@ -129,7 +129,7 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Incident deleted'),
-            backgroundColor: AppColorPalette.emeraldGreen,
+            backgroundColor: AppColorPalette.mistyBlue,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -215,7 +215,7 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
       drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Incident History'),
-        backgroundColor: AppColorPalette.emeraldGreen,
+        backgroundColor: AppColorPalette.mistyBlue,
         foregroundColor: AppColorPalette.white,
       ),
       body: RefreshIndicator(

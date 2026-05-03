@@ -1,4 +1,5 @@
 /// Crop suitability analysis models
+library;
 import 'package:flutter/material.dart';
 
 /// Decision type for crop planting

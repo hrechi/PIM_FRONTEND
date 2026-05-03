@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import '../../providers/vaccine_provider.dart';
 import '../../models/vaccine_models.dart';
 import '../../utils/constants.dart';
-import '../../widgets/vaccine_status_chip.dart';
 
 class VaccineCalendarScreen extends StatefulWidget {
   const VaccineCalendarScreen({super.key});
@@ -15,219 +13,378 @@ class VaccineCalendarScreen extends StatefulWidget {
 }
 
 class _VaccineCalendarScreenState extends State<VaccineCalendarScreen> {
-  CalendarFormat _calendarFormat = CalendarFormat.month;
-  DateTime _focusedDay = DateTime.now();
-  DateTime? _selectedDay;
+  DateTime _focusedMonth = DateTime.now();
+  DateTime _selectedDay = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _selectedDay = _focusedDay;
-    // Load all vaccines if not loaded
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<VaccineProvider>().loadGlobalSchedules();
     });
   }
 
-  bool _isSameDayLocal(DateTime? a, DateTime? b) {
-    if (a == null || b == null) return false;
-    return a.year == b.year && a.month == b.month && a.day == b.day;
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  bool _isToday(DateTime d) => _isSameDay(d, DateTime.now());
+
+  List<VaccineSchedule> _getEventsForDay(DateTime day, List<VaccineSchedule> allSchedules) {
+    return allSchedules.where((s) => _isSameDay(s.scheduledDate, day)).toList();
   }
 
-  List<VaccineSchedule> _getEventsForDay(DateTime day) {
-    final provider = context.read<VaccineProvider>();
-    return provider.allSchedules.where((s) {
-      return _isSameDayLocal(s.scheduledDate, day);
-    }).toList();
+  // Returns all days visible in the calendar grid (leading/trailing + current month)
+  List<DateTime?> _buildCalendarDays() {
+    final firstOfMonth = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
+    final daysInMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0).day;
+    final startWeekday = (firstOfMonth.weekday % 7); // Sun first
+
+    final List<DateTime?> days = [];
+    // Leading nulls for previous month layout
+    for (int i = 0; i < startWeekday; i++) {
+      days.add(null);
+    }
+    // Current month days
+    for (int d = 1; d <= daysInMonth; d++) {
+      days.add(DateTime(_focusedMonth.year, _focusedMonth.month, d));
+    }
+    // Trailing to fill last row
+    while (days.length % 7 != 0) {
+      days.add(null);
+    }
+    return days;
+  }
+
+  void _onMonthChanged(int delta) {
+    setState(() {
+      _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + delta);
+      // Auto-select the same day in the new month if possible, else the 1st
+      int day = _selectedDay.day;
+      final lastDayOfNewMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0).day;
+      if (day > lastDayOfNewMonth) day = lastDayOfNewMonth;
+      _selectedDay = DateTime(_focusedMonth.year, _focusedMonth.month, day);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    // We use context.watch to make the whole UI react to provider data changes
+    final allSchedules = context.watch<VaccineProvider>().allSchedules;
+    
+    final monthLabel = DateFormat('MMMM yyyy', 'en_US').format(_focusedMonth);
+    final dayLabel = DateFormat('EEEE d MMMM', 'en_US').format(_selectedDay);
+    final events = _getEventsForDay(_selectedDay, allSchedules);
+    final calDays = _buildCalendarDays();
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF7),
-      appBar: AppBar(
-        title: const Text('Vaccine Calendar', 
-          style: TextStyle(color: Color(0xFF1B3C35), fontWeight: FontWeight.w900)),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF1B3C35)),
-          onPressed: () => Navigator.pop(context),
-        ),
+      backgroundColor: AppColors.wheatWarmClay,
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.mistBlue,
+        elevation: 6,
+        onPressed: () {},
+        child: const Icon(Icons.add_rounded, color: Colors.white, size: 30),
       ),
-      body: Column(
-        children: [
-          _buildCalendarCard(),
-          const SizedBox(height: 16),
-          Expanded(child: _buildEventList()),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCalendarCard() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1B3C35).withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: TableCalendar<VaccineSchedule>(
-        firstDay: DateTime.now().subtract(const Duration(days: 365)),
-        lastDay: DateTime.now().add(const Duration(days: 365 * 2)),
-        focusedDay: _focusedDay,
-        calendarFormat: _calendarFormat,
-        selectedDayPredicate: (day) => _isSameDayLocal(_selectedDay, day),
-        eventLoader: _getEventsForDay,
-        onDaySelected: (selectedDay, focusedDay) {
-          setState(() {
-            _selectedDay = selectedDay;
-            _focusedDay = focusedDay;
-          });
-        },
-        onFormatChanged: (format) {
-          if (_calendarFormat != format) {
-            setState(() => _calendarFormat = format);
-          }
-        },
-        onPageChanged: (focusedDay) {
-          _focusedDay = focusedDay;
-        },
-        calendarStyle: CalendarStyle(
-          todayDecoration: BoxDecoration(
-            color: const Color(0xFF1B3C35).withValues(alpha: 0.2),
-            shape: BoxShape.circle,
-          ),
-          selectedDecoration: const BoxDecoration(
-            color: Color(0xFF1B3C35),
-            shape: BoxShape.circle,
-          ),
-        ),
-        calendarBuilders: CalendarBuilders(
-          markerBuilder: (context, day, events) {
-            if (events.isEmpty) return null;
-            return Positioned(
-              bottom: 1,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: events.take(3).map((event) {
-                  final e = event;
-                  Color c = const Color(0xFF1B3C35);
-                  if (e.isMandatory) {
-                     final days = e.scheduledDate.difference(DateTime.now()).inDays;
-                     if (e.isOverdue || days <= 7) {
-                       c = const Color(0xFFEF4444);
-                     } else {
-                       c = const Color(0xFFF59E0B);
-                     }
-                  }
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 0.5),
-                    width: 6, height: 6,
-                    decoration: BoxDecoration(color: c, shape: BoxShape.circle),
-                  );
-                }).toList(),
-              ),
-            );
-          },
-        ),
-        headerStyle: const HeaderStyle(
-          formatButtonVisible: true,
-          titleCentered: true,
-          formatButtonShowsNext: false,
-          titleTextStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF1B3C35)),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEventList() {
-    final events = _getEventsForDay(_selectedDay!);
-
-    if (events.isEmpty) {
-      return Center(
+      body: SafeArea(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.event_busy_rounded, size: 64, color: Colors.grey.withValues(alpha: 0.3)),
-            const SizedBox(height: 16),
-            const Text('No vaccines scheduled for this day', 
-              style: TextStyle(color: Color(0xFF4A6741), fontWeight: FontWeight.w600)),
+            _buildHeader(monthLabel),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildCalendarGrid(calDays, allSchedules),
+                    const SizedBox(height: 20),
+                    _buildDaySummary(dayLabel, events),
+                    const SizedBox(height: 12),
+                    if (events.isEmpty)
+                      _buildEmpty()
+                    else
+                      ...events.map((s) => _VaccineEventCard(schedule: s, contextDay: _selectedDay)),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
-      );
-    }
+      ),
+    );
+  }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: events.length,
-      itemBuilder: (context, index) {
-        final schedule = events[index];
-        return _CalendarEventCard(schedule: schedule);
-      },
+  Widget _buildHeader(String monthLabel) {
+    return Container(
+      color: AppColors.sageTint,
+      padding: const EdgeInsets.fromLTRB(4, 16, 4, 12),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: Color(0xFF475569)),
+                onPressed: () => Navigator.pop(context),
+              ),
+              const Expanded(
+                child: Text(
+                  'Vaccine Calendar',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF141E15)),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.more_horiz_rounded, size: 24, color: Color(0xFF475569)),
+                onPressed: () {},
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.mistBlue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                GestureDetector(
+                  onTap: () => _onMonthChanged(-1),
+                  child: Icon(Icons.chevron_left_rounded, color: AppColors.mistBlue, size: 26),
+                ),
+                Text(
+                  monthLabel,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.mistBlue),
+                ),
+                GestureDetector(
+                  onTap: () => _onMonthChanged(1),
+                  child: Icon(Icons.chevron_right_rounded, color: AppColors.mistBlue, size: 26),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static const List<String> _weekdayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+  Widget _buildCalendarGrid(List<DateTime?> days, List<VaccineSchedule> allSchedules) {
+    return Column(
+      children: [
+        Row(
+          children: _weekdayLabels.map((label) => Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8), letterSpacing: 1),
+              ),
+            ),
+          )).toList(),
+        ),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            childAspectRatio: 0.9,
+          ),
+          itemCount: days.length,
+          itemBuilder: (context, index) {
+            final day = days[index];
+            if (day == null) return const SizedBox.shrink();
+            return _buildDayCell(day, allSchedules);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDayCell(DateTime day, List<VaccineSchedule> allSchedules) {
+    final isSelected = _isSameDay(day, _selectedDay);
+    final isToday = _isToday(day);
+    final isCurrentMonth = day.month == _focusedMonth.month;
+    final events = _getEventsForDay(day, allSchedules);
+    final hasUrgent = events.any((e) => e.isMandatory && (e.isOverdue || e.isUrgent));
+    final hasEvents = events.isNotEmpty;
+
+    return GestureDetector(
+      onTap: () => setState(() {
+        _selectedDay = day;
+        if (day.month != _focusedMonth.month) {
+          _focusedMonth = DateTime(day.year, day.month);
+        }
+      }),
+      child: Container(
+        margin: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.mistBlue : (isToday ? AppColors.mistBlue.withValues(alpha: 0.12) : Colors.transparent),
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: isSelected ? [BoxShadow(color: AppColors.mistBlue.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 4))] : [],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '${day.day}',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected || isToday ? FontWeight.w800 : FontWeight.w500,
+                color: isSelected ? Colors.white : (isCurrentMonth ? (isToday ? AppColors.mistBlue : const Color(0xFF334155)) : const Color(0xFFCBD5E1)),
+              ),
+            ),
+            if (hasEvents) ...[
+              const SizedBox(height: 2),
+              Container(
+                width: 5, height: 5,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected ? Colors.white : (hasUrgent ? const Color(0xFFEF4444) : AppColors.mistBlue),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDaySummary(String dayLabel, List<VaccineSchedule> events) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          dayLabel,
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFF141E15)),
+        ),
+        Text(
+          '${events.length} task${events.length > 1 ? 's' : ''}',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.mistBlue),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmpty() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              child: const Icon(Icons.event_available_rounded, size: 42, color: Color(0xFFCBD5E1)),
+            ),
+            const SizedBox(height: 16),
+            const Text('No vaccines scheduled', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600, fontSize: 15)),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _CalendarEventCard extends StatelessWidget {
+class _VaccineEventCard extends StatelessWidget {
   final VaccineSchedule schedule;
-  const _CalendarEventCard({required this.schedule});
+  final DateTime contextDay;
+  const _VaccineEventCard({required this.schedule, required this.contextDay});
 
   @override
   Widget build(BuildContext context) {
     final vaccine = schedule.vaccine;
-    
+    final name = (vaccine?.code == 'OTHER' ? schedule.notes : vaccine?.nameFr) ?? 'Vaccin';
+    final isDone = schedule.status == 'DONE';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDone ? Colors.white.withValues(alpha: 0.6) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF1B3C35).withValues(alpha: 0.08), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1B3C35).withValues(alpha: 0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: isDone ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1B3C35).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.vaccines_rounded, color: Color(0xFF1B3C35), size: 24),
+            decoration: BoxDecoration(color: AppColors.mistBlue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(14)),
+            child: Icon(Icons.pets_rounded, color: AppColors.mistBlue, size: 24),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  (vaccine?.code == 'OTHER' ? schedule.notes : vaccine?.nameFr) ?? 'Vaccine',
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF1B3C35)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Animal: ${schedule.animalId}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF141E15))),
+                    _StatusBadge(schedule: schedule, viewDate: contextDay),
+                  ],
                 ),
-                Text(
-                  'Animal ID: ${schedule.animalId}', // Could be improved if animal name is available
-                  style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
-                ),
+                Text(name, style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                if (!isDone) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.mistBlue,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () {},
+                          child: const Text('Done', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(10)),
+                        child: const Icon(Icons.edit_rounded, size: 18, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
-          VaccineStatusChip(status: schedule.status, small: true),
         ],
       ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final VaccineSchedule schedule;
+  final DateTime viewDate;
+  const _StatusBadge({required this.schedule, required this.viewDate});
+
+  @override
+  Widget build(BuildContext context) {
+    String label;
+    Color bg, fg;
+
+    if (schedule.status == 'DONE') {
+      label = 'COMPLETED'; bg = const Color(0xFFF0FDF4); fg = const Color(0xFF16A34A);
+    } else if (schedule.isOverdue) {
+      label = 'OVERDUE'; bg = const Color(0xFFFEF2F2); fg = const Color(0xFFEF4444);
+    } else {
+      label = 'SCHEDULED'; bg = const Color(0xFFEFF6FF); fg = const Color(0xFF3B82F6);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
+      child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: fg)),
     );
   }
 }

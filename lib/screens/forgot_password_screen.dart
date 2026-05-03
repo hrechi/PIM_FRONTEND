@@ -174,7 +174,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 // Send OTP button
                 CustomButton(
                   text: 'Send Code',
-                  gradient: AppColors.fieldFreshGradient,
+                  gradient: const LinearGradient(
+                    colors: [AppColors.mistyBlue, AppColors.fieldFreshStart],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   isLoading: _isLoading,
                   onPressed: _handleSendOtp,
                 ),

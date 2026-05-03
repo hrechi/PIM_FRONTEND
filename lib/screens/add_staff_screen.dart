@@ -21,15 +21,39 @@ class AddStaffScreen extends StatefulWidget {
 class _AddStaffScreenState extends State<AddStaffScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _imagePicker = ImagePicker();
 
   File? _selectedImage;
   bool _isLoading = false;
+  List<Map<String, dynamic>> _fieldOptions = [];
+  String? _assignedFieldId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFields();
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadFields() async {
+    try {
+      final data = await ApiService.get('/field', withAuth: true);
+      if (!mounted) return;
+      setState(() {
+        _fieldOptions = List<Map<String, dynamic>>.from(data as List);
+      });
+    } catch (_) {
+      // Non-blocking for staff creation.
+    }
   }
 
   // ── Image selection ─────────────────────────────────────────
@@ -139,6 +163,9 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
       await ApiService.uploadStaff(
         _nameController.text.trim(),
         _selectedImage!.path,
+        _usernameController.text.trim(),
+        _passwordController.text,
+        _assignedFieldId,
       );
 
       if (!mounted) return;
@@ -307,6 +334,70 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                       return 'Name must be at least 2 characters';
                     }
                     return null;
+                  },
+                ),
+
+                const SizedBox(height: 14),
+
+                CustomTextField(
+                  controller: _usernameController,
+                  hintText: 'e.g. farmer.ahmed',
+                  label: 'Worker Username',
+                  prefixIcon: Icons.alternate_email,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a username';
+                    }
+                    if (value.trim().length < 3) {
+                      return 'Username must be at least 3 characters';
+                    }
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 14),
+
+                CustomTextField(
+                  controller: _passwordController,
+                  hintText: 'Set worker password',
+                  label: 'Worker Password',
+                  prefixIcon: Icons.lock_outline,
+                  isPassword: true,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a password';
+                    }
+                    if (value.length < 6) {
+                      return 'Password must be at least 6 characters';
+                    }
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 14),
+
+                DropdownButtonFormField<String?>(
+                  initialValue: _assignedFieldId,
+                  decoration: InputDecoration(
+                    labelText: 'Assigned Field (optional)',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('No field assignment'),
+                    ),
+                    ..._fieldOptions.map(
+                      (field) => DropdownMenuItem<String?>(
+                        value: field['id']?.toString(),
+                        child: Text(field['name']?.toString() ?? 'Unknown'),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _assignedFieldId = value);
                   },
                 ),
 

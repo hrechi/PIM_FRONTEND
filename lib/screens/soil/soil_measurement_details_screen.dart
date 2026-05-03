@@ -1,16 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../../theme/color_palette.dart';
 import '../../theme/text_styles.dart';
 import '../../utils/responsive.dart';
 import '../../models/soil_measurement.dart' as soil_models;
 import '../../models/field_model.dart';
+import '../../models/soil_intelligence.dart';
 import '../../widgets/soil/status_badge.dart';
 import '../../widgets/soil/soil_metric_card.dart';
+import '../../widgets/soil/soil_video_player.dart';
 import '../../services/field_service.dart';
 import '../../services/soil_repository.dart';
 import '../../services/parcel_crud_service.dart';
 import '../../services/soil_crop_compatibility_service.dart';
+import '../../services/soil_intelligence_service.dart';
 import '../../services/weather_service.dart';
 import '../../models/parcel.dart';
 import '../../models/weather_info.dart';
@@ -43,6 +49,18 @@ class _SoilMeasurementDetailsScreenState
   final SoilRepository _soilRepository = SoilRepository();
   final ParcelCrudService _parcelService = ParcelCrudService();
   final WeatherService _weatherService = WeatherService();
+  final SoilIntelligenceService _soilIntelligenceService = SoilIntelligenceService();
+
+  // FEATURE: Soil fingerprint
+  List<SoilFingerprintMatch> _fingerprintMatches = [];
+  bool _isLoadingFingerprint = false;
+  String? _fingerprintError;
+
+  // FEATURE: Weather x Soil alerts
+  List<SoilWeatherAlert> _weatherAlerts = [];
+  bool _isLoadingWeatherAlerts = false;
+  bool _showAllAlerts = false;
+  Timer? _alertsTimer;
 
   // FEATURE 1: Parcel Crops Compatibility
   Parcel? _parcel;
@@ -221,6 +239,8 @@ class _SoilMeasurementDetailsScreenState
           _parcel = resolvedParcel;
           _parcelCropNames = cropNames;
         });
+
+        await _triggerAndLoadWeatherAlerts();
 
         if (cropNames.isNotEmpty) {
           // Load crop compatibility after crop names are available (will trigger corrections)
@@ -450,6 +470,8 @@ class _SoilMeasurementDetailsScreenState
       setState(() {
         measurement = updated;
       });
+      _loadSoilFingerprint();
+      _loadWeatherAlerts();
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -469,6 +491,8 @@ class _SoilMeasurementDetailsScreenState
           measurement = freshMeasurement;
           _isLoadingMeasurement = false;
         });
+        _loadSoilFingerprint();
+        _loadWeatherAlerts();
       }
     } catch (e) {
       if (mounted) {
@@ -490,6 +514,116 @@ class _SoilMeasurementDetailsScreenState
     }
     // Load weather-based season first, then crop compatibility and seasonal plans.
     _initializeSeasonAndCropAnalysis();
+    _loadSoilFingerprint();
+    _loadWeatherAlerts();
+    _alertsTimer = Timer.periodic(
+      const Duration(minutes: 30),
+      (_) => _loadWeatherAlerts(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _alertsTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadSoilFingerprint() async {
+    setState(() {
+      _isLoadingFingerprint = true;
+      _fingerprintError = null;
+    });
+
+    try {
+      final nitrogen = _getNutrientValue('N');
+      final phosphorus = _getNutrientValue('P');
+      final potassium = _getNutrientValue('K');
+
+      final matches = await _soilIntelligenceService.findSimilarSoils(
+        soilMeasurementId: measurement.id,
+        ph: measurement.ph,
+        moisture: measurement.soilMoisture,
+        temperature: measurement.temperature,
+        nitrogen: nitrogen,
+        phosphorus: phosphorus,
+        potassium: potassium,
+        soilType: measurement.soilType ?? 'Sandy',
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _fingerprintMatches = matches;
+        _isLoadingFingerprint = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _fingerprintError = e.toString();
+        _isLoadingFingerprint = false;
+      });
+    }
+  }
+
+  Future<void> _triggerAndLoadWeatherAlerts() async {
+    final parcelId = measurement.parcelId ?? _parcel?.id;
+    if (parcelId == null || parcelId.isEmpty) {
+      return;
+    }
+
+    try {
+      await _soilIntelligenceService.triggerWeatherCheck(parcelId, measurement.id);
+    } catch (_) {
+      // Trigger endpoint may fail in dev if weather key is missing; keep UI resilient.
+    }
+
+    await _loadWeatherAlerts();
+  }
+
+  Future<void> _loadWeatherAlerts() async {
+    final parcelId = measurement.parcelId ?? _parcel?.id;
+    if (parcelId == null || parcelId.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingWeatherAlerts = true;
+    });
+
+    try {
+      final alerts = await _soilIntelligenceService.getActiveAlerts(parcelId);
+      if (!mounted) return;
+
+      setState(() {
+        _weatherAlerts = alerts;
+        _isLoadingWeatherAlerts = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingWeatherAlerts = false;
+      });
+    }
+  }
+
+  Future<void> _markAlertAsRead(SoilWeatherAlert alert) async {
+    try {
+      await _soilIntelligenceService.markAlertAsRead(alert.id);
+      if (!mounted) return;
+
+      setState(() {
+        _weatherAlerts.removeWhere((item) => item.id == alert.id);
+      });
+    } catch (_) {
+      // Keep silent to avoid blocking the main flow.
+    }
+  }
+
+  String _relativeTime(DateTime value) {
+    final diff = DateTime.now().difference(value);
+    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+    if (diff.inHours < 24) return '${diff.inHours} h ago';
+    return '${diff.inDays} d ago';
   }
 
 
@@ -548,7 +682,7 @@ class _SoilMeasurementDetailsScreenState
       backgroundColor: AppColorPalette.wheatWarmClay,
       appBar: AppBar(
         title: Text(
-          _isLoadingField ? 'Loading...' : _displayTitle,
+          (_isLoadingField || _isLoadingMeasurement) ? 'Loading...' : _displayTitle,
           style: AppTextStyles.h3(),
         ),
         actions: [
@@ -596,10 +730,33 @@ class _SoilMeasurementDetailsScreenState
 
             const SizedBox(height: 24),
 
+            // Weather x Soil cross-alert section (top priority)
+            _buildWeatherAlertsSection(),
+
+            if (_weatherAlerts.isNotEmpty) const SizedBox(height: 24),
+
             // Soil Health Analysis Section
             _buildSoilHealthAnalysisSection(),
 
             const SizedBox(height: 24),
+
+            // Soil fingerprint section
+            _buildSoilFingerprintSection(),
+
+            const SizedBox(height: 24),
+
+            if (kDebugMode) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    await _triggerAndLoadWeatherAlerts();
+                  },
+                  child: const Text('🧪 Simulate Weather Check'),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
 
             // FEATURE 1: Parcel Crops Compatibility
             _buildParcelCropsCompatibilitySection(),
@@ -773,6 +930,286 @@ class _SoilMeasurementDetailsScreenState
           ],
 
           const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeatherAlertsSection() {
+    if (_isLoadingWeatherAlerts && _weatherAlerts.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColorPalette.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColorPalette.softSlate.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Checking weather-soil risks...',
+              style: AppTextStyles.bodyMedium(color: AppColorPalette.softSlate),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_weatherAlerts.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final first = _weatherAlerts.first;
+    final remaining = _weatherAlerts.skip(1).toList();
+    final visible = _showAllAlerts ? _weatherAlerts : [first];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ...visible.map(_buildSingleWeatherAlertCard),
+        if (remaining.isNotEmpty && !_showAllAlerts)
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _showAllAlerts = true;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8, left: 4),
+              child: Text(
+                '+ ${remaining.length} more alerts',
+                style: AppTextStyles.bodySmall(color: AppColorPalette.info).copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSingleWeatherAlertCard(SoilWeatherAlert alert) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 280),
+      child: Container(
+        key: ValueKey(alert.id),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: alert.backgroundColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: alert.borderColor, width: 1.4),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '⚠️ ACTIVE SOIL ALERT',
+                    style: AppTextStyles.bodyMedium().copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: alert.borderColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    alert.severity.toUpperCase(),
+                    style: AppTextStyles.caption(color: alert.borderColor).copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '${alert.alertIcon} ${alert.type.replaceAll('_', ' ')}',
+              style: AppTextStyles.bodyMedium().copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            Text(alert.message, style: AppTextStyles.bodySmall()),
+            if (alert.action.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColorPalette.white.withValues(alpha: 0.65),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Action Required:',
+                      style: AppTextStyles.bodySmall().copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(alert.action, style: AppTextStyles.bodySmall()),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Detected ${_relativeTime(alert.triggeredAt)}',
+                    style: AppTextStyles.caption(color: AppColorPalette.softSlate),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => _markAlertAsRead(alert),
+                  icon: const Icon(Icons.check, size: 16),
+                  label: const Text('OK'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSoilFingerprintSection() {
+    if (_isLoadingFingerprint) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColorPalette.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColorPalette.softSlate.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('🧬 Finding similar soils...', style: AppTextStyles.h4()),
+            const SizedBox(height: 12),
+            Container(height: 14, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(8))),
+            const SizedBox(height: 8),
+            Container(height: 14, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(8))),
+            const SizedBox(height: 8),
+            Container(height: 14, width: 160, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(8))),
+          ],
+        ),
+      );
+    }
+
+    if (_fingerprintError != null || _fingerprintMatches.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColorPalette.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColorPalette.softSlate.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('🧬 Soil Fingerprint Match', style: AppTextStyles.h4()),
+          const SizedBox(height: 6),
+          Text(
+            'Farmers who had this soil fixed it:',
+            style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate),
+          ),
+          const SizedBox(height: 14),
+          ..._fingerprintMatches.take(3).map(_buildFingerprintCard),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFingerprintCard(SoilFingerprintMatch match) {
+    final moisture = (match.soilData['moisture'] as num?)?.toDouble();
+    final ph = (match.soilData['ph'] as num?)?.toDouble();
+    final soilType = (match.soilData['soil_type'] ?? match.soilData['soilType'] ?? '').toString();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: match.matchColor.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: match.matchColor.withValues(alpha: 0.65), width: 1.4),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: match.matchColor.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '${match.matchPercentage} Match',
+                  style: AppTextStyles.caption(color: match.matchColor).copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '📍 ${match.parcelLocation}',
+                  style: AppTextStyles.bodyMedium().copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${soilType.isNotEmpty ? soilType : 'Unknown'} soil · pH ${ph?.toStringAsFixed(1) ?? '-'} · Wet ${moisture?.toStringAsFixed(0) ?? '-'}%',
+            style: AppTextStyles.caption(color: AppColorPalette.softSlate),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F5E9),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '✅ What they did:',
+                  style: AppTextStyles.bodySmall().copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(match.recoveryAction, style: AppTextStyles.bodySmall()),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '⏱ Recovery time: ${match.recoveryDurationWeeks} weeks',
+            style: AppTextStyles.bodySmall(color: AppColorPalette.charcoalGreen).copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -1334,6 +1771,56 @@ class _SoilMeasurementDetailsScreenState
 
   /// FEATURE 3: Build Seasonal Soil Care Plan section
   Widget _buildSeasonalSoilCareSection() {
+    if (_isLoadingSeasonalPlans) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColorPalette.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColorPalette.softSlate.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Center(
+          child: Column(
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 10),
+              Text(
+                'Loading seasonal plan...',
+                style: AppTextStyles.bodySmall(color: AppColorPalette.softSlate),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_seasonalPlansError != null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColorPalette.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColorPalette.alertError.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, color: AppColorPalette.alertError),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _seasonalPlansError!,
+                style: AppTextStyles.bodySmall(),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (_seasonalPlans.isEmpty || !_seasonalPlans.containsKey(_currentSeason)) {
       return const SizedBox.shrink();
     }
@@ -1625,7 +2112,7 @@ class _SoilMeasurementDetailsScreenState
   /// Build soil photo section
   Widget _buildSoilPhotoSection() {
     final imageUrl = measurement.imagePath != null
-        ? ApiConfig.baseUrl.replaceFirst('/api', '') + '/' + measurement.imagePath!
+        ? '${ApiConfig.baseUrl.replaceFirst('/api', '')}/${measurement.imagePath!}'
         : null;
 
     return Container(
@@ -1677,7 +2164,9 @@ class _SoilMeasurementDetailsScreenState
           ),
           const SizedBox(height: 16),
           if (imageUrl != null)
-            ClipRRect(
+            (measurement.imagePath?.toLowerCase().endsWith('.mp4') ?? false)
+                ? SoilVideoPlayer(url: imageUrl)
+                : ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
                 imageUrl,
@@ -1933,7 +2422,7 @@ class _SoilMeasurementDetailsScreenState
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

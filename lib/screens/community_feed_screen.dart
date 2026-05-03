@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,6 +7,52 @@ import 'package:intl/intl.dart';
 import '../models/community_models.dart';
 import '../services/api_service.dart';
 import '../services/community_service.dart';
+import '../services/voice_number_parser.dart';
+import '../services/voice_page_action_registry.dart';
+
+String _normalizeVoiceInput(String input) {
+  return input
+      .toLowerCase()
+      .replaceAll(RegExp(r'["`]+'), ' ')
+      .replaceAll(RegExp(r'[،,;:!?؟!.]+'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+}
+
+int? _parseOneBasedIndex(String input) {
+  return VoiceNumberParser.parseOneBasedIndex(input);
+}
+
+String? _extractAfterPrefixes(String transcript, List<String> prefixes) {
+  final normalized = _normalizeVoiceInput(transcript);
+  for (final prefix in prefixes) {
+    if (!normalized.startsWith(prefix)) {
+      continue;
+    }
+
+    final value = normalized.substring(prefix.length).trim();
+    if (value.isNotEmpty) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+bool _isConfirmDeleteCommand(String normalized) {
+  return normalized == 'confirm delete' ||
+      normalized == 'delete confirm' ||
+      normalized == 'confirm deletion' ||
+      normalized == 'yes delete';
+}
+
+bool _isCancelDeleteCommand(String normalized) {
+  return normalized == 'cancel delete' ||
+      normalized == 'delete cancel' ||
+      normalized == 'cancel deletion' ||
+      normalized == 'dont delete' ||
+      normalized == "don't delete";
+}
 
 class CommunityFeedScreen extends StatefulWidget {
   const CommunityFeedScreen({super.key});
@@ -15,17 +62,34 @@ class CommunityFeedScreen extends StatefulWidget {
 }
 
 class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
+  static const String _voicePageKey = 'community_feed_main';
+
   final CommunityService _service = CommunityService();
   final List<CommunityPost> _posts = [];
   bool _isLoading = true;
   String? _error;
   String? _currentUserId;
+  CommunityPost? _pendingDeletePost;
 
   @override
   void initState() {
     super.initState();
     _loadCurrentUserId();
     _loadPosts();
+    _registerVoiceHandler();
+  }
+
+  @override
+  void dispose() {
+    VoicePageActionRegistry.unregister(_voicePageKey);
+    super.dispose();
+  }
+
+  void _registerVoiceHandler() {
+    VoicePageActionRegistry.register(
+      pageKey: _voicePageKey,
+      executor: _handleVoiceAction,
+    );
   }
 
   Future<void> _loadCurrentUserId() async {
@@ -71,6 +135,10 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
       setState(() {
         _posts.insert(0, created);
       });
+    }
+
+    if (mounted) {
+      _registerVoiceHandler();
     }
   }
 
@@ -144,15 +212,21 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
 
     if (confirmed != true) return;
 
+    await _performDeletePost(post);
+  }
+
+  Future<bool> _performDeletePost(CommunityPost post) async {
     try {
       await _service.deletePost(post.id);
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() {
         _posts.removeWhere((p) => p.id == post.id);
       });
       _showSnack('Post deleted');
+      return true;
     } catch (e) {
       _showSnack(e.toString());
+      return false;
     }
   }
 
@@ -180,6 +254,237 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
     if (count != null) {
       _replacePost(post.copyWith(commentsCount: count));
     }
+
+    if (mounted) {
+      _registerVoiceHandler();
+    }
+  }
+
+  CommunityPost? _resolvePostFromVoice(String transcript) {
+    if (_posts.isEmpty) {
+      return null;
+    }
+
+    final index = _parseOneBasedIndex(transcript);
+    if (index != null && index >= 1 && index <= _posts.length) {
+      return _posts[index - 1];
+    }
+
+    final normalized = _normalizeVoiceInput(transcript);
+    String? target = _extractAfterPrefixes(
+      normalized,
+      <String>[
+        'open comments for ',
+        'open comments of ',
+        'show comments for ',
+        'show comments of ',
+        'comments for post ',
+        'comment section for post ',
+        'like post ',
+        'dislike post ',
+        'delete post ',
+        'remove post ',
+      ],
+    );
+
+    if ((target == null || target.isEmpty) &&
+        normalized.contains('open post ') &&
+        normalized.contains('comment')) {
+      final match = RegExp(
+        r'open post (.+?) comments?(?: section)?(?:$| for| of)',
+      ).firstMatch(normalized);
+      target = match?.group(1)?.trim();
+    }
+
+    if (target != null && target.isNotEmpty) {
+      final targetText = target;
+      final matched = _posts.where((post) {
+        final content = _normalizeVoiceInput(post.content);
+        final author = _normalizeVoiceInput(post.author.name);
+        return content.contains(targetText) ||
+            targetText.contains(content) ||
+            author.contains(targetText);
+      }).toList();
+
+      if (matched.isNotEmpty) {
+        return matched.first;
+      }
+    }
+
+    return _posts.first;
+  }
+
+  bool _isOpenCommentsCommand(String normalized) {
+    final hasOpenOrShow =
+        normalized.contains('open') || normalized.contains('show');
+    final hasCommentWord =
+        normalized.contains('comment') || normalized.contains('comments');
+    if (hasOpenOrShow && hasCommentWord) {
+      return true;
+    }
+
+    if (normalized.startsWith('comments for post ') ||
+        normalized.startsWith('comment section for post ')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  Future<VoicePageActionResult> _handleVoiceAction(String transcript) async {
+    final normalized = _normalizeVoiceInput(transcript);
+    if (normalized.isEmpty) {
+      return const VoicePageActionResult.notHandled();
+    }
+
+    if (normalized.contains('create post') ||
+        normalized.contains('new post') ||
+        normalized.contains('add post') ||
+        normalized.contains('start post')) {
+      unawaited(_openCreatePostSheet());
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Opening post composer.',
+      );
+    }
+
+    if (normalized.contains('refresh') && normalized.contains('feed')) {
+      await _loadPosts();
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Community feed refreshed.',
+      );
+    }
+
+    if (_isConfirmDeleteCommand(normalized)) {
+      final post = _pendingDeletePost;
+      if (post == null) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'There is no pending post deletion to confirm.',
+        );
+      }
+
+      _pendingDeletePost = null;
+      final index = _posts.indexWhere((p) => p.id == post.id);
+      final deleted = await _performDeletePost(post);
+      if (!deleted) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'Could not delete the selected post.',
+        );
+      }
+
+      if (index >= 0) {
+        return VoicePageActionResult(
+          handled: true,
+          message: 'Post ${index + 1} deleted.',
+        );
+      }
+
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Selected post deleted.',
+      );
+    }
+
+    if (_isCancelDeleteCommand(normalized)) {
+      if (_pendingDeletePost == null) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'There is no pending post deletion.',
+        );
+      }
+
+      _pendingDeletePost = null;
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Post deletion canceled.',
+      );
+    }
+
+    if (RegExp(r'\b(delete|remove)\s+post\b').hasMatch(normalized)) {
+      final post = _resolvePostFromVoice(normalized);
+      if (post == null) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'There are no posts to delete.',
+        );
+      }
+
+      final index = _posts.indexWhere((p) => p.id == post.id);
+      _pendingDeletePost = post;
+
+      if (index >= 0) {
+        return VoicePageActionResult(
+          handled: true,
+          message:
+              'Post ${index + 1} selected for deletion. Say confirm delete or cancel delete.',
+        );
+      }
+
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Post selected for deletion. Say confirm delete or cancel delete.',
+      );
+    }
+
+    if (_isOpenCommentsCommand(normalized)) {
+      final post = _resolvePostFromVoice(normalized);
+      if (post == null) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'There are no posts available yet.',
+        );
+      }
+
+      unawaited(_openComments(post));
+      final index = _posts.indexWhere((p) => p.id == post.id);
+      return VoicePageActionResult(
+        handled: true,
+        message: 'Opening comments for post ${index + 1}.',
+      );
+    }
+
+    final wantsDislikePost = RegExp(r'\bdislike post\b').hasMatch(normalized);
+    final wantsLikePost =
+        RegExp(r'\blike post\b').hasMatch(normalized) && !wantsDislikePost;
+
+    if (wantsDislikePost) {
+      final post = _resolvePostFromVoice(normalized);
+      if (post == null) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'There are no posts to dislike.',
+        );
+      }
+
+      await _reactPost(post, 'DISLIKE');
+      final index = _posts.indexWhere((p) => p.id == post.id);
+      return VoicePageActionResult(
+        handled: true,
+        message: 'Disliked post ${index + 1}.',
+      );
+    }
+
+    if (wantsLikePost) {
+      final post = _resolvePostFromVoice(normalized);
+      if (post == null) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'There are no posts to like.',
+        );
+      }
+
+      await _reactPost(post, 'LIKE');
+      final index = _posts.indexWhere((p) => p.id == post.id);
+      return VoicePageActionResult(
+        handled: true,
+        message: 'Liked post ${index + 1}.',
+      );
+    }
+
+    return const VoicePageActionResult.notHandled();
   }
 
   void _replacePost(CommunityPost updated) {
@@ -643,6 +948,11 @@ class _CreatePostSheet extends StatefulWidget {
 }
 
 class _CreatePostSheetState extends State<_CreatePostSheet> {
+  static const String _voicePageKey = 'community_feed_create_post';
+
+  static const int _voiceStepContent = 1;
+  static const int _voiceStepActions = 2;
+
   final _contentCtrl = TextEditingController();
   final _pollQuestionCtrl = TextEditingController();
   final List<TextEditingController> _pollOptionCtrls = [
@@ -652,17 +962,180 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
 
   bool _isVote = false;
   bool _submitting = false;
+  int _voiceStep = _voiceStepContent;
   DateTime? _pollEndsAt;
   XFile? _selectedImage;
 
   @override
+  void initState() {
+    super.initState();
+    VoicePageActionRegistry.register(
+      pageKey: _voicePageKey,
+      executor: _handleVoiceAction,
+    );
+  }
+
+  @override
   void dispose() {
+    VoicePageActionRegistry.unregister(_voicePageKey);
     _contentCtrl.dispose();
     _pollQuestionCtrl.dispose();
     for (final controller in _pollOptionCtrls) {
       controller.dispose();
     }
     super.dispose();
+  }
+
+  Future<VoicePageActionResult> _handleVoiceAction(String transcript) async {
+    final normalized = _normalizeVoiceInput(transcript);
+    if (normalized.isEmpty) {
+      return const VoicePageActionResult.notHandled();
+    }
+
+    if (_submitting) {
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Post submission is in progress.',
+      );
+    }
+
+    bool isImageCommand(String text) {
+      final patternA = RegExp(
+        r'\b(add|open|choose|select)\b.*\b(image|picture|photo|gallery)\b',
+      );
+      final patternB = RegExp(
+        r'\b(image|picture|photo|gallery)\b.*\b(add|open|choose|select)\b',
+      );
+      return patternA.hasMatch(text) || patternB.hasMatch(text);
+    }
+
+    if (normalized == 'help' || normalized == 'voice help') {
+      if (_voiceStep == _voiceStepContent) {
+        return const VoicePageActionResult(
+          handled: true,
+          message:
+              'Step one: say your post text now, or say write post followed by your text.',
+        );
+      }
+
+      return const VoicePageActionResult(
+        handled: true,
+        message:
+            'Step two: say add image, remove picture, publish post, or edit description.',
+      );
+    }
+
+    if (normalized == 'close composer' ||
+        normalized == 'cancel post' ||
+        normalized == 'dismiss composer') {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Closing post composer.',
+      );
+    }
+
+    if (normalized == 'post for me' ||
+        normalized == 'publish post' ||
+        normalized == 'post now') {
+      await _submit();
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Publishing your post now.',
+      );
+    }
+
+    if (isImageCommand(normalized)) {
+      if (_isVote) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'Image is disabled in vote mode. Switch to normal post first.',
+        );
+      }
+
+      await _pickImage();
+      _voiceStep = _voiceStepActions;
+      return VoicePageActionResult(
+        handled: true,
+        message: _selectedImage == null
+            ? 'No picture selected.'
+            : 'Picture selected from gallery.',
+      );
+    }
+
+    if (normalized.contains('remove picture') ||
+        normalized.contains('remove image') ||
+        normalized.contains('clear picture')) {
+      setState(() => _selectedImage = null);
+      _voiceStep = _voiceStepActions;
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Picture removed from this post.',
+      );
+    }
+
+    if (normalized == 'edit description' ||
+        normalized == 'rewrite description' ||
+        normalized == 'change description') {
+      _voiceStep = _voiceStepContent;
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Description step active. Say your post text now.',
+      );
+    }
+
+    final contentValue = _extractAfterPrefixes(
+      transcript,
+      <String>[
+        'set post content ',
+        'post content ',
+        'set post text ',
+        'post text ',
+        'write post ',
+        'right post ',
+        'rite post ',
+        'wright post ',
+        'write ',
+        'right ',
+        'rite ',
+        'wright ',
+      ],
+    );
+
+    if (contentValue != null && contentValue.isNotEmpty) {
+      setState(() {
+        _contentCtrl.text = contentValue;
+      });
+      _voiceStep = _voiceStepActions;
+
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Post content is set. You can now say add image or publish post.',
+      );
+    }
+
+    if (!_isVote && _voiceStep == _voiceStepContent) {
+      setState(() {
+        _contentCtrl.text = transcript.trim();
+      });
+      _voiceStep = _voiceStepActions;
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'I added that to your post. Next, say add image or publish post.',
+      );
+    }
+
+    if (!_isVote && _voiceStep == _voiceStepActions) {
+      return const VoicePageActionResult(
+        handled: true,
+        message:
+            'I am in action step. Say add image, publish post, or edit description.',
+      );
+    }
+
+    return const VoicePageActionResult.notHandled();
   }
 
   Future<void> _pickImage() async {
@@ -961,22 +1434,427 @@ class _CommentsSheet extends StatefulWidget {
 }
 
 class _CommentsSheetState extends State<_CommentsSheet> {
+  static const String _voicePageKey = 'community_feed_comments';
+
   final TextEditingController _inputCtrl = TextEditingController();
   bool _loading = true;
   bool _sending = false;
   List<CommunityComment> _comments = [];
   CommunityComment? _replyTarget;
+  String? _pendingDeleteCommentId;
+  bool _pendingDeleteIsReply = false;
+  int? _pendingDeleteVoiceIndex;
 
   @override
   void initState() {
     super.initState();
     _load();
+    VoicePageActionRegistry.register(
+      pageKey: _voicePageKey,
+      executor: _handleVoiceAction,
+    );
   }
 
   @override
   void dispose() {
+    VoicePageActionRegistry.unregister(_voicePageKey);
     _inputCtrl.dispose();
     super.dispose();
+  }
+
+  List<CommunityComment> _flattenReplies(List<CommunityComment> nodes) {
+    final out = <CommunityComment>[];
+
+    void collect(List<CommunityComment> source) {
+      for (final node in source) {
+        for (final reply in node.replies) {
+          out.add(reply);
+          if (reply.replies.isNotEmpty) {
+            collect(<CommunityComment>[reply]);
+          }
+        }
+      }
+    }
+
+    collect(nodes);
+    return out;
+  }
+
+  Future<VoicePageActionResult> _handleVoiceAction(String transcript) async {
+    final normalized = _normalizeVoiceInput(transcript);
+    if (normalized.isEmpty) {
+      return const VoicePageActionResult.notHandled();
+    }
+
+    final roots = _comments;
+    final replies = _flattenReplies(_comments);
+
+    if (_isConfirmDeleteCommand(normalized)) {
+      final pendingId = _pendingDeleteCommentId;
+      final pendingIsReply = _pendingDeleteIsReply;
+      final pendingIndex = _pendingDeleteVoiceIndex;
+      if (pendingId == null) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'There is no pending deletion to confirm.',
+        );
+      }
+
+      _pendingDeleteCommentId = null;
+      _pendingDeleteIsReply = false;
+      _pendingDeleteVoiceIndex = null;
+
+      final existing = _findCommentById(_comments, pendingId);
+      if (existing == null) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'That item is no longer available.',
+        );
+      }
+
+      final deleted = await _performDeleteCommentById(pendingId);
+      if (!deleted) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'Could not complete the deletion.',
+        );
+      }
+
+      final targetLabel = pendingIsReply ? 'Reply' : 'Comment';
+      if (pendingIndex != null) {
+        return VoicePageActionResult(
+          handled: true,
+          message: '$targetLabel $pendingIndex deleted.',
+        );
+      }
+
+      return VoicePageActionResult(
+        handled: true,
+        message: '$targetLabel deleted.',
+      );
+    }
+
+    if (_isCancelDeleteCommand(normalized)) {
+      if (_pendingDeleteCommentId == null) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'There is no pending deletion.',
+        );
+      }
+
+      _pendingDeleteCommentId = null;
+      _pendingDeleteIsReply = false;
+      _pendingDeleteVoiceIndex = null;
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Deletion canceled.',
+      );
+    }
+
+    if (RegExp(r'\b(delete|remove)\s+reply\b').hasMatch(normalized)) {
+      var index = _parseOneBasedIndex(normalized);
+      if (index == null) {
+        if (replies.length == 1) {
+          index = 1;
+        } else {
+          return const VoicePageActionResult(
+            handled: true,
+            message: 'Tell me which reply number to delete.',
+          );
+        }
+      }
+
+      if (index < 1 || index > replies.length) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'I could not find that reply number.',
+        );
+      }
+
+      final target = replies[index - 1];
+      _pendingDeleteCommentId = target.id;
+      _pendingDeleteIsReply = true;
+      _pendingDeleteVoiceIndex = index;
+
+      return VoicePageActionResult(
+        handled: true,
+        message:
+            'Reply $index selected for deletion. Say confirm delete or cancel delete.',
+      );
+    }
+
+    if (RegExp(r'\b(delete|remove)\s+comment\b').hasMatch(normalized)) {
+      var index = _parseOneBasedIndex(normalized);
+      if (index == null) {
+        if (roots.length == 1) {
+          index = 1;
+        } else {
+          return const VoicePageActionResult(
+            handled: true,
+            message: 'Tell me which comment number to delete.',
+          );
+        }
+      }
+
+      if (index < 1 || index > roots.length) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'I could not find that comment number.',
+        );
+      }
+
+      final target = roots[index - 1];
+      _pendingDeleteCommentId = target.id;
+      _pendingDeleteIsReply = false;
+      _pendingDeleteVoiceIndex = index;
+
+      return VoicePageActionResult(
+        handled: true,
+        message:
+            'Comment $index selected for deletion. Say confirm delete or cancel delete.',
+      );
+    }
+
+    if (normalized.startsWith('reply to comment ')) {
+      final inlineMatch = RegExp(
+        r'\b(?:say|write|right|rite|wright)\b\s+(.+)$',
+        caseSensitive: false,
+      ).firstMatch(transcript);
+      final targetPart = inlineMatch == null
+          ? normalized
+          : _normalizeVoiceInput(transcript.substring(0, inlineMatch.start).trim());
+      final inlineReply = inlineMatch?.group(1)?.trim();
+
+      final index = _parseOneBasedIndex(targetPart);
+      if (index == null || index < 1 || index > roots.length) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'I could not find that comment number.',
+        );
+      }
+
+      setState(() {
+        _replyTarget = roots[index - 1];
+        if (inlineReply != null && inlineReply.isNotEmpty) {
+          _inputCtrl.text = inlineReply;
+        }
+      });
+      return VoicePageActionResult(
+        handled: true,
+        message: inlineReply != null && inlineReply.isNotEmpty
+            ? 'Reply target set to comment $index and reply text captured.'
+            : 'Reply target set to comment $index.',
+      );
+    }
+
+    if (normalized.startsWith('reply to reply ')) {
+      final inlineMatch = RegExp(
+        r'\b(?:say|write|right|rite|wright)\b\s+(.+)$',
+        caseSensitive: false,
+      ).firstMatch(transcript);
+      final targetPart = inlineMatch == null
+          ? normalized
+          : _normalizeVoiceInput(transcript.substring(0, inlineMatch.start).trim());
+      final inlineReply = inlineMatch?.group(1)?.trim();
+
+      final index = _parseOneBasedIndex(targetPart);
+      if (index == null || index < 1 || index > replies.length) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'I could not find that reply number.',
+        );
+      }
+
+      setState(() {
+        _replyTarget = replies[index - 1];
+        if (inlineReply != null && inlineReply.isNotEmpty) {
+          _inputCtrl.text = inlineReply;
+        }
+      });
+      return VoicePageActionResult(
+        handled: true,
+        message: inlineReply != null && inlineReply.isNotEmpty
+            ? 'Reply target set to reply $index and reply text captured.'
+            : 'Reply target set to reply $index.',
+      );
+    }
+
+    if (normalized == 'cancel reply' || normalized == 'clear reply target') {
+      setState(() {
+        _replyTarget = null;
+      });
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Reply target cleared.',
+      );
+    }
+
+    final universalWrite = RegExp(
+      r'^\s*(?:write|right|rite|wright)\s+(.+)$',
+      caseSensitive: false,
+    ).firstMatch(transcript);
+    if (universalWrite != null) {
+      final text = universalWrite.group(1)?.trim() ?? '';
+      if (text.isNotEmpty) {
+        setState(() {
+          _inputCtrl.text = text;
+        });
+
+        return VoicePageActionResult(
+          handled: true,
+          message: _replyTarget == null
+              ? 'Comment text is ready.'
+              : 'Reply text is ready.',
+        );
+      }
+    }
+
+    final commentText = _extractAfterPrefixes(
+      transcript,
+      <String>[
+        'write comment ',
+        'right comment ',
+        'rite comment ',
+        'wright comment ',
+        'comment text ',
+      ],
+    );
+
+    if (commentText != null && commentText.isNotEmpty) {
+      setState(() {
+        _replyTarget = null;
+        _inputCtrl.text = commentText;
+      });
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Comment text is ready.',
+      );
+    }
+
+    final replyText = _extractAfterPrefixes(
+      transcript,
+      <String>[
+        'write reply ',
+        'right reply ',
+        'rite reply ',
+        'wright reply ',
+        'set reply ',
+        'reply text ',
+      ],
+    );
+
+    if (replyText != null && replyText.isNotEmpty) {
+      if (_replyTarget == null) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'Choose a reply target first, for example: reply to comment one.',
+        );
+      }
+
+      setState(() {
+        _inputCtrl.text = replyText;
+      });
+      return const VoicePageActionResult(
+        handled: true,
+        message: 'Reply text is ready.',
+      );
+    }
+
+    if (normalized == 'send reply' ||
+        normalized == 'post reply' ||
+        normalized == 'send comment' ||
+        normalized == 'post comment') {
+      if (_inputCtrl.text.trim().isEmpty) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'Comment text is empty. Please dictate it first.',
+        );
+      }
+
+      final sendingReply = _replyTarget != null;
+      await _sendComment();
+      return VoicePageActionResult(
+        handled: true,
+        message: sendingReply ? 'Reply sent.' : 'Comment sent.',
+      );
+    }
+
+    final wantsDislikeReply =
+        RegExp(r'\bdislike reply\b').hasMatch(normalized);
+    final wantsLikeReply =
+        RegExp(r'\blike reply\b').hasMatch(normalized) && !wantsDislikeReply;
+
+    if (wantsDislikeReply) {
+      final index = _parseOneBasedIndex(normalized);
+      if (index == null || index < 1 || index > replies.length) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'I could not find that reply number.',
+        );
+      }
+
+      await _reactComment(replies[index - 1].id, 'DISLIKE');
+      return VoicePageActionResult(
+        handled: true,
+        message: 'Disliked reply $index.',
+      );
+    }
+
+    if (wantsLikeReply) {
+      final index = _parseOneBasedIndex(normalized);
+      if (index == null || index < 1 || index > replies.length) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'I could not find that reply number.',
+        );
+      }
+
+      await _reactComment(replies[index - 1].id, 'LIKE');
+      return VoicePageActionResult(
+        handled: true,
+        message: 'Liked reply $index.',
+      );
+    }
+
+    final wantsDislikeComment =
+        RegExp(r'\bdislike comment\b').hasMatch(normalized);
+    final wantsLikeComment =
+        RegExp(r'\blike comment\b').hasMatch(normalized) &&
+        !wantsDislikeComment;
+
+    if (wantsDislikeComment) {
+      final index = _parseOneBasedIndex(normalized);
+      if (index == null || index < 1 || index > roots.length) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'I could not find that comment number.',
+        );
+      }
+
+      await _reactComment(roots[index - 1].id, 'DISLIKE');
+      return VoicePageActionResult(
+        handled: true,
+        message: 'Disliked comment $index.',
+      );
+    }
+
+    if (wantsLikeComment) {
+      final index = _parseOneBasedIndex(normalized);
+      if (index == null || index < 1 || index > roots.length) {
+        return const VoicePageActionResult(
+          handled: true,
+          message: 'I could not find that comment number.',
+        );
+      }
+
+      await _reactComment(roots[index - 1].id, 'LIKE');
+      return VoicePageActionResult(
+        handled: true,
+        message: 'Liked comment $index.',
+      );
+    }
+
+    return const VoicePageActionResult.notHandled();
   }
 
   Future<void> _load() async {
@@ -1081,14 +1959,40 @@ class _CommentsSheetState extends State<_CommentsSheet> {
 
     if (confirmed != true) return;
 
+    await _performDeleteCommentById(comment.id);
+  }
+
+  Future<bool> _performDeleteCommentById(String commentId) async {
+    final deletingReplyTarget = _replyTarget?.id == commentId;
+
     try {
-      await widget.service.deleteComment(comment.id);
-      _comments = _removeCommentFromTree(_comments, comment.id);
+      await widget.service.deleteComment(commentId);
+      _comments = _removeCommentFromTree(_comments, commentId);
+      if (deletingReplyTarget) {
+        _replyTarget = null;
+      }
       if (mounted) setState(() {});
       _showSnack('Comment deleted');
+      return true;
     } catch (e) {
       _showSnack(e.toString());
+      return false;
     }
+  }
+
+  CommunityComment? _findCommentById(List<CommunityComment> nodes, String id) {
+    for (final node in nodes) {
+      if (node.id == id) {
+        return node;
+      }
+
+      final nested = _findCommentById(node.replies, id);
+      if (nested != null) {
+        return nested;
+      }
+    }
+
+    return null;
   }
 
   List<CommunityComment> _updateCommentContent(

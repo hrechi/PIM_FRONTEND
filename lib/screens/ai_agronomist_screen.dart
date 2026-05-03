@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../utils/constants.dart';
 
 class AiAgronomistScreen extends StatefulWidget {
   final String parcelId;
 
-  const AiAgronomistScreen({Key? key, required this.parcelId}) : super(key: key);
+  const AiAgronomistScreen({super.key, required this.parcelId});
 
   @override
   _AiAgronomistScreenState createState() => _AiAgronomistScreenState();
@@ -21,8 +22,10 @@ class _AiAgronomistScreenState extends State<AiAgronomistScreen> {
     });
 
     try {
-      // Replace with your NestJS IP/Port. Use 10.0.2.2 for Android Emulator.
-      final url = Uri.parse('http://10.0.2.2:3000/agronomist/advice/${widget.parcelId}');
+      // Uses the project WiFi IP for backend access from physical devices.
+
+      final url = Uri.parse('http://${AppConfig.serverHost}:${AppConfig.serverPort}/api/agronomist/advice/${widget.parcelId}');
+
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -58,7 +61,11 @@ class _AiAgronomistScreenState extends State<AiAgronomistScreen> {
             ElevatedButton.icon(
               onPressed: _isLoading ? null : fetchAiAdvice,
               icon: _isLoading
-                  ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : Icon(Icons.auto_awesome),
               label: Text('Ask AI Agronomist'),
             ),

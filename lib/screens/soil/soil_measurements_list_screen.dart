@@ -25,7 +25,7 @@ class SoilMeasurementsProvider extends ChangeNotifier {
   
   // Pagination
   int _currentPage = 1;
-  int _limit = 20;
+  final int _limit = 20;
   bool _hasMore = true;
   PaginationMeta? _meta;
   
@@ -326,53 +326,36 @@ class _SoilMeasurementsListScreenState
     );
   }
 
-  /// Delete measurement with confirmation
-  Future<void> _deleteMeasurement(SoilMeasurement measurement) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Measurement'),
-        content: Text('Are you sure you want to delete measurement at ${measurement.locationName}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColorPalette.alertError,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
+  /// Delete measurement and return success so Dismissible can decide if it should collapse.
+  Future<bool> _deleteMeasurement(SoilMeasurement measurement) async {
+    _provider.clearError();
+    final success = await _provider.deleteMeasurement(measurement.id);
 
-    if (confirmed == true && mounted) {
-      final success = await _provider.deleteMeasurement(measurement.id);
-      
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Measurement at ${measurement.locationName} deleted'),
-            backgroundColor: AppColorPalette.success,
-          ),
-        );
-      } else if (mounted && _provider.error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_provider.error!),
-            backgroundColor: AppColorPalette.alertError,
-            action: SnackBarAction(
-              label: 'Dismiss',
-              textColor: Colors.white,
-              onPressed: () => _provider.clearError(),
-            ),
-          ),
-        );
-      }
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Measurement at ${measurement.locationName} deleted'),
+          backgroundColor: AppColorPalette.success,
+        ),
+      );
+      return true;
     }
+
+    if (mounted && _provider.error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_provider.error!),
+          backgroundColor: AppColorPalette.alertError,
+          action: SnackBarAction(
+            label: 'Dismiss',
+            textColor: Colors.white,
+            onPressed: () => _provider.clearError(),
+          ),
+        ),
+      );
+    }
+
+    return false;
   }
 
   @override

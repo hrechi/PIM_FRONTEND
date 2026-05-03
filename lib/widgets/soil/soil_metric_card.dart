@@ -102,7 +102,7 @@ class SoilMetricCard extends StatelessWidget {
                 ),
 
                 // Trailing widget (optional)
-                if (trailing != null) trailing!,
+                ?trailing,
               ],
             ),
 

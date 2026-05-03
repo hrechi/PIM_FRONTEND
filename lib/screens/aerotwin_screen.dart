@@ -224,31 +224,68 @@ class _AeroTwinScreenState extends State<AeroTwinScreen> {
         elevation: 0,
         actions: [
           if (_fields.isNotEmpty)
-            DropdownButton<String>(
-              value: _selectedFieldId,
-              dropdownColor: const Color(0xFF1E2128),
-              underline: const SizedBox(),
-              items: _fields.map((f) => DropdownMenuItem(
-                value: f.id,
-                child: Text(f.name, style: GoogleFonts.inter(color: Colors.white)),
-              )).toList(),
-              onChanged: (val) {
-                setState(() => _selectedFieldId = val);
-                _fetchNDVIData();
-              },
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: SizedBox(
+                width: 170,
+                child: DropdownButton<String>(
+                  value: _selectedFieldId,
+                  isExpanded: true,
+                  dropdownColor: const Color(0xFF1E2128),
+                  underline: const SizedBox(),
+                  items: _fields.map((f) => DropdownMenuItem(
+                    value: f.id,
+                    child: Text(
+                      f.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(color: Colors.white),
+                    ),
+                  )).toList(),
+                  onChanged: (val) {
+                    setState(() => _selectedFieldId = val);
+                    _fetchNDVIData();
+                  },
+                ),
+              ),
             ),
-          const SizedBox(width: 16),
         ],
       ),
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
-        : Stack(
-            children: [
-              _buildMap(),
-              _buildOverlayUI(),
-              if (_isModified()) _buildSimulatedBadge(),
-            ],
-          ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final mapHeight =
+                    (constraints.maxHeight * 0.48).clamp(250.0, 430.0);
+
+                return Column(
+                  children: [
+                    SizedBox(
+                      height: mapHeight,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(child: _buildMap()),
+                          if (_isModified()) _buildSimulatedBadge(),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.only(top: 12, bottom: 12),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildIntelligencePanel(),
+                            const SizedBox(height: 12),
+                            _buildControlPanel(),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
     );
   }
 
@@ -291,17 +328,6 @@ class _AeroTwinScreenState extends State<AeroTwinScreen> {
     );
   }
 
-  Widget _buildOverlayUI() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        _buildIntelligencePanel(),
-        const SizedBox(height: 16),
-        _buildControlPanel(),
-      ],
-    );
-  }
-
   Widget _buildIntelligencePanel() {
     final activeAlert = _simulationResult?.alert ?? _alert;
     if (activeAlert == null) return const SizedBox.shrink();
@@ -331,34 +357,51 @@ class _AeroTwinScreenState extends State<AeroTwinScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  isSimulated ? Icons.analytics : Icons.auto_awesome, 
-                  color: isSimulated ? Colors.orangeAccent : Colors.blueAccent, 
-                  size: 24
+                  isSimulated ? Icons.analytics : Icons.auto_awesome,
+                  color: isSimulated ? Colors.orangeAccent : Colors.blueAccent,
+                  size: 24,
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  isSimulated ? 'SIMULATION INSIGHT' : 'FIELD INTELLIGENCE', 
-                  style: GoogleFonts.outfit(
-                    color: Colors.white, 
-                    fontWeight: FontWeight.bold, 
-                    fontSize: 14,
-                    letterSpacing: 1.2,
-                  )
-                ),
-                const Spacer(),
-                if (isSimulated)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.orangeAccent.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
+                Expanded(
+                  child: Text(
+                    isSimulated ? 'SIMULATION INSIGHT' : 'FIELD INTELLIGENCE',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      letterSpacing: 1.2,
                     ),
-                    child: Text('PREDICTION', style: GoogleFonts.inter(color: Colors.orangeAccent, fontSize: 10, fontWeight: FontWeight.bold)),
                   ),
+                ),
               ],
             ),
+            if (isSimulated) ...[
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orangeAccent.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'PREDICTION',
+                    style: GoogleFonts.inter(
+                      color: Colors.orangeAccent,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             Text(
               activeAlert.recommendation, 
@@ -371,12 +414,22 @@ class _AeroTwinScreenState extends State<AeroTwinScreen> {
             if (activeAlert.issue != 'nominal' && activeAlert.issue != 'unknown') ...[
               const SizedBox(height: 12),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 16),
                   const SizedBox(width: 8),
-                  Text(
-                    'Detected Issue: ${activeAlert.issue.replaceAll('_', ' ').toUpperCase()}',
-                    style: GoogleFonts.inter(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.bold),
+                  Expanded(
+                    child: Text(
+                      'Detected Issue: ${activeAlert.issue.replaceAll('_', ' ').toUpperCase()}',
+                      softWrap: true,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        color: Colors.amber,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/parcel.dart';
 import '../models/soil_measurement.dart';
+import '../models/soil_intelligence.dart';
 import '../providers/parcel_provider.dart';
 import '../providers/weather_provider.dart';
 import '../services/soil_repository.dart';
+import '../services/soil_intelligence_service.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../widgets/soil/status_badge.dart';
@@ -246,7 +248,7 @@ class _ParcelListScreenState extends State<ParcelListScreen>
           context, MaterialPageRoute(builder: (_) => const AddParcelScreen())),
       icon: const Icon(Icons.add),
       label: const Text('Add Parcel'),
-      backgroundColor: const Color(0xFF2ECC71),
+      backgroundColor: AppColorPalette.mistyBlue,
     );
   }
 }
@@ -268,7 +270,9 @@ class _ParcelCard extends StatefulWidget {
 
 class _ParcelCardState extends State<_ParcelCard> {
   late Future<SoilMeasurement?> _latestSoilFuture;
+  late Future<List<SoilWeatherAlert>> _alertsFuture;
   final SoilRepository _soilRepository = SoilRepository();
+  final SoilIntelligenceService _soilIntelligenceService = SoilIntelligenceService();
 
   String _displayParcelTitle() {
     final rawLocation = widget.parcel.location.trim();
@@ -298,6 +302,17 @@ class _ParcelCardState extends State<_ParcelCard> {
     super.initState();
     _latestSoilFuture =
         _soilRepository.getLatestMeasurementByParcelId(widget.parcel.id);
+    _alertsFuture = _soilIntelligenceService.getActiveAlerts(widget.parcel.id);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ParcelCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.parcel.id != widget.parcel.id) {
+      _latestSoilFuture =
+          _soilRepository.getLatestMeasurementByParcelId(widget.parcel.id);
+      _alertsFuture = _soilIntelligenceService.getActiveAlerts(widget.parcel.id);
+    }
   }
 
   Color get _cardAccent {
@@ -391,6 +406,8 @@ class _ParcelCardState extends State<_ParcelCard> {
                             ],
                           ),
                         ),
+                        _buildAlertBadge(),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
@@ -412,6 +429,51 @@ class _ParcelCardState extends State<_ParcelCard> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAlertBadge() {
+    return FutureBuilder<List<SoilWeatherAlert>>(
+      future: _alertsFuture,
+      builder: (context, snapshot) {
+        final alerts = snapshot.data ?? const <SoilWeatherAlert>[];
+        if (alerts.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final highOrCritical = alerts
+            .where((a) {
+              final severity = a.severity.toUpperCase();
+              return severity == 'CRITICAL' || severity == 'HIGH';
+            })
+            .length;
+        final medium = alerts
+            .where((a) => a.severity.toUpperCase() == 'MEDIUM')
+            .length;
+
+        if (highOrCritical <= 0 && medium <= 0) {
+          return const SizedBox.shrink();
+        }
+
+        final isRed = highOrCritical > 0;
+        final count = isRed ? highOrCritical : medium;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          decoration: BoxDecoration(
+            color: isRed ? const Color(0xFFC62828) : const Color(0xFFEF6C00),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            '${isRed ? '🔴' : '🟠'} $count',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        );
+      },
     );
   }
 

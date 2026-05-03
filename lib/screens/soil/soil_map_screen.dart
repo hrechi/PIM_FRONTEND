@@ -431,7 +431,7 @@ class _SoilMapScreenState extends State<SoilMapScreen> {
                                 value: field.id,
                                 child: Text(field.name),
                               );
-                            }).toList(),
+                            }),
                           ],
                           onChanged: (fieldId) async {
                             if (fieldId == null) {

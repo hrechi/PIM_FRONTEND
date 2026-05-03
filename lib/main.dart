@@ -10,15 +10,34 @@ import 'providers/parcel_provider.dart';
 import 'providers/weather_provider.dart';
 import 'providers/irrigation_provider.dart';
 import 'providers/vaccine_provider.dart';
+import 'providers/notification_provider.dart';
 import 'providers/shorts_provider.dart';
+import 'providers/field_provider.dart';
+import 'providers/finance_provider.dart';
+import 'providers/catalogue_provider.dart';
+import 'providers/voice_access_mode_provider.dart';
+import 'providers/global_voice_controller.dart';
+import 'providers/asset_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/farmer_home_screen_v2.dart';
+import 'screens/asset_list_screen.dart';
+import 'screens/control_room_screen.dart';
+import 'screens/skill_certification_screen.dart';
 import 'screens/security/incident_detail_screen.dart';
+import 'screens/notification_center_screen.dart';
+import 'screens/vaccines/vaccine_dashboard_screen.dart';
 import 'screens/soil/soil_measurements_list_screen.dart';
+import 'screens/soil/soil_alert_notifications_screen.dart';
+import 'services/local_notification_service.dart';
+import 'widgets/global_voice_fab.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-/// Global navigator key — used for navigating from notification callbacks 
+/// Global navigator key — used for navigating from notification callbacks
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+final RouteObserver<ModalRoute<void>> routeObserver =
+    RouteObserver<ModalRoute<void>>();
 
 /// Background message handler — must be a top-level function
 @pragma('vm:entry-point')
@@ -28,8 +47,27 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 /// Handle incoming FCM message — extract incidentId and navigate
-void handleMessage(RemoteMessage message) {
-  final incidentId = message.data['incidentId'];
+void handleNotificationData(Map<String, dynamic> data) {
+  final screen = (data['screen'] ?? '').toString().toUpperCase();
+  final type = (data['type'] ?? '').toString().toUpperCase();
+
+  if (screen == 'SOIL_ALERTS' || type == 'SOIL_WEATHER_ALERT') {
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(builder: (_) => const SoilAlertNotificationsScreen()),
+    );
+    return;
+  }
+
+  if (screen == 'ASSET_DETAILS' || type == 'ASSET_MAINTENANCE_ALERT') {
+    final assetId = (data['assetId'] ?? '').toString();
+    navigatorKey.currentState?.pushNamed(
+      '/assets',
+      arguments: assetId.isEmpty ? null : {'assetId': assetId},
+    );
+    return;
+  }
+
+  final incidentId = data['incidentId'];
   if (incidentId != null && incidentId.toString().isNotEmpty) {
     navigatorKey.currentState?.pushNamed(
       '/incident-details',
@@ -38,14 +76,18 @@ void handleMessage(RemoteMessage message) {
   }
 }
 
+void handleMessage(RemoteMessage message) {
+  handleNotificationData(Map<String, dynamic>.from(message.data));
+}
+
 class MyScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
-        PointerDeviceKind.touch,
-        PointerDeviceKind.mouse,
-        PointerDeviceKind.trackpad,
-        PointerDeviceKind.stylus,
-      };
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+    PointerDeviceKind.stylus,
+  };
 }
 
 void main() async {
@@ -56,6 +98,7 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    await LocalNotificationService.initialize(onTap: handleNotificationData);
   }
 
   await initializeDateFormatting('fr_FR', null);
@@ -93,6 +136,11 @@ class _FieldlyAppState extends State<FieldlyApp> {
 
     // App was in background → user tapped notification
     FirebaseMessaging.onMessageOpenedApp.listen(handleMessage);
+
+    // App is in foreground → show local notification so it appears in the phone tray.
+    FirebaseMessaging.onMessage.listen((message) {
+      LocalNotificationService.showFromRemoteMessage(message);
+    });
   }
 
   @override
@@ -105,21 +153,56 @@ class _FieldlyAppState extends State<FieldlyApp> {
         ChangeNotifierProvider(create: (_) => WeatherProvider()),
         ChangeNotifierProvider(create: (_) => IrrigationProvider()),
         ChangeNotifierProvider(create: (_) => VaccineProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => ShortsProvider()),
+        ChangeNotifierProvider(create: (_) => FieldProvider()),
+        ChangeNotifierProvider(create: (_) => FinanceProvider()),
+        ChangeNotifierProvider(create: (_) => CatalogueProvider()),
+        ChangeNotifierProvider(
+          create: (_) => VoiceAccessModeProvider()..load(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => GlobalVoiceController(
+            accessModeProvider: context.read<VoiceAccessModeProvider>(),
+          ),
+        ),
+        ChangeNotifierProvider(create: (_) => AssetProvider()),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
+        navigatorObservers: [routeObserver],
         title: 'Fieldly',
         scrollBehavior: MyScrollBehavior(),
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         home: const SplashScreen(),
+        builder: (context, child) {
+          return Stack(
+            children: [
+              child ?? const SizedBox.shrink(),
+              const GlobalVoiceFab(),
+            ],
+          );
+        },
         routes: {
+          '/owner_dashboard': (context) => const HomeScreen(),
+          '/worker_home': (context) => const FarmerHomeScreenV2(),
+          '/farmer_home': (context) => const FarmerHomeScreenV2(),
+          '/control_room': (context) => const ControlRoomScreen(),
+          '/skill_certification': (context) => const SkillCertificationScreen(),
+          '/assets': (context) {
+            final args = ModalRoute.of(context)?.settings.arguments;
+            final assetId = args is Map ? args['assetId']?.toString() : null;
+            return AssetListScreen(focusAssetId: assetId);
+          },
           '/incident-details': (context) {
             final incidentId =
                 ModalRoute.of(context)!.settings.arguments as String;
             return IncidentDetailScreen(incidentId: incidentId);
           },
+          '/notifications': (context) => const NotificationCenterScreen(),
+          '/vaccine-dashboard': (context) =>
+              const VaccineDashboardScreen(), // assuming this exists or maps to the correct screen
         },
       ),
     );

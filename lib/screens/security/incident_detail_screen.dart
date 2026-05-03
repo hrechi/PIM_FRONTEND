@@ -237,7 +237,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColorPalette.wheatWarmClay,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -294,7 +294,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                   Image.network(
                     _imageUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (_, _, _) => Container(
                       color: Colors.grey.shade900,
                       child: Icon(_typeIcon, size: 80, color: Colors.white30),
                     ),
@@ -494,7 +494,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                 Icons.access_time_rounded,
                 'Time',
                 formattedTime,
-                AppColorPalette.emeraldGreen,
+                AppColorPalette.mistyBlue,
               ),
             ),
             const SizedBox(width: 12),

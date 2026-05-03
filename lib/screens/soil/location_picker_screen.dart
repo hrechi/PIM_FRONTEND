@@ -12,11 +12,11 @@ class LocationPickerScreen extends StatefulWidget {
   final FieldModel? selectedField;
 
   const LocationPickerScreen({
-    Key? key,
+    super.key,
     this.initialLatitude,
     this.initialLongitude,
     this.selectedField,
-  }) : super(key: key);
+  });
 
   @override
   State<LocationPickerScreen> createState() => _LocationPickerScreenState();

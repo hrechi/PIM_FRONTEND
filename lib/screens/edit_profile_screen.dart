@@ -23,6 +23,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _imagePicker = ImagePicker();
   bool _isUploadingPicture = false;
 
@@ -35,6 +36,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _farmNameController.text = user.farmName;
       _emailController.text = user.email ?? '';
       _phoneController.text = user.phone ?? '';
+      _usernameController.text = user.username ?? '';
     }
   }
 
@@ -45,23 +47,64 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
+    _usernameController.dispose();
     super.dispose();
   }
 
   Future<void> _pickAndUploadImage() async {
-    final auth = context.read<AuthProvider>();
-    final picked = await _imagePicker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 800,
-      maxHeight: 800,
-      imageQuality: 85,
-    );
-    if (picked == null) return;
+    final user = context.read<AuthProvider>().user;
+    if (user != null && user.role.toUpperCase() == 'WORKER') {
+      return;
+    }
 
-    setState(() => _isUploadingPicture = true);
-    await auth.uploadProfilePicture(picked.path);
-    if (!mounted) return;
-    setState(() => _isUploadingPicture = false);
+    final auth = context.read<AuthProvider>();
+
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        // Don't pre-resize: lets the picker accept any image format
+        // (jpg/jpeg/png/webp/gif/heic/bmp/…) without re-encoding failures.
+        imageQuality: 90,
+      );
+      if (picked == null) return;
+
+      setState(() => _isUploadingPicture = true);
+      final ok = await auth.uploadProfilePicture(picked.path);
+      if (!mounted) return;
+      setState(() => _isUploadingPicture = false);
+
+      if (!ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              auth.errorMessage ?? 'Upload failed. Please try another image.',
+              style: GoogleFonts.inter(),
+            ),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isUploadingPicture = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not load image: $e',
+            style: GoogleFonts.inter(),
+          ),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _handleSave() async {
@@ -69,14 +112,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     final auth = context.read<AuthProvider>();
     final user = auth.user!;
+    final isWorker = user.role.toUpperCase() == 'WORKER';
 
     final success = await auth.updateProfile(
       name: _nameController.text.trim() != user.name
           ? _nameController.text.trim()
           : null,
-      farmName: _farmNameController.text.trim() != user.farmName
+      farmName: isWorker
+        ? null
+        : (_farmNameController.text.trim() != user.farmName
           ? _farmNameController.text.trim()
-          : null,
+          : null),
       email: _emailController.text.trim() != (user.email ?? '')
           ? _emailController.text.trim()
           : null,
@@ -120,6 +166,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         builder: (context, auth, _) {
           final user = auth.user;
           if (user == null) return const SizedBox.shrink();
+          final isWorker = user.role.toUpperCase() == 'WORKER';
 
           return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -130,68 +177,111 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   const SizedBox(height: 24),
 
                   // Profile picture editor
-                  Stack(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: AppColors.fieldFreshGradient,
+                  if (isWorker)
+                    Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: AppColors.fieldFreshGradient,
                         ),
-                        child: CircleAvatar(
-                          radius: 52,
-                          backgroundColor: AppColors.wheatWarmClay,
-                          backgroundImage: user.profilePicture != null
-                              ? NetworkImage(
-                                  '${ApiService.mediaBaseUrl}${user.profilePicture}',
-                                )
-                              : null,
-                          child: _isUploadingPicture
-                              ? const CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                )
-                              : (user.profilePicture == null
-                                    ? Text(
-                                        user.name.isNotEmpty
-                                            ? user.name[0].toUpperCase()
-                                            : '?',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 32,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.mistyBlue,
-                                        ),
-                                      )
-                                    : null),
+                          child: CircleAvatar(
+                            radius: 52,
+                            backgroundColor: AppColors.wheatWarmClay,
+                            backgroundImage: user.profilePicture != null
+                                ? NetworkImage(
+                                    '${ApiService.mediaBaseUrl}${user.profilePicture}',
+                                  )
+                                : null,
+                            child: user.profilePicture == null
+                                ? Text(
+                                    user.name.isNotEmpty
+                                        ? user.name[0].toUpperCase()
+                                        : '?',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.mistyBlue,
+                                    ),
+                                  )
+                                : null,
+                          ),
                         ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: _isUploadingPicture
-                              ? null
-                              : _pickAndUploadImage,
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: AppColors.mistyBlue,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 2.5,
+                        const SizedBox(height: 12),
+                        Text(
+                          'Profile picture is managed by the farm owner',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: AppColors.secondaryText,
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Stack(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: AppColors.fieldFreshGradient,
+                          ),
+                          child: CircleAvatar(
+                            radius: 52,
+                            backgroundColor: AppColors.wheatWarmClay,
+                            backgroundImage: user.profilePicture != null
+                                ? NetworkImage(
+                                    '${ApiService.mediaBaseUrl}${user.profilePicture}',
+                                  )
+                                : null,
+                            child: _isUploadingPicture
+                                ? const CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                  )
+                                : (user.profilePicture == null
+                                      ? Text(
+                                          user.name.isNotEmpty
+                                              ? user.name[0].toUpperCase()
+                                              : '?',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 32,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.mistyBlue,
+                                          ),
+                                        )
+                                      : null),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: _isUploadingPicture
+                                ? null
+                                : _pickAndUploadImage,
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: AppColors.mistyBlue,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2.5,
+                                ),
                               ),
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt_outlined,
-                              color: Colors.white,
-                              size: 18,
+                              child: const Icon(
+                                Icons.camera_alt_outlined,
+                                color: Colors.white,
+                                size: 18,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                   const SizedBox(height: 32),
 
                   // Name
@@ -204,15 +294,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Farm Name
-                  CustomTextField(
-                    controller: _farmNameController,
-                    hintText: 'Enter your farm name',
-                    label: 'Farm Name',
-                    prefixIcon: Icons.agriculture_rounded,
-                    validator: (v) => Validators.required(v, 'Farm name'),
-                  ),
-                  const SizedBox(height: 16),
+                  if (!isWorker) ...[
+                    // Farm Name
+                    CustomTextField(
+                      controller: _farmNameController,
+                      hintText: 'Enter your farm name',
+                      label: 'Farm Name',
+                      prefixIcon: Icons.agriculture_rounded,
+                      validator: (v) => Validators.required(v, 'Farm name'),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  if (isWorker) ...[
+                    CustomTextField(
+                      controller: _usernameController,
+                      hintText: 'Worker username',
+                      label: 'Username',
+                      prefixIcon: Icons.badge_outlined,
+                      enabled: false,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
                   // Email
                   CustomTextField(

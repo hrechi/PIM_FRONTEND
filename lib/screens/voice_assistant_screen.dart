@@ -2,8 +2,12 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/voice_access_mode_provider.dart';
 import '../services/chat_service.dart';
+import '../services/robot_voice_controller.dart';
+import '../services/voice_navigation_service.dart';
 import '../services/voice_service.dart';
 import '../utils/constants.dart';
 
@@ -54,6 +58,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   VoiceLanguageMode _languageMode = VoiceLanguageMode.auto;
   String? _activeListeningLocale;
   String _activeReplyLanguage = 'en-US';
+  bool _isFullAccessEnabled = false;
 
   Timer? _thinkingTimer;
 
@@ -78,7 +83,25 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
       duration: const Duration(milliseconds: 1800),
     );
 
+    _loadFullAccessMode();
     _initializeVoice();
+  }
+
+  Future<void> _loadFullAccessMode() async {
+    final accessMode = context.read<VoiceAccessModeProvider>();
+    if (!accessMode.isLoaded) {
+      await accessMode.load();
+    }
+
+    final enabled = accessMode.isEnabled;
+    if (!mounted) return;
+
+    setState(() {
+      _isFullAccessEnabled = enabled;
+      if (_state == VoiceUiState.idle) {
+        _statusText = _idleStatusText();
+      }
+    });
   }
 
   Future<void> _initializeVoice() async {
@@ -140,7 +163,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
       if (!mounted) return;
       setState(() {
         _state = VoiceUiState.idle;
-        _statusText = 'Tap the bubble to start listening';
+        _statusText = _idleStatusText();
       });
       return;
     }
@@ -338,11 +361,205 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
 
   String _listeningStatusText() {
     final selectedMode = _languageMode;
+    final modeHint = _isFullAccessEnabled ? ' Full access is ON.' : '';
     if (selectedMode == VoiceLanguageMode.auto) {
-      return 'Listening (auto detect)... tap again when you are done';
+      return 'Listening (auto detect)... tap again when you are done$modeHint';
     }
 
-    return 'Listening in ${_languageLabel(selectedMode)}... tap again when you are done';
+    return 'Listening in ${_languageLabel(selectedMode)}... tap again when you are done$modeHint';
+  }
+
+  String _idleStatusText() {
+    if (_isFullAccessEnabled) {
+      return 'Full access mode is ON. Say "open" followed by a page name.';
+    }
+
+    return 'Tap the bubble to start listening';
+  }
+
+  Future<void> _setFullAccessEnabled(bool enabled) async {
+    await context.read<VoiceAccessModeProvider>().setEnabled(enabled);
+    if (!mounted) return;
+
+    setState(() {
+      _isFullAccessEnabled = enabled;
+    });
+  }
+
+  Future<void> _speakLocalFeedback({
+    required String message,
+    required String transcript,
+  }) async {
+    final requestedLanguageCode = _resolveRequestedLanguageCode(transcript);
+
+    if (!mounted) return;
+    setState(() {
+      _assistantReply = message;
+      _activeReplyLanguage = requestedLanguageCode;
+      _state = VoiceUiState.speaking;
+      _statusText = 'Speaking response...';
+      _showStillThinking = false;
+      _soundLevel = 0;
+    });
+
+    await _voiceService.speak(
+      message,
+      languageCode: requestedLanguageCode,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _state = VoiceUiState.idle;
+      _statusText = _idleStatusText();
+      _soundLevel = 0;
+    });
+  }
+
+  Future<bool> _handleLocalVoiceCommand(String transcript) async {
+    final command = VoiceNavigationService.parse(transcript);
+    switch (command.type) {
+      case VoiceCommandType.none:
+        return false;
+      case VoiceCommandType.activateFullAccess:
+        await _setFullAccessEnabled(true);
+        await _speakLocalFeedback(
+          message:
+              'Full access mode enabled. You can now say open followed by any page name.',
+          transcript: transcript,
+        );
+        return true;
+      case VoiceCommandType.deactivateFullAccess:
+        await _setFullAccessEnabled(false);
+        await _speakLocalFeedback(
+          message: 'Full access mode disabled.',
+          transcript: transcript,
+        );
+        return true;
+      case VoiceCommandType.navigate:
+        if (!_isFullAccessEnabled) {
+          await _speakLocalFeedback(
+            message:
+                'Full access mode is currently off. Say give me full access first.',
+            transcript: transcript,
+          );
+          return true;
+        }
+
+        final page = command.page;
+        if (page == null) {
+          return true;
+        }
+
+        final label = VoiceNavigationService.labelForPage(page);
+        VoiceNavigationService.navigateToPage(context, page);
+        await _speakLocalFeedback(
+          message: 'Opening $label.',
+          transcript: transcript,
+        );
+        return true;
+      case VoiceCommandType.unknownNavigate:
+        if (!_isFullAccessEnabled) {
+          await _speakLocalFeedback(
+            message:
+                'I heard a navigation request, but full access mode is off. Say give me full access first.',
+            transcript: transcript,
+          );
+          return true;
+        }
+
+        final suggestions = command.suggestions;
+        final suggestionText = suggestions.isEmpty
+            ? ''
+            : ' Try: ${suggestions.join(', ')}.';
+        await _speakLocalFeedback(
+          message:
+              'I could not find that page in the app.$suggestionText',
+          transcript: transcript,
+        );
+        return true;
+      case VoiceCommandType.robotCommand:
+        return _handleRobotVoiceCommand(command, transcript);
+    }
+  }
+
+  Future<bool> _handleRobotVoiceCommand(
+    VoiceCommandResult command,
+    String transcript,
+  ) async {
+    if (!_isFullAccessEnabled) {
+      await _speakLocalFeedback(
+        message:
+            'I heard a robot command, but full access mode is off. Say give me full access first.',
+        transcript: transcript,
+      );
+      return true;
+    }
+
+    final action = command.robotAction;
+    if (action == null) return true;
+
+    final controller = RobotVoiceController.instance;
+
+    // Stop is highest-priority and must work even if we never connected.
+    if (action == RobotVoiceAction.stop) {
+      final ok = await controller.emergencyStop();
+      await _speakLocalFeedback(
+        message: ok
+            ? 'Emergency stop sent.'
+            : 'No robot is connected, but I tried to send a stop anyway.',
+        transcript: transcript,
+      );
+      return true;
+    }
+
+    final connected = await controller.ensureConnected();
+    if (!connected) {
+      await _speakLocalFeedback(
+        message:
+            'I cannot reach the robot right now. Please check that it is online and try again.',
+        transcript: transcript,
+      );
+      return true;
+    }
+
+    bool dispatched = false;
+    String spoken = '';
+    switch (action) {
+      case RobotVoiceAction.forward:
+        dispatched = await controller.moveForward();
+        spoken = 'Moving forward.';
+        break;
+      case RobotVoiceAction.backward:
+        dispatched = await controller.moveBackward();
+        spoken = 'Moving backward.';
+        break;
+      case RobotVoiceAction.left:
+        dispatched = await controller.turnLeft();
+        spoken = 'Turning left.';
+        break;
+      case RobotVoiceAction.right:
+        dispatched = await controller.turnRight();
+        spoken = 'Turning right.';
+        break;
+      case RobotVoiceAction.distance:
+        final meters = command.distanceMeters ?? 0;
+        dispatched = await controller.driveDistance(meters: meters);
+        final cm = (meters.abs() * 100).round();
+        final dir = meters >= 0 ? 'forward' : 'backward';
+        spoken = 'Driving $dir for $cm centimeters.';
+        break;
+      case RobotVoiceAction.stop:
+        // handled above
+        break;
+    }
+
+    await _speakLocalFeedback(
+      message: dispatched
+          ? spoken
+          : 'The robot did not accept the command. Please try again.',
+      transcript: transcript,
+    );
+    return true;
   }
 
   Future<void> _discardListening() async {
@@ -388,6 +605,10 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
             'Arabic transcription is not coming as Arabic script. Please enable/download Arabic speech recognition on your device and try again.';
         _soundLevel = 0;
       });
+      return;
+    }
+
+    if (await _handleLocalVoiceCommand(transcript)) {
       return;
     }
 
@@ -451,7 +672,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
       if (!mounted) return;
       setState(() {
         _state = VoiceUiState.idle;
-        _statusText = 'Tap the bubble to start listening';
+        _statusText = _idleStatusText();
         _soundLevel = 0;
       });
     } catch (e) {
@@ -729,10 +950,66 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
     );
   }
 
+  Widget _buildFullAccessModeCard() {
+    final enabled = _isFullAccessEnabled;
+    final bg = enabled
+        ? const Color(0xFFDFF5E6)
+        : const Color(0xFFFFF4DA);
+    final border = enabled
+        ? const Color(0xFF3E8E5B)
+        : const Color(0xFFB5852E);
+    final textColor = enabled
+        ? const Color(0xFF1E5D39)
+        : const Color(0xFF7A5717);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border.withValues(alpha: 0.7)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                enabled ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
+                color: textColor,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                enabled ? 'Full Access: ON' : 'Full Access: OFF',
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Enable with: "give me full access"\nDisable with: "disable full access" or "exit full access mode"',
+            style: TextStyle(
+              color: textColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFE8F3FB),
+      backgroundColor: AppColors.wheatWarmClay,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -771,6 +1048,8 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
                     _buildTranscriptCard(),
                     const SizedBox(height: 12),
                     _buildLanguageSelector(),
+                    const SizedBox(height: 12),
+                    _buildFullAccessModeCard(),
                     const SizedBox(height: 14),
                     Text(
                       _statusText,
