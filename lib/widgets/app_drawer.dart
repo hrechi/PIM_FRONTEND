@@ -8,6 +8,7 @@ import '../theme/text_styles.dart';
 
 // Top-level / Account
 import '../screens/home_screen.dart';
+import '../widgets/rating_dialog.dart';
 import '../screens/farmer_home_screen_v2.dart';
 import '../screens/profile_screen.dart';
 import '../screens/signin_screen.dart';
@@ -432,7 +433,10 @@ class _AppDrawerState extends State<AppDrawer>
           const SizedBox(width: 10),
           Expanded(
             child: OutlinedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                Navigator.pop(context); // close drawer first
+                RatingDialog.show(context);
+              },
               style: OutlinedButton.styleFrom(
                 foregroundColor: _ink,
                 side: const BorderSide(color: _hairline),

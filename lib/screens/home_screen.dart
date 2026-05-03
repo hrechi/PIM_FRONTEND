@@ -39,6 +39,7 @@ import 'chat_assistant_screen.dart';
 import 'notification_center_screen.dart';
 import 'weather_screen.dart';
 import 'shorts_screen.dart';
+import '../widgets/ratings_flow.dart';
 
 /// Main home screen displaying the farm dashboard
 class HomeScreen extends StatefulWidget {
@@ -656,6 +657,7 @@ class _HomeScreenState extends State<HomeScreen>
         _buildMilkProductionBanner(),
         _buildLiveHealthMetrics(),
       ],
+      const RatingsFlow(),
     ];
 
     return Scaffold(

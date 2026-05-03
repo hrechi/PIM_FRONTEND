@@ -18,6 +18,7 @@ import 'providers/catalogue_provider.dart';
 import 'providers/voice_access_mode_provider.dart';
 import 'providers/global_voice_controller.dart';
 import 'providers/asset_provider.dart';
+import 'providers/rating_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
@@ -167,6 +168,13 @@ class _FieldlyAppState extends State<FieldlyApp> {
           ),
         ),
         ChangeNotifierProvider(create: (_) => AssetProvider()),
+        ChangeNotifierProvider(
+          create: (_) {
+            final p = RatingProvider();
+            p.init(); // start fetching + polling immediately
+            return p;
+          },
+        ),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
