@@ -1,14 +1,24 @@
+
 import 'package:flutter/material.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
+import '../services/billing_service.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import 'signin_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  GoProScreen  –  Fieldly subscription / upgrade modal
-//  Design: inspired by the "Upgrade to Pro" card UI (image reference)
-//  Colors: strictly from AppColorPalette (fieldFreshGradient, charcoalGreen…)
+//  GoProScreen  –  Fieldly subscription upgrade modal
+//  Flow:
+//    1. Pick plan + billing cycle
+//    2. Add robot add-ons with quantity stepper
+//    3. Review live order summary
+//    4. Tap CTA → backend creates Stripe Checkout session → opens in browser
+//    5. Stripe redirects back via deep-link fieldly://billing/success
+//    6. Webhook activates subscription server-side
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Entry point – show as a bottom-sheet modal from the drawer.
 void showGoProSheet(BuildContext context) {
   showModalBottomSheet(
     context: context,
@@ -20,74 +30,43 @@ void showGoProSheet(BuildContext context) {
 
 class GoProScreen extends StatefulWidget {
   const GoProScreen({super.key});
-
   @override
   State<GoProScreen> createState() => _GoProScreenState();
 }
 
 // ─── Plan data ───────────────────────────────────────────────────────────────
 
-enum _PlanId { essential, growth, operationsPro, enterprise }
-
 class _Plan {
-  final _PlanId id;
+  final PlanId id;
   final String name;
-  final String price;
-  final String period;
-  final String? annualNote;
+  final int monthlyPrice;
   final String? badge;
   final bool highlighted;
 
   const _Plan({
     required this.id,
     required this.name,
-    required this.price,
-    required this.period,
-    this.annualNote,
+    required this.monthlyPrice,
     this.badge,
     this.highlighted = false,
   });
+
+  String displayPrice(bool annual) {
+    if (id == PlanId.enterprise) return 'Custom';
+    final p = annual ? (monthlyPrice * 0.82).round() : monthlyPrice;
+    return '\$$p';
+  }
 }
 
 const _plans = [
-  _Plan(
-    id: _PlanId.essential,
-    name: 'Essential',
-    price: r'$29',
-    period: '/ mo',
-    annualNote: r'$290 / yr',
-  ),
-  _Plan(
-    id: _PlanId.growth,
-    name: 'Growth',
-    price: r'$89',
-    period: '/ mo',
-    annualNote: r'$876 / yr',
-    badge: 'Most popular',
-    highlighted: false,
-  ),
-  _Plan(
-    id: _PlanId.operationsPro,
-    name: 'Ops Pro',
-    price: r'$199',
-    period: '/ mo',
-    annualNote: r'$1,960 / yr',
-    badge: 'Best value',
-    highlighted: true,
-  ),
-  _Plan(
-    id: _PlanId.enterprise,
-    name: 'Enterprise',
-    price: r'Custom',
-    period: '',
-    badge: 'Contact us',
-  ),
+  _Plan(id: PlanId.essential,     name: 'Essential', monthlyPrice: 29),
+  _Plan(id: PlanId.growth,        name: 'Growth',    monthlyPrice: 89,  badge: 'Most popular'),
+  _Plan(id: PlanId.operationsPro, name: 'Ops Pro',   monthlyPrice: 199, badge: 'Best value', highlighted: true),
+  _Plan(id: PlanId.enterprise,    name: 'Enterprise',monthlyPrice: 0,   badge: 'Contact us'),
 ];
 
-// ─── Feature rows per plan ───────────────────────────────────────────────────
-
 const _featuresByPlan = {
-  _PlanId.essential: [
+  PlanId.essential: [
     'Core dashboard & parcels (up to 10)',
     'Animal tracking (up to 30)',
     'Weather data integration',
@@ -95,7 +74,7 @@ const _featuresByPlan = {
     '200 AI credits / month',
     '5 GB storage · 2 users',
   ],
-  _PlanId.growth: [
+  PlanId.growth: [
     'Everything in Essential',
     'AI Agronomist 🤖 & Plant Doctor 🌿',
     'Irrigation scheduler 💧',
@@ -103,7 +82,7 @@ const _featuresByPlan = {
     'Mission / task management',
     '1,500 AI credits · 50 GB · 6 users',
   ],
-  _PlanId.operationsPro: [
+  PlanId.operationsPro: [
     'Everything in Growth',
     'Advanced analytics & dashboards 📊',
     'Security incident monitoring 🚨',
@@ -111,7 +90,7 @@ const _featuresByPlan = {
     'Export PDF / CSV · Priority support',
     '5,000 AI credits · 200 GB · 15 users',
   ],
-  _PlanId.enterprise: [
+  PlanId.enterprise: [
     'Everything in Ops Pro',
     'Multi-site management',
     'API access & SSO',
@@ -121,23 +100,61 @@ const _featuresByPlan = {
   ],
 };
 
+// ─── Robot option display data ────────────────────────────────────────────────
+
+class _RobotOption {
+  final RobotTierId tier;
+  final String description;
+  final Color color;
+  const _RobotOption({required this.tier, required this.description, required this.color});
+}
+
+const _robotOptions = [
+  _RobotOption(
+    tier: RobotTierId.robotConnect,
+    description: 'Live status, mission logs, basic alerts',
+    color: AppColorPalette.fieldFreshStart,
+  ),
+  _RobotOption(
+    tier: RobotTierId.robotAutonomy,
+    description: 'Autonomous scheduling, route optimization',
+    color: AppColorPalette.fieldFreshMid,
+  ),
+  _RobotOption(
+    tier: RobotTierId.robotFleet,
+    description: 'Fleet dashboard, KPIs, audit logs',
+    color: AppColorPalette.fieldFreshEnd,
+  ),
+];
+
+const _robotPrices = {
+  RobotTierId.robotConnect:  49,
+  RobotTierId.robotAutonomy: 99,
+  RobotTierId.robotFleet:    299,
+};
+
 // ─── State ───────────────────────────────────────────────────────────────────
 
 class _GoProScreenState extends State<GoProScreen>
     with SingleTickerProviderStateMixin {
-  _PlanId _selected = _PlanId.operationsPro;
-  bool _annual = true;
+  PlanId _selected = PlanId.operationsPro;
+  bool   _annual   = true;
+  bool   _loading  = false;
+
+  final Map<RobotTierId, int> _robotQty = {
+    RobotTierId.robotConnect:  0,
+    RobotTierId.robotAutonomy: 0,
+    RobotTierId.robotFleet:    0,
+  };
 
   late final AnimationController _ac;
-  late final Animation<double> _fadeSlide;
+  late final Animation<double>   _fadeSlide;
 
   @override
   void initState() {
     super.initState();
-    _ac = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 520),
-    )..forward();
+    _ac = AnimationController(vsync: this, duration: const Duration(milliseconds: 520))
+      ..forward();
     _fadeSlide = CurvedAnimation(parent: _ac, curve: Curves.easeOutCubic);
   }
 
@@ -147,12 +164,29 @@ class _GoProScreenState extends State<GoProScreen>
     super.dispose();
   }
 
-  // ─── Build ─────────────────────────────────────────────────────────────────
+  // ── Computed ──────────────────────────────────────────────────────────────
+
+  int get _totalMonthly {
+    if (_selected == PlanId.enterprise) return 0;
+    final plan  = _plans.firstWhere((p) => p.id == _selected);
+    final base  = _annual ? (plan.monthlyPrice * 0.82).round() : plan.monthlyPrice;
+    int robots  = 0;
+    for (final e in _robotQty.entries) {
+      robots += (_robotPrices[e.key] ?? 0) * e.value;
+    }
+    return base + robots;
+  }
+
+  List<RobotAddon> get _selectedRobots => _robotQty.entries
+      .where((e) => e.value > 0)
+      .map((e) => RobotAddon(tier: e.key, quantity: e.value))
+      .toList();
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final sheetH = mq.size.height * 0.92;
+    final sheetH = MediaQuery.of(context).size.height * 0.92;
 
     return AnimatedBuilder(
       animation: _fadeSlide,
@@ -171,28 +205,30 @@ class _GoProScreenState extends State<GoProScreen>
         ),
         child: Column(
           children: [
-            _buildHandle(),
-            _buildHeader(context),
+            _handle(),
+            _header(context),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 4),
-                    _buildBillingToggle(),
+                    _billingToggle(),
                     const SizedBox(height: 20),
-                    _buildPlanCards(),
+                    _planCards(),
                     const SizedBox(height: 24),
-                    _buildFeatureList(),
+                    _featureList(),
                     const SizedBox(height: 28),
-                    _buildRobotAddOn(),
+                    _robotAddOns(),
+                    const SizedBox(height: 20),
+                    _orderSummary(),
+                    const SizedBox(height: 20),
+                    _trialBanner(),
                     const SizedBox(height: 28),
-                    _buildTrialBanner(),
-                    const SizedBox(height: 28),
-                    _buildCTA(context),
-                    const SizedBox(height: 12),
-                    _buildFooterLinks(context),
+                    _ctaButton(context),
+                    const SizedBox(height: 14),
+                    _footerLinks(context),
                   ],
                 ),
               ),
@@ -203,419 +239,553 @@ class _GoProScreenState extends State<GoProScreen>
     );
   }
 
-  // ─── Handle ────────────────────────────────────────────────────────────────
+  // ── Handle ────────────────────────────────────────────────────────────────
 
-  Widget _buildHandle() {
-    return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 4),
-      child: Center(
-        child: Container(
-          width: 40,
-          height: 4,
-          decoration: BoxDecoration(
-            color: const Color(0xFFDDD9D0),
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ─── Header ────────────────────────────────────────────────────────────────
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 12, 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ⚡ Pro badge
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    gradient: AppColorPalette.fieldFreshGradient,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.bolt_rounded,
-                          color: Colors.white, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Pro',
-                        style: AppTextStyles.buttonSmall(color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Upgrade to Pro',
-                  style: AppTextStyles.h2(
-                    color: const Color(0xFF1F2933),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Unlock the full power of your farm',
-                  style: AppTextStyles.bodyMedium(
-                    color: const Color(0xFF9AA0A6),
-                  ),
-                ),
-              ],
+  Widget _handle() => Padding(
+        padding: const EdgeInsets.only(top: 12, bottom: 4),
+        child: Center(
+          child: Container(
+            width: 40, height: 4,
+            decoration: BoxDecoration(
+              color: const Color(0xFFDDD9D0),
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
-          // Close button
-          IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.close_rounded, color: Color(0xFF9AA0A6)),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      );
 
-  // ─── Billing toggle ────────────────────────────────────────────────────────
+  // ── Header ────────────────────────────────────────────────────────────────
 
-  Widget _buildBillingToggle() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEEEAE2),
-        borderRadius: BorderRadius.circular(28),
-      ),
-      child: Row(
-        children: [
-          _toggleOption('Monthly', !_annual),
-          _toggleOption('Annual  –18%', _annual),
-        ],
-      ),
-    );
-  }
-
-  Widget _toggleOption(String label, bool active) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _annual = label.startsWith('Annual')),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            gradient: active ? AppColorPalette.fieldFreshGradient : null,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: active
-                ? [
-                    BoxShadow(
-                      color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.25),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    )
-                  ]
-                : null,
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: AppTextStyles.bodyMedium(
-                color: active ? Colors.white : const Color(0xFF9AA0A6),
-                fontWeight: FontWeight.w600,
+  Widget _header(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 12, 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ⚡ Pro badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: AppColorPalette.fieldFreshGradient,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.bolt_rounded, color: Colors.white, size: 14),
+                        const SizedBox(width: 4),
+                        Text('Pro', style: AppTextStyles.buttonSmall(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text('Upgrade to Pro',
+                      style: AppTextStyles.h2(color: const Color(0xFF1F2933))),
+                  const SizedBox(height: 4),
+                  Text('Unlock the full power of your farm',
+                      style: AppTextStyles.bodyMedium(color: const Color(0xFF9AA0A6))),
+                ],
               ),
             ),
+            IconButton(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.close_rounded, color: Color(0xFF9AA0A6)),
+            ),
+          ],
+        ),
+      );
+
+  // ── Billing toggle ────────────────────────────────────────────────────────
+
+  Widget _billingToggle() => Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEEEAE2),
+          borderRadius: BorderRadius.circular(28),
+        ),
+        child: Row(
+          children: [
+            _toggleChip('Monthly',     !_annual),
+            _toggleChip('Annual  –18%', _annual),
+          ],
+        ),
+      );
+
+  Widget _toggleChip(String label, bool active) => Expanded(
+        child: GestureDetector(
+          onTap: () => setState(() => _annual = label.startsWith('Annual')),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              gradient: active ? AppColorPalette.fieldFreshGradient : null,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: active
+                  ? [BoxShadow(
+                      color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.25),
+                      blurRadius: 8, offset: const Offset(0, 3))]
+                  : null,
+            ),
+            child: Center(
+              child: Text(label,
+                  style: AppTextStyles.bodyMedium(
+                    color: active ? Colors.white : const Color(0xFF9AA0A6),
+                    fontWeight: FontWeight.w600,
+                  )),
+            ),
           ),
         ),
-      ),
-    );
-  }
+      );
 
-  // ─── Plan cards ────────────────────────────────────────────────────────────
+  // ── Plan cards ────────────────────────────────────────────────────────────
 
-  Widget _buildPlanCards() {
-    return SizedBox(
-      height: 130,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _plans.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 10),
-        itemBuilder: (_, i) => _PlanCard(
-          plan: _plans[i],
-          selected: _plans[i].id == _selected,
-          annual: _annual,
-          onTap: () => setState(() => _selected = _plans[i].id),
+  Widget _planCards() => SizedBox(
+        height: 130,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: _plans.length,
+          separatorBuilder: (context, index) => const SizedBox(width: 10),
+          itemBuilder: (ctx, i) => _PlanCard(
+            plan:     _plans[i],
+            selected: _plans[i].id == _selected,
+            annual:   _annual,
+            onTap:    () => setState(() => _selected = _plans[i].id),
+          ),
         ),
-      ),
-    );
-  }
+      );
 
-  // ─── Feature list ──────────────────────────────────────────────────────────
+  // ── Feature list ──────────────────────────────────────────────────────────
 
-  Widget _buildFeatureList() {
+  Widget _featureList() {
     final features = _featuresByPlan[_selected] ?? [];
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 280),
       child: Column(
         key: ValueKey(_selected),
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'What\'s included',
-            style: AppTextStyles.h4(color: const Color(0xFF1F2933)),
-          ),
+          Text("What's included",
+              style: AppTextStyles.h4(color: const Color(0xFF1F2933))),
           const SizedBox(height: 12),
-          ...features.map(
-            (f) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      gradient: AppColorPalette.fieldFreshGradient,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.check_rounded,
-                        color: Colors.white, size: 14),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      f,
-                      style: AppTextStyles.bodyMedium(
-                        color: const Color(0xFF1F2933),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Robot add-on ──────────────────────────────────────────────────────────
-
-  Widget _buildRobotAddOn() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEEEAE2)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: AppColorPalette.robotTechGradient,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.precision_manufacturing_rounded,
-                    color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
+          ...features.map((f) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Robot Add-On',
-                      style: AppTextStyles.bodyLarge(
-                        color: const Color(0xFF1F2933),
-                        fontWeight: FontWeight.w700,
+                    Container(
+                      width: 22, height: 22,
+                      decoration: const BoxDecoration(
+                        gradient: AppColorPalette.fieldFreshGradient,
+                        shape: BoxShape.circle,
                       ),
+                      child: const Icon(Icons.check_rounded,
+                          color: Colors.white, size: 14),
                     ),
-                    Text(
-                      'Per robot · independent from plan',
-                      style: AppTextStyles.bodySmall(
-                        color: const Color(0xFF9AA0A6),
-                      ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(f,
+                          style: AppTextStyles.bodyMedium(
+                              color: const Color(0xFF1F2933))),
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              _RobotTierChip(
-                label: 'Connect',
-                price: r'$49',
-                color: AppColorPalette.fieldFreshStart,
-              ),
-              const SizedBox(width: 8),
-              _RobotTierChip(
-                label: 'Autonomy',
-                price: r'$99',
-                color: AppColorPalette.fieldFreshMid,
-              ),
-              const SizedBox(width: 8),
-              _RobotTierChip(
-                label: 'Fleet',
-                price: r'$299',
-                color: AppColorPalette.fieldFreshEnd,
-              ),
-            ],
-          ),
+              )),
         ],
       ),
     );
   }
 
-  // ─── Trial banner ──────────────────────────────────────────────────────────
+  // ── Robot add-ons (interactive quantity steppers) ─────────────────────────
 
-  Widget _buildTrialBanner() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColorPalette.fieldFreshStart.withValues(alpha: 0.12),
-            AppColorPalette.fieldFreshEnd.withValues(alpha: 0.08),
+  Widget _robotAddOns() => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFEEEAE2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12, offset: const Offset(0, 4),
+            ),
           ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.25),
-        ),
-      ),
-      child: Row(
-        children: [
-          const Text('🎁', style: TextStyle(fontSize: 28)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Section header
+            Row(
               children: [
-                Text(
-                  'Free full access for 14 days',
-                  style: AppTextStyles.bodyLarge(
-                    color: const Color(0xFF1F2933),
-                    fontWeight: FontWeight.w700,
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: AppColorPalette.robotTechGradient,
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  child: const Icon(Icons.precision_manufacturing_rounded,
+                      color: Colors.white, size: 20),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'No credit card required · cancel anytime',
-                  style: AppTextStyles.bodySmall(
-                    color: const Color(0xFF9AA0A6),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Robot Add-Ons',
+                          style: AppTextStyles.bodyLarge(
+                              color: const Color(0xFF1F2933),
+                              fontWeight: FontWeight.w700)),
+                      Text('Per robot · billed with your plan',
+                          style: AppTextStyles.bodySmall(
+                              color: const Color(0xFF9AA0A6))),
+                    ],
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            // One row per robot tier
+            ..._robotOptions.map((opt) => _RobotRow(
+                  option:    opt,
+                  quantity:  _robotQty[opt.tier] ?? 0,
+                  onChanged: (qty) => setState(() => _robotQty[opt.tier] = qty),
+                )),
+          ],
+        ),
+      );
+
+  // ── Order summary ─────────────────────────────────────────────────────────
+
+  Widget _orderSummary() {
+    if (_selected == PlanId.enterprise) return const SizedBox.shrink();
+
+    final plan      = _plans.firstWhere((p) => p.id == _selected);
+    final basePrice = _annual
+        ? (plan.monthlyPrice * 0.82).round()
+        : plan.monthlyPrice;
+    final hasRobots = _robotQty.values.any((q) => q > 0);
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColorPalette.fieldFreshStart.withValues(alpha: 0.07),
+              AppColorPalette.fieldFreshEnd.withValues(alpha: 0.04),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Order summary',
+                style: AppTextStyles.bodyLarge(
+                    color: const Color(0xFF1F2933),
+                    fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+            _SummaryRow(label: '${plan.name} plan', value: '\$$basePrice / mo'),
+            if (hasRobots) ...[
+              const SizedBox(height: 4),
+              ..._robotQty.entries.where((e) => e.value > 0).map((e) {
+                final opt   = _robotOptions.firstWhere((o) => o.tier == e.key);
+                final price = (_robotPrices[e.key] ?? 0) * e.value;
+                return _SummaryRow(
+                  label: '${opt.tier.label} × ${e.value}',
+                  value: '\$$price / mo',
+                );
+              }),
+            ],
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10),
+              child: Divider(color: Color(0xFFDDD9D0), height: 1),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Total',
+                    style: AppTextStyles.bodyLarge(
+                        color: const Color(0xFF1F2933),
+                        fontWeight: FontWeight.w700)),
+                Text('\$$_totalMonthly / mo',
+                    style: AppTextStyles.bodyLarge(
+                        color: AppColorPalette.fieldFreshMid,
+                        fontWeight: FontWeight.w800)),
+              ],
+            ),
+            if (_annual) ...[
+              const SizedBox(height: 4),
+              Text('Billed annually · 18% saved vs monthly',
+                  style: AppTextStyles.bodySmall(
+                      color: AppColorPalette.fieldFreshMid)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Trial banner ──────────────────────────────────────────────────────────
+
+  Widget _trialBanner() => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColorPalette.fieldFreshStart.withValues(alpha: 0.12),
+              AppColorPalette.fieldFreshEnd.withValues(alpha: 0.08),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.25),
+          ),
+        ),
+        child: Row(
+          children: [
+            const Text('💳', style: TextStyle(fontSize: 28)),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Payment starts on checkout',
+                      style: AppTextStyles.bodyLarge(
+                          color: const Color(0xFF1F2933),
+                          fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
+                  Text('You will be sent to Stripe to complete payment',
+                      style: AppTextStyles.bodySmall(
+                          color: const Color(0xFF9AA0A6))),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+
+  // ── CTA button ────────────────────────────────────────────────────────────
+
+  Widget _ctaButton(BuildContext context) {
+    final isEnterprise = _selected == PlanId.enterprise;
+    final label = isEnterprise ? 'Contact Sales'
+        : (_loading ? 'Opening Stripe…' : 'Pass to Pay');
+
+    return GestureDetector(
+      onTap: _loading ? null : () => _handleCTA(context),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: _loading
+              ? const LinearGradient(
+                  colors: [Color(0xFFBDC3C7), Color(0xFFBDC3C7)])
+              : AppColorPalette.fieldFreshGradient,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: _loading ? [] : [
+            BoxShadow(
+              color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.35),
+              blurRadius: 16, offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Center(
+          child: _loading
+              ? const SizedBox(
+                  width: 22, height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                  ),
+                )
+              : Text(label,
+                  style: AppTextStyles.buttonLarge(color: Colors.white)),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleCTA(BuildContext context) async {
+    // Enterprise → open email
+    if (_selected == PlanId.enterprise) {
+      final uri = Uri.parse(
+          'mailto:sales@fieldly.app?subject=Enterprise%20Plan%20Inquiry');
+      if (await canLaunchUrl(uri)) await launchUrl(uri);
+      return;
+    }
+
+    // Require authentication before creating a Checkout session
+    final auth = context.read<AuthProvider>();
+    if (!auth.isAuthenticated) {
+      final shouldSignIn = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Sign in required'),
+          content: const Text('You need to sign in to start a subscription.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Sign in'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldSignIn == true && context.mounted) {
+        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SignInScreen()));
+      }
+      return;
+    }
+
+    // Show loading dialog
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Opening Stripe Checkout...'),
+          content: const SizedBox(
+            height: 40,
+            child: Center(
+              child: CircularProgressIndicator(),
+            ),
+          ),
+        ),
+      );
+    }
+
+    setState(() => _loading = true);
+    try {
+      // ignore: avoid_print
+      print('[Go Pro] Creating checkout session: plan=$_selected, annual=$_annual');
+      
+      final url = await BillingService.createCheckoutSession(
+        plan:   _selected,
+        annual: _annual,
+        robots: _selectedRobots,
+      );
+
+      // ignore: avoid_print
+      print('[Go Pro] Checkout URL received: $url');
+
+      if (url != null && context.mounted) {
+        final uri = Uri.parse(url);
+        Navigator.of(context).pop(); // Close loading dialog
+        
+        try {
+          // Try to launch in in-app WebView (more reliable on mobile)
+          await launchUrl(uri, mode: LaunchMode.inAppWebView);
+          if (!context.mounted) return;
+          Navigator.of(context).pop(); // Close GoProScreen
+        } catch (e) {
+          // If in-app fails, try external browser
+          print('[Go Pro] In-app launch failed: $e, trying external browser');
+          try {
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+              if (!context.mounted) return;
+              Navigator.of(context).pop(); // Close GoProScreen
+            } else {
+              if (!context.mounted) return;
+              _showErrorDialog(context, 'Could not open Stripe checkout. Please check your internet connection.');
+            }
+          } catch (externalError) {
+            print('[Go Pro] External launch also failed: $externalError');
+            if (!context.mounted) return;
+            _showErrorDialog(context, 'Could not open Stripe checkout: ${externalError.toString()}');
+          }
+        }
+      } else {
+        if (!context.mounted) return;
+        Navigator.of(context).pop(); // Close loading dialog
+        _showErrorDialog(context, 'Failed to create checkout session.');
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('[Go Pro] Error: $e');
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        _showErrorDialog(context, 'Error: ${e.toString()}');
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _showErrorDialog(BuildContext context, String msg) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Something went wrong'),
+        content: Text(msg),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
           ),
         ],
       ),
     );
   }
 
-  // ─── CTA button ────────────────────────────────────────────────────────────
+  // ── Footer links ──────────────────────────────────────────────────────────
 
-  Widget _buildCTA(BuildContext context) {
-    final label = _selected == _PlanId.enterprise
-        ? 'Contact Sales'
-        : 'Start free trial';
+  Widget _footerLinks(BuildContext context) => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _fLink('Privacy Policy'),
+          Text('  ·  ',
+              style: AppTextStyles.bodySmall(color: const Color(0xFFBDC3C7))),
+          _fLink('Terms of Use'),
+          Text('  ·  ',
+              style: AppTextStyles.bodySmall(color: const Color(0xFFBDC3C7))),
+          _fLink('Manage Plan', onTap: () => _openPortal(context)),
+        ],
+      );
 
-    return GestureDetector(
-      onTap: () {
-        // TODO: wire to payment / contact flow
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _selected == _PlanId.enterprise
-                  ? 'Our team will reach out shortly!'
-                  : '14-day free trial started 🎉',
-            ),
-            backgroundColor: AppColorPalette.fieldFreshMid,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-      },
-      child: Container(
-        height: 56,
-        decoration: BoxDecoration(
-          gradient: AppColorPalette.fieldFreshGradient,
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.35),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: AppTextStyles.buttonLarge(color: Colors.white),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _fLink(String label, {VoidCallback? onTap}) => GestureDetector(
+        onTap: onTap,
+        child: Text(label,
+            style: AppTextStyles.bodySmall(color: AppColorPalette.fieldFreshMid)
+                .copyWith(decoration: TextDecoration.underline)),
+      );
 
-  // ─── Footer links ──────────────────────────────────────────────────────────
-
-  Widget _buildFooterLinks(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _footerLink('Privacy Policy'),
-        Text(
-          '  ·  ',
-          style: AppTextStyles.bodySmall(color: const Color(0xFFBDC3C7)),
-        ),
-        _footerLink('Terms of Use'),
-        Text(
-          '  ·  ',
-          style: AppTextStyles.bodySmall(color: const Color(0xFFBDC3C7)),
-        ),
-        _footerLink('Restore'),
-      ],
-    );
-  }
-
-  Widget _footerLink(String label) {
-    return GestureDetector(
-      onTap: () {},
-      child: Text(
-        label,
-        style: AppTextStyles.bodySmall(
-          color: AppColorPalette.fieldFreshMid,
-        ).copyWith(decoration: TextDecoration.underline),
-      ),
-    );
+  Future<void> _openPortal(BuildContext context) async {
+    try {
+      final url = await BillingService.createPortalSession();
+      if (url != null) {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      }
+    } catch (_) {
+      if (context.mounted) {
+        _showErrorDialog(context, 'No active subscription found.');
+      }
+    }
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Plan card widget
+//  _PlanCard
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _PlanCard extends StatelessWidget {
@@ -631,74 +801,54 @@ class _PlanCard extends StatelessWidget {
     required this.onTap,
   });
 
-  String get _displayPrice {
-    if (plan.price == r'Custom') return r'Custom';
-    // Strip $ and parse
-    final raw = double.tryParse(plan.price.replaceAll(r'$', '')) ?? 0;
-    final monthly = annual ? (raw * 0.82).round() : raw.round();
-    return '\$$monthly';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final cardW = (MediaQuery.of(context).size.width - 40 - 30) / 3.4;
+    final cardW = ((MediaQuery.of(context).size.width - 40 - 30) / 3.4)
+        .clamp(90.0, 130.0);
 
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
-        width: cardW.clamp(90.0, 130.0),
+        width: cardW,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           gradient: selected ? AppColorPalette.fieldFreshGradient : null,
-          color: selected ? null : Colors.white,
+          color:    selected ? null : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected
-                ? Colors.transparent
-                : const Color(0xFFEEEAE2),
+            color: selected ? Colors.transparent : const Color(0xFFEEEAE2),
             width: 1.5,
           ),
           boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.3),
-                    blurRadius: 14,
-                    offset: const Offset(0, 5),
-                  )
-                ]
-              : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  )
-                ],
+              ? [BoxShadow(
+                  color: AppColorPalette.fieldFreshStart.withValues(alpha: 0.30),
+                  blurRadius: 14, offset: const Offset(0, 5))]
+              : [BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8, offset: const Offset(0, 2))],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Badge
+            // Badge or spacer
             if (plan.badge != null)
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: selected
                       ? Colors.white.withValues(alpha: 0.25)
                       : AppColorPalette.fieldFreshStart.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
-                  plan.badge!,
-                  style: AppTextStyles.overline(
-                    color: selected
-                        ? Colors.white
-                        : AppColorPalette.fieldFreshMid,
-                  ).copyWith(fontWeight: FontWeight.w700),
-                ),
+                child: Text(plan.badge!,
+                    style: AppTextStyles.overline(
+                      color: selected
+                          ? Colors.white
+                          : AppColorPalette.fieldFreshMid,
+                    ).copyWith(fontWeight: FontWeight.w700)),
               )
             else
               const SizedBox(height: 16),
@@ -707,33 +857,27 @@ class _PlanCard extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _displayPrice,
-                  style: AppTextStyles.h3(
-                    color: selected ? Colors.white : const Color(0xFF1F2933),
-                  ).copyWith(fontWeight: FontWeight.w800),
-                ),
-                if (plan.period.isNotEmpty)
-                  Text(
-                    plan.period,
-                    style: AppTextStyles.bodySmall(
-                      color: selected
-                          ? Colors.white.withValues(alpha: 0.8)
-                          : const Color(0xFF9AA0A6),
-                    ),
-                  ),
+                Text(plan.displayPrice(annual),
+                    style: AppTextStyles.h3(
+                      color: selected ? Colors.white : const Color(0xFF1F2933),
+                    ).copyWith(fontWeight: FontWeight.w800)),
+                if (plan.id != PlanId.enterprise)
+                  Text('/ mo',
+                      style: AppTextStyles.bodySmall(
+                        color: selected
+                            ? Colors.white.withValues(alpha: 0.8)
+                            : const Color(0xFF9AA0A6),
+                      )),
               ],
             ),
 
             // Plan name
-            Text(
-              plan.name,
-              style: AppTextStyles.bodySmall(
-                color: selected
-                    ? Colors.white.withValues(alpha: 0.9)
-                    : const Color(0xFF9AA0A6),
-              ).copyWith(fontWeight: FontWeight.w600),
-            ),
+            Text(plan.name,
+                style: AppTextStyles.bodySmall(
+                  color: selected
+                      ? Colors.white.withValues(alpha: 0.9)
+                      : const Color(0xFF9AA0A6),
+                ).copyWith(fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -742,51 +886,157 @@ class _PlanCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Robot tier chip
+//  _RobotRow  –  one robot tier with quantity stepper
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _RobotTierChip extends StatelessWidget {
-  final String label;
-  final String price;
-  final Color color;
+class _RobotRow extends StatelessWidget {
+  final _RobotOption option;
+  final int quantity;
+  final ValueChanged<int> onChanged;
 
-  const _RobotTierChip({
-    required this.label,
-    required this.price,
-    required this.color,
+  const _RobotRow({
+    required this.option,
+    required this.quantity,
+    required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withValues(alpha: 0.25)),
-        ),
-        child: Column(
-          children: [
-            Text(
-              price,
-              style: AppTextStyles.bodyLarge(
-                color: color,
-                fontWeight: FontWeight.w800,
+    final price = _robotPrices[option.tier] ?? 0;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          // Color dot
+          Container(
+            width: 10, height: 10,
+            decoration: BoxDecoration(
+              color: option.color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Label + description
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(option.tier.label,
+                        style: AppTextStyles.bodyMedium(
+                            color: const Color(0xFF1F2933),
+                            fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 6),
+                    Text('\$$price / mo',
+                        style: AppTextStyles.bodySmall(
+                            color: option.color)
+                            .copyWith(fontWeight: FontWeight.w700)),
+                  ],
+                ),
+                Text(option.description,
+                    style: AppTextStyles.bodySmall(
+                        color: const Color(0xFF9AA0A6))),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Quantity stepper
+          Row(
+            children: [
+              _StepBtn(
+                icon: Icons.remove_rounded,
+                color: option.color,
+                enabled: quantity > 0,
+                onTap: () => onChanged(quantity - 1),
               ),
-            ),
-            Text(
-              label,
-              style: AppTextStyles.bodySmall(color: color)
-                  .copyWith(fontWeight: FontWeight.w600),
-            ),
-            Text(
-              '/ robot / mo',
-              style: AppTextStyles.overline(color: color.withValues(alpha: 0.7)),
-            ),
-          ],
-        ),
+              SizedBox(
+                width: 28,
+                child: Center(
+                  child: Text('$quantity',
+                      style: AppTextStyles.bodyMedium(
+                          color: const Color(0xFF1F2933),
+                          fontWeight: FontWeight.w700)),
+                ),
+              ),
+              _StepBtn(
+                icon: Icons.add_rounded,
+                color: option.color,
+                enabled: true,
+                onTap: () => onChanged(quantity + 1),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
+}
+
+class _StepBtn extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _StepBtn({
+    required this.icon,
+    required this.color,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 28, height: 28,
+        decoration: BoxDecoration(
+          color: enabled
+              ? color.withValues(alpha: 0.12)
+              : const Color(0xFFEEEAE2),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: enabled
+                ? color.withValues(alpha: 0.3)
+                : const Color(0xFFDDD9D0),
+          ),
+        ),
+        child: Icon(icon,
+            size: 16,
+            color: enabled ? color : const Color(0xFFBDC3C7)),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  _SummaryRow
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SummaryRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _SummaryRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label,
+                style: AppTextStyles.bodyMedium(
+                    color: const Color(0xFF1F2933))),
+            Text(value,
+                style: AppTextStyles.bodyMedium(
+                    color: AppColorPalette.fieldFreshMid,
+                    fontWeight: FontWeight.w700)),
+          ],
+        ),
+      );
 }
