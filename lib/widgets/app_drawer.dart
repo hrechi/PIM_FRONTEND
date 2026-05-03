@@ -7,8 +7,9 @@ import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 
 // Top-level / Account
+import '../screens/go_pro_screen.dart';
 import '../screens/home_screen.dart';
-import '../screens/farmer_home_screen_v2.dart';
+import '../screens/worker_home_improved.dart';
 import '../screens/profile_screen.dart';
 import '../screens/signin_screen.dart';
 
@@ -409,12 +410,7 @@ class _AppDrawerState extends State<AppDrawer>
             child: ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ProfileScreen(),
-                  ),
-                );
+                showGoProSheet(context);
               },
               icon: const Icon(Icons.workspace_premium_rounded, size: 18),
               label: const Text('Go Pro'),
@@ -698,7 +694,7 @@ class _AppDrawerState extends State<AppDrawer>
             _DrawerItem(
               icon: Icons.home_outlined,
               title: 'Home',
-              builder: (_) => const FarmerHomeScreenV2(),
+              builder: (_) => const WorkerHomeImproved(),
             ),
           ],
           categories: const [
