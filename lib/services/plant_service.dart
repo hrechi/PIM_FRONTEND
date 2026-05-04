@@ -4,13 +4,11 @@ import 'package:http/http.dart' as http;
 import '../utils/constants.dart';
 
 class PlantService {
-
-  // Uses the same server host as the rest of the app
-  // For Plant Doctor AI service (runs on port 8012)
-  static String get baseUrl => 'http://${AppConfig.serverHost}:${AppConfig.plantDoctorPort}';
-  @deprecated
-  static const String baseUrl = 'http://process.env.API_BASE_URL:8000'; // Deprecated - use getter above
-
+  // 🚨 REPLACE THIS WITH YOUR MAC'S IP ADDRESS 🚨
+  // Run 'ifconfig' (Mac) or 'ipconfig' (Windows) in terminal to find it.
+  // Example: http://192.168.100.9:8000
+  // Update this line:
+  static const String baseUrl = 'http://192.168.100.9:8000';
   static Future<Map<String, dynamic>> scanPlant(File imageFile) async {
     try {
       var request = http.MultipartRequest(
