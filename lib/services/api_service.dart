@@ -22,12 +22,12 @@ class ApiService {
       final isEmulator = host == 'localhost' || host == '127.0.0.1';
 
       return isEmulator
-          ? 'http://192.168.1.146:$port/api'
+          ? 'http://192.168.100.9:$port/api'
           : 'http://$host:$port/api';
     }
     // iOS simulator can use localhost; real iPhone uses WiFi IP
     if (host == 'localhost' || host == '127.0.0.1') {
-      return 'http://192.168.1.146:$port/api';
+      return 'http://192.168.100.9:$port/api';
     }
 
     return 'http://$host:$port/api';
@@ -40,10 +40,10 @@ class ApiService {
     if (kIsWeb) return 'http://$host:$port';
     if (Platform.isAndroid) {
       final isEmulator = host == 'localhost' || host == '127.0.0.1';
-      return isEmulator ? 'http://192.168.1.146:$port' : 'http://$host:$port';
+      return isEmulator ? 'http://192.168.100.9:$port' : 'http://$host:$port';
     }
     if (host == 'localhost' || host == '127.0.0.1')
-      return 'http://192.168.1.146:$port';
+      return 'http://192.168.100.9:$port';
     return 'http://$host:$port';
   }
 
