@@ -9,6 +9,10 @@ class AppConfig {
   static const int serverPort = 3000;
   static const int plantDoctorPort = 8012;
 
+  /// Custom URL scheme used for deep links back into the mobile app
+  /// (e.g. Stripe billing return: `fieldly://billing-return?session_id=...`).
+  static const String appScheme = 'fieldly';
+
   /// Public catalogue share URL — used for share links sent to buyers.
   /// Points to the backend public endpoint (no auth required).
   static String publicCatalogueUrl(String token) =>

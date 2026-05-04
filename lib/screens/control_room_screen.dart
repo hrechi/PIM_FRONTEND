@@ -284,6 +284,15 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
   Future<void> _emergencyStop() async {
     _joyTicker?.cancel();
     _joyTicker = null;
+
+    // 1) Cancel any autonomous explore loop FIRST so it can't keep re-issuing
+    //    drive commands after our zero-twist lands.
+    final voiceCtrl = RobotVoiceController.instance;
+    final wasExploring = _exploring;
+    try {
+      await voiceCtrl.stopExplore();
+    } catch (_) {}
+
     final robot = _robot;
     // Triple-tap stop in case a single Twist gets dropped on a flaky link.
     for (var i = 0; i < 3; i++) {
@@ -302,7 +311,11 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
     setState(() {
       _speed = 0;
       _joystickOffset = Offset.zero;
+      _exploring = false;
       _direction = 'Emergency stop';
+      if (wasExploring) {
+        _appendEvent('Auto-explore disabled by emergency stop', AppColorPalette.alertError);
+      }
       _appendEvent('Emergency stop executed', AppColorPalette.alertError);
     });
   }

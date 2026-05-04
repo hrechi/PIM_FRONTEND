@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/app_rating.dart';
 import '../providers/rating_provider.dart';
+import '../services/api_service.dart';
 import '../utils/responsive.dart';
 
 /// Continuous auto-scrolling horizontal marquee of rating cards.
@@ -285,17 +286,29 @@ class _Avatar extends StatelessWidget {
 
   const _Avatar({required this.name, this.avatarUrl, required this.radius});
 
+  /// Backend returns relative paths like `/uploads/...` for `profilePicture`.
+  /// `NetworkImage` needs a fully-qualified URL — prepend the API base.
+  String? _resolvedUrl() {
+    final raw = avatarUrl;
+    if (raw == null || raw.isEmpty) return null;
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+    final base = ApiService.mediaBaseUrl;
+    return raw.startsWith('/') ? '$base$raw' : '$base/$raw';
+  }
+
   @override
   Widget build(BuildContext context) {
     final initials = name.isNotEmpty
-        ? name.trim().split(' ').map((w) => w[0]).take(2).join().toUpperCase()
+        ? name.trim().split(' ').map((w) => w.isNotEmpty ? w[0] : '').take(2).join().toUpperCase()
         : '?';
 
-    if (avatarUrl != null && avatarUrl!.isNotEmpty) {
+    final resolved = _resolvedUrl();
+    if (resolved != null) {
       return CircleAvatar(
         radius: radius,
-        backgroundImage: NetworkImage(avatarUrl!),
+        backgroundImage: NetworkImage(resolved),
         backgroundColor: const Color(0xFF309448),
+        onBackgroundImageError: (_, __) {},
       );
     }
 
