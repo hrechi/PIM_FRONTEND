@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../models/catalogue_models.dart';
-import '../providers/catalogue_provider.dart';
-import '../widgets/animal_catalogue_card.dart';
-import '../catalogue/catalogue_export_screen.dart';
+import '../../models/catalogue_models.dart';
+import '../../providers/catalogue_provider.dart';
+import '../../widgets/animal_catalogue_card.dart';
+import 'catalogue_export_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Palette

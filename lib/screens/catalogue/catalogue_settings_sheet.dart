@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/catalogue_models.dart';
+import '../../models/catalogue_models.dart';
 
 class CatalogueSettingsSheet extends StatefulWidget {
   final CatalogueSettings initialSettings;

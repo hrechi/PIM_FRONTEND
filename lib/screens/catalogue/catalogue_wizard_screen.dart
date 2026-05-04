@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/catalogue_provider.dart';
-import '../models/catalogue_models.dart';
-import '../models/animal.dart';
-import '../widgets/animal_catalogue_card.dart';
-import '../utils/currency_converter.dart';
+import '../../providers/catalogue_provider.dart';
+import '../../models/catalogue_models.dart';
+import '../../models/animal.dart';
+import '../../widgets/animal_catalogue_card.dart';
+import '../../utils/currency_converter.dart';
 import '../animal_selector_screen.dart';
-import '../catalogue/catalogue_preview_screen.dart';
+import 'catalogue_preview_screen.dart';
 
 class CatalogueWizardScreen extends StatefulWidget {
   final SaleCatalogue? catalogue;
@@ -53,7 +53,7 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
     _saleDate = catalogue.saleDate;
     _currency = catalogue.currency;
     _showPrices = catalogue.showPrices;
-    _settings = catalogue.settings ?? CatalogueSettings.defaultSettings();
+    _settings = catalogue.settings;
     _selectedAnimals = catalogue.animals
         .where((ca) => ca.animal != null)
         .map((ca) => ca.animal!)
