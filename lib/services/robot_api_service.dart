@@ -46,6 +46,40 @@ extension RobotCommandName on RobotCommand {
   String get wireName => name; // matches the DTO's lowercase enum values
 }
 
+/// Metadata for a saved occupancy-grid snapshot persisted on the backend.
+class RobotMapMetadata {
+  const RobotMapMetadata({
+    required this.id,
+    required this.robotId,
+    required this.resolution,
+    required this.cols,
+    required this.rows,
+    required this.createdAt,
+    this.label,
+  });
+
+  final String id;
+  final String robotId;
+  final double resolution;
+  final int cols;
+  final int rows;
+  final DateTime createdAt;
+  final String? label;
+
+  factory RobotMapMetadata.fromJson(Map<String, dynamic> json) {
+    return RobotMapMetadata(
+      id: json['id'] as String,
+      robotId: json['robotId'] as String,
+      resolution: (json['resolution'] as num).toDouble(),
+      cols: (json['cols'] as num).toInt(),
+      rows: (json['rows'] as num).toInt(),
+      label: json['label'] as String?,
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+          DateTime.now(),
+    );
+  }
+}
+
 /// Talks to the NestJS backend for robot registry + audit logging.
 ///
 /// Reuses the existing [ApiService] for base URL + JWT retrieval so we don't
@@ -133,6 +167,75 @@ class RobotApiService {
 
   void dispose() {
     _client.close();
+  }
+
+  /// `POST /api/robots/:id/maps` — persist a map snapshot (PNG) on the
+  /// backend so it survives across sessions and devices.
+  Future<Map<String, dynamic>> saveMap({
+    required String robotId,
+    required Uint8List pngBytes,
+    required double resolutionMeters,
+    required int cols,
+    required int rows,
+    String? label,
+  }) async {
+    final uri = Uri.parse('${ApiService.baseUrl}/robots/$robotId/maps');
+    final body = json.encode({
+      'pngBase64': base64.encode(pngBytes),
+      'resolution': resolutionMeters,
+      'cols': cols,
+      'rows': rows,
+      if (label != null) 'label': label,
+    });
+    final res = await _client.post(
+      uri,
+      headers: await _headers(),
+      body: body,
+    );
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw RobotApiException(
+        'POST /robots/$robotId/maps failed (${res.statusCode}): ${res.body}',
+      );
+    }
+    return json.decode(res.body) as Map<String, dynamic>;
+  }
+
+  /// `GET /api/robots/:id/maps` — returns metadata for every saved map.
+  Future<List<RobotMapMetadata>> listMaps(String robotId) async {
+    final uri = Uri.parse('${ApiService.baseUrl}/robots/$robotId/maps');
+    final res = await _client.get(uri, headers: await _headers());
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw RobotApiException(
+        'GET /robots/$robotId/maps failed (${res.statusCode}): ${res.body}',
+      );
+    }
+    final decoded = json.decode(res.body);
+    if (decoded is! List) {
+      throw RobotApiException(
+        'GET /robots/$robotId/maps returned unexpected payload',
+      );
+    }
+    return decoded
+        .cast<Map<String, dynamic>>()
+        .map(RobotMapMetadata.fromJson)
+        .toList(growable: false);
+  }
+
+  /// `GET /api/robots/:id/maps/:mapId/png` — returns the raw PNG bytes for
+  /// a single saved map.
+  Future<Uint8List> fetchMapPng({
+    required String robotId,
+    required String mapId,
+  }) async {
+    final uri =
+        Uri.parse('${ApiService.baseUrl}/robots/$robotId/maps/$mapId/png');
+    final res = await _client.get(uri, headers: await _headers());
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw RobotApiException(
+        'GET map PNG failed (${res.statusCode}): ${res.body}',
+      );
+    }
+    return res.bodyBytes;
   }
 
   /// Grab a single JPEG frame from the robot's `web_video_server` and write

@@ -31,8 +31,20 @@ class RobotVoiceController {
   Timer? _pulseTicker;
   Timer? _pulseTimeout;
 
+  // Autonomous explore state machine.
+  Timer? _exploreTicker;
+  StreamSubscription<RobotLaserScan>? _exploreScanSub;
+  _ExploreState? _exploreState;
+  DateTime _exploreStateEnteredAt = DateTime.now();
+  static const double _exploreLinear = 0.15;
+  static const double _exploreAngular = 0.9;
+  static const double _exploreSafetyDistance = 0.45;
+  static const double _exploreConeRad = 0.5; // ~28°
+
   RobotDescriptor? get activeRobot => _robot;
   bool get isConnected => _svc?.isConnected ?? false;
+  RobotService? get service => _svc;
+  bool get isExploring => _exploreState != null;
 
   /// Bring up (or reuse) a connection. Returns `true` once the rosbridge
   /// link is established. Returns `false` if no robot is registered or the
@@ -187,6 +199,7 @@ class RobotVoiceController {
   /// Hard stop — cancels any in-flight pulse and triple-publishes a zero
   /// Twist (matching the Control Room emergency stop behaviour).
   Future<bool> emergencyStop() async {
+    _stopExplore();
     _cancelPulse();
     final svc = _svc;
     if (svc == null) return false;
@@ -239,9 +252,97 @@ class RobotVoiceController {
     _pulseTimeout = null;
   }
 
+  // ---------------------------------------------------------------------
+  // Autonomous explore mode
+  // ---------------------------------------------------------------------
+
+  /// Begin the autonomous wander loop. Returns false if no robot is
+  /// connected.
+  Future<bool> startExplore() async {
+    final ok = await ensureConnected();
+    if (!ok) return false;
+    final svc = _svc!;
+    _cancelPulse();
+    _stopExplore();
+    _exploreState = _ExploreState.wandering;
+    _exploreStateEnteredAt = DateTime.now();
+    _exploreScanSub = svc.scanStream.listen(_onExploreScan);
+    _exploreTicker =
+        Timer.periodic(const Duration(milliseconds: 100), (_) => _tickExplore());
+    return true;
+  }
+
+  /// Stop the autonomous wander loop. Idempotent.
+  Future<void> stopExplore() async {
+    _stopExplore();
+    final svc = _svc;
+    if (svc != null) {
+      try {
+        await svc.stop();
+      } catch (_) {}
+    }
+  }
+
+  void _stopExplore() {
+    _exploreTicker?.cancel();
+    _exploreTicker = null;
+    _exploreScanSub?.cancel();
+    _exploreScanSub = null;
+    _exploreState = null;
+  }
+
+  void _onExploreScan(RobotLaserScan scan) {
+    if (_exploreState != _ExploreState.wandering) return;
+    final closest = scan.minRangeInCone(_exploreConeRad);
+    if (closest != null && closest < _exploreSafetyDistance) {
+      _enterExploreState(_ExploreState.backingOff);
+    }
+  }
+
+  void _enterExploreState(_ExploreState s) {
+    _exploreState = s;
+    _exploreStateEnteredAt = DateTime.now();
+  }
+
+  void _tickExplore() {
+    final svc = _svc;
+    final state = _exploreState;
+    if (svc == null || state == null) return;
+    final now = DateTime.now();
+    final elapsed = now.difference(_exploreStateEnteredAt);
+    switch (state) {
+      case _ExploreState.wandering:
+        // Cruise forward; the scan listener flips us to backingOff on
+        // obstacles. Add a tiny random yaw bias so we don't lock onto walls.
+        svc.drive(linear: _exploreLinear, angular: 0);
+        break;
+      case _ExploreState.backingOff:
+        if (elapsed >= const Duration(milliseconds: 700)) {
+          // Random turn direction to avoid getting stuck in corners.
+          _turnDir = _turnDir == 1 ? -1 : 1;
+          _enterExploreState(_ExploreState.turning);
+        } else {
+          svc.drive(linear: -_exploreLinear, angular: 0);
+        }
+        break;
+      case _ExploreState.turning:
+        if (elapsed >= const Duration(milliseconds: 1100)) {
+          // Clear safety latch (we backed away) and resume wandering.
+          svc.clearSafetyLatch();
+          _enterExploreState(_ExploreState.wandering);
+        } else {
+          svc.drive(linear: 0, angular: _exploreAngular * _turnDir);
+        }
+        break;
+    }
+  }
+
+  int _turnDir = 1;
+
   /// Tear down the underlying connection. Called only when the user logs out
   /// or the app exits — voice commands should keep the link warm otherwise.
   Future<void> shutdown() async {
+    _stopExplore();
     _cancelPulse();
     final svc = _svc;
     _svc = null;
@@ -253,3 +354,5 @@ class RobotVoiceController {
     }
   }
 }
+
+enum _ExploreState { wandering, backingOff, turning }

@@ -356,6 +356,11 @@ class GlobalVoiceController with ChangeNotifier {
         final dir = meters >= 0 ? 'forward' : 'backward';
         successMessage = 'Driving $dir for $cm centimeters.';
         break;
+      case RobotVoiceAction.explore:
+        ok = await controller.startExplore();
+        successMessage =
+            'Starting autonomous exploration. Say stop to cancel.';
+        break;
       case RobotVoiceAction.stop:
         // handled above
         return;
