@@ -548,6 +548,12 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
         final dir = meters >= 0 ? 'forward' : 'backward';
         spoken = 'Driving $dir for $cm centimeters.';
         break;
+      case RobotVoiceAction.explore:
+        dispatched = await controller.startExplore();
+        spoken = dispatched
+            ? 'Starting autonomous exploration. Say stop to cancel.'
+            : 'I could not start exploration.';
+        break;
       case RobotVoiceAction.stop:
         // handled above
         break;

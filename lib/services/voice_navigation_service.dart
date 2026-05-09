@@ -39,7 +39,7 @@ enum VoiceCommandType {
 }
 
 /// Discrete robot motion intents recognised by the voice layer.
-enum RobotVoiceAction { forward, backward, left, right, stop, distance }
+enum RobotVoiceAction { forward, backward, left, right, stop, distance, explore }
 
 enum VoicePage {
   home,
@@ -400,6 +400,24 @@ class VoiceNavigationService {
     '\u064a\u0645\u064a\u0646',
   ];
 
+  static const List<String> _explorePhrases = <String>[
+    'start exploring',
+    'explore the area',
+    'explore area',
+    'auto pilot',
+    'autopilot',
+    'autonomous mode',
+    'wander around',
+    'patrol the area',
+    'patrol',
+    'explorer la zone',
+    'mode autonome',
+    'pilote automatique',
+    'patrouille',
+    '\u0627\u0633\u062a\u0643\u0634\u0641',
+    '\u0627\u0633\u062a\u0643\u0634\u0641 \u0627\u0644\u0645\u0646\u0637\u0642\u0629',
+  ];
+
   /// Match any of [phrases] as a word-start occurrence inside [normalized].
   /// Allows trailing letters/punctuation so 'forward' also matches 'forwards'
   /// and 'forward.' / 'forward!' (common with STT output).
@@ -445,6 +463,13 @@ class VoiceNavigationService {
       return const VoiceCommandResult(
         type: VoiceCommandType.robotCommand,
         robotAction: RobotVoiceAction.stop,
+      );
+    }
+
+    if (_containsPhrase(normalized, _explorePhrases)) {
+      return const VoiceCommandResult(
+        type: VoiceCommandType.robotCommand,
+        robotAction: RobotVoiceAction.explore,
       );
     }
 

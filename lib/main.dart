@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
+<<<<<<< HEAD
 import 'package:flutter_localizations/flutter_localizations.dart';
+=======
+import 'dart:async';
+>>>>>>> 1295c58cbbf82bfdc67e944527ac70954e4ecd69
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:app_links/app_links.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/parcel_provider.dart';
@@ -19,12 +24,17 @@ import 'providers/catalogue_provider.dart';
 import 'providers/voice_access_mode_provider.dart';
 import 'providers/global_voice_controller.dart';
 import 'providers/asset_provider.dart';
+<<<<<<< HEAD
 import 'providers/locale_provider.dart';
 import 'providers/animal_health_provider.dart';
 import 'l10n/app_localizations.dart';
+=======
+import 'providers/rating_provider.dart';
+>>>>>>> 1295c58cbbf82bfdc67e944527ac70954e4ecd69
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/billing_return_screen.dart';
 import 'screens/farmer_home_screen_v2.dart';
 import 'screens/asset_list_screen.dart';
 import 'screens/control_room_screen.dart';
@@ -37,6 +47,7 @@ import 'screens/soil/soil_alert_notifications_screen.dart';
 import 'services/local_notification_service.dart';
 import 'widgets/global_voice_fab.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'utils/constants.dart';
 
 /// Global navigator key — used for navigating from notification callbacks
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -120,10 +131,20 @@ class FieldlyApp extends StatefulWidget {
 }
 
 class _FieldlyAppState extends State<FieldlyApp> {
+  final AppLinks _appLinks = AppLinks();
+  StreamSubscription<Uri>? _deepLinkSubscription;
+
   @override
   void initState() {
     super.initState();
     _setupNotificationNavigation();
+    _setupDeepLinks();
+  }
+
+  @override
+  void dispose() {
+    _deepLinkSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _setupNotificationNavigation() async {
@@ -147,6 +168,41 @@ class _FieldlyAppState extends State<FieldlyApp> {
     FirebaseMessaging.onMessage.listen((message) {
       LocalNotificationService.showFromRemoteMessage(message);
     });
+  }
+
+  Future<void> _setupDeepLinks() async {
+    if (kIsWeb) {
+      return;
+    }
+
+    try {
+      final initialUri = await _appLinks.getInitialLink();
+      if (initialUri != null) {
+        _handleIncomingDeepLink(initialUri);
+      }
+    } catch (_) {}
+
+    _deepLinkSubscription = _appLinks.uriLinkStream.listen(
+      _handleIncomingDeepLink,
+      onError: (_) {},
+    );
+  }
+
+  void _handleIncomingDeepLink(Uri uri) {
+    if (uri.scheme != AppConfig.appScheme) {
+      return;
+    }
+
+    if (uri.host == 'billing-return' || uri.path == '/billing-return') {
+      final sessionId = uri.queryParameters['session_id'];
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        navigatorKey.currentState?.pushNamedAndRemoveUntil(
+          '/billing-return',
+          (route) => false,
+          arguments: {'sessionId': sessionId},
+        );
+      });
+    }
   }
 
   @override
@@ -173,8 +229,18 @@ class _FieldlyAppState extends State<FieldlyApp> {
           ),
         ),
         ChangeNotifierProvider(create: (_) => AssetProvider()),
+<<<<<<< HEAD
         ChangeNotifierProvider(create: (_) => LocaleProvider()..load()),
         ChangeNotifierProvider(create: (_) => AnimalHealthProvider()),
+=======
+        ChangeNotifierProvider(
+          create: (_) {
+            final p = RatingProvider();
+            p.init(); // start fetching + polling immediately
+            return p;
+          },
+        ),
+>>>>>>> 1295c58cbbf82bfdc67e944527ac70954e4ecd69
       ],
       child: Consumer<LocaleProvider>(
         builder: (context, localeProvider, _) => MaterialApp(
@@ -209,6 +275,11 @@ class _FieldlyAppState extends State<FieldlyApp> {
           );
         },
         routes: {
+          '/billing-return': (context) {
+            final args = ModalRoute.of(context)?.settings.arguments;
+            final sessionId = args is Map ? args['sessionId']?.toString() : null;
+            return BillingReturnScreen(sessionId: sessionId);
+          },
           '/owner_dashboard': (context) => const HomeScreen(),
           '/worker_home': (context) => const FarmerHomeScreenV2(),
           '/farmer_home': (context) => const FarmerHomeScreenV2(),

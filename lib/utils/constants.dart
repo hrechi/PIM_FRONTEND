@@ -5,9 +5,17 @@ import 'package:flutter/material.dart';
 // physical device. Run `ipconfig` (Windows) or `ifconfig` (Mac/Linux)
 // and use the IPv4 address from your WiFi adapter.
 class AppConfig {
+<<<<<<< HEAD
   static const String serverHost = 'localhost'; // use localhost when running on PC; use WiFi IP (e.g. 192.168.0.148) for physical devices
+=======
+  static const String serverHost = '192.168.1.151'; // your PC's WiFi IP
+>>>>>>> 1295c58cbbf82bfdc67e944527ac70954e4ecd69
   static const int serverPort = 3000;
   static const int plantDoctorPort = 8012;
+
+  /// Custom URL scheme used for deep links back into the mobile app
+  /// (e.g. Stripe billing return: `fieldly://billing-return?session_id=...`).
+  static const String appScheme = 'fieldly';
 
   /// Public catalogue share URL — used for share links sent to buyers.
   /// Points to the backend public endpoint (no auth required).

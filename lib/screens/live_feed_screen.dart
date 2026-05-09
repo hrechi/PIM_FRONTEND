@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -31,6 +32,10 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
   int _fps = 0;
   int _frameCount = 0;
   DateTime _lastFpsUpdate = DateTime.now();
+
+  // Robot on-board speaker controller
+  final RobotAudioController _robotAudio = RobotAudioController();
+  bool _robotAudioBusy = false;
 
   /// Single-frame JPEG endpoint served by Flask
   String get _snapshotUrl => 'http://${AppConfig.serverHost}:5050/snapshot';
@@ -164,6 +169,17 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
             },
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _robotAudioBusy ? null : _toggleRobotWarning,
+        backgroundColor: _robotAudio.isPlaying ? Colors.red : Colors.deepPurple,
+        foregroundColor: Colors.white,
+        icon: Icon(
+          _robotAudio.isPlaying
+              ? Icons.stop_circle_outlined
+              : Icons.campaign_rounded,
+        ),
+        label: Text(_robotAudio.isPlaying ? 'Stop Warning' : 'Warning'),
       ),
       body: Column(
         children: [
@@ -328,5 +344,72 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
         ],
       ),
     );
+  }
+
+  // ── Robot warning audio ───────────────────────────────────
+
+  Future<void> _toggleRobotWarning() async {
+    if (_robotAudioBusy) return;
+    setState(() => _robotAudioBusy = true);
+    final wasPlaying = _robotAudio.isPlaying;
+    try {
+      await _robotAudio.toggleAudio('warning warning');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 2),
+          backgroundColor:
+              _robotAudio.isPlaying ? Colors.red : Colors.deepPurple,
+          content: Text(
+            _robotAudio.isPlaying
+                ? 'Robot warning playing…'
+                : 'Robot warning stopped',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          content: Text(
+            wasPlaying
+                ? 'Failed to stop robot audio: $e'
+                : 'Failed to play robot audio: $e',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _robotAudioBusy = false);
+    }
+  }
+}
+
+/// Sends play/stop commands to the robot's on-board audio service
+/// (Flask endpoint exposed on the robot at port 5001).
+class RobotAudioController {
+  RobotAudioController({this.robotIP = '192.168.1.101', this.port = 5001});
+
+  final String robotIP;
+  final int port;
+  bool isPlaying = false;
+
+  Future<void> toggleAudio(String text) async {
+    try {
+      if (isPlaying) {
+        await http.post(Uri.parse('http://$robotIP:$port/audio/stop'));
+        isPlaying = false;
+      } else {
+        await http.post(
+          Uri.parse('http://$robotIP:$port/audio/play'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'text': text}),
+        );
+        isPlaying = true;
+      }
+    } catch (e) {
+      debugPrint('RobotAudioController error: $e');
+      rethrow;
+    }
   }
 }

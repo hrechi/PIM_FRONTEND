@@ -54,6 +54,18 @@ class AssetProvider with ChangeNotifier {
           .toList();
       _assets = list;
 
+        // Keep worker/farmer session state in sync with server truth so UI can
+        // correctly reflect IN_USE after refresh/relogin.
+        final activeAsset = list.cast<AssetItem?>().firstWhere(
+          (asset) =>
+            asset != null &&
+            asset.status == 'IN_USE' &&
+            asset.activeSession != null,
+          orElse: () => null,
+          );
+        _activeUsageSession = activeAsset?.activeSession;
+        _activeAssetId = activeAsset?.id;
+
       for (final asset in list) {
         try {
           await fetchPredictiveMaintenance(asset.id, notify: false);

@@ -20,7 +20,7 @@ class ApiService {
     if (Platform.isAndroid) {
       final isEmulator = host == 'localhost' || host == '127.0.0.1';
       return isEmulator
-          ? 'http://$host:$port/api'
+          ? 'http://10.0.2.2:$port/api'
           : 'http://$host:$port/api';
     }
     return 'http://$host:$port/api';
@@ -32,7 +32,10 @@ class ApiService {
     final port = AppConfig.serverPort;
 
     if (kIsWeb) return 'http://$host:$port';
-    if (Platform.isAndroid) return 'http://$host:$port';
+    if (Platform.isAndroid) {
+      final isEmulator = host == 'localhost' || host == '127.0.0.1';
+      return isEmulator ? 'http://10.0.2.2:$port' : 'http://$host:$port';
+    }
     return 'http://$host:$port';
   }
 

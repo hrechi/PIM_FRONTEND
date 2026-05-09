@@ -5,7 +5,10 @@ import '../../models/catalogue_models.dart';
 import '../../models/animal.dart';
 import '../../widgets/animal_catalogue_card.dart';
 import '../../utils/currency_converter.dart';
+<<<<<<< HEAD
 import '../../l10n/l10n_extensions.dart';
+=======
+>>>>>>> 1295c58cbbf82bfdc67e944527ac70954e4ecd69
 import '../animal_selector_screen.dart';
 import 'catalogue_preview_screen.dart';
 
@@ -54,7 +57,7 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
     _saleDate = catalogue.saleDate;
     _currency = catalogue.currency;
     _showPrices = catalogue.showPrices;
-    _settings = catalogue.settings ?? CatalogueSettings.defaultSettings();
+    _settings = catalogue.settings;
     _selectedAnimals = catalogue.animals
         .where((ca) => ca.animal != null)
         .map((ca) => ca.animal!)

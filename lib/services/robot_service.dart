@@ -7,6 +7,49 @@ import 'package:roslibdart/roslibdart.dart';
 /// Connection state of the underlying rosbridge WebSocket.
 enum RobotConnectionState { disconnected, connecting, connected }
 
+/// Single 360° (or partial-arc) laser scan from `sensor_msgs/LaserScan`.
+@immutable
+class RobotLaserScan {
+  const RobotLaserScan({
+    required this.ranges,
+    required this.angleMin,
+    required this.angleMax,
+    required this.angleIncrement,
+    required this.rangeMin,
+    required this.rangeMax,
+    required this.timestamp,
+  });
+
+  /// Distances in metres. NaN/Inf means "no return". Length matches the
+  /// number of beams the sensor reported.
+  final List<double> ranges;
+  final double angleMin; // rad
+  final double angleMax; // rad
+  final double angleIncrement; // rad per beam
+  final double rangeMin; // m
+  final double rangeMax; // m
+  final DateTime timestamp;
+
+  int get beamCount => ranges.length;
+
+  /// Smallest valid range inside the forward cone of half-width [coneRad].
+  /// Returns null if no beam in the cone is valid (between rangeMin/Max).
+  double? minRangeInCone(double coneRad) {
+    double? best;
+    for (var i = 0; i < ranges.length; i++) {
+      final angle = angleMin + i * angleIncrement;
+      // Normalise to (-pi, pi].
+      final a = math.atan2(math.sin(angle), math.cos(angle));
+      if (a.abs() > coneRad) continue;
+      final r = ranges[i];
+      if (!r.isFinite) continue;
+      if (r < rangeMin || r > rangeMax) continue;
+      if (best == null || r < best) best = r;
+    }
+    return best;
+  }
+}
+
 /// Snapshot of the latest telemetry pulled off rosbridge.
 @immutable
 class RobotTelemetry {
@@ -83,8 +126,11 @@ class RobotService {
     this.odomTopic = '/odom',
     this.voltageTopic = '/voltage',
     this.batteryStateTopic = '/battery_state',
+    this.scanTopic = '/scan',
     this.batteryFullVolts = 12.6,
     this.batteryEmptyVolts = 9.5,
+    this.safetyStopDistance = 0.30,
+    this.safetyConeRad = math.pi / 6, // ±30°
   });
 
   final String robotIp;
@@ -93,14 +139,22 @@ class RobotService {
   final String odomTopic;
   final String voltageTopic;
   final String batteryStateTopic;
+  final String scanTopic;
   final double batteryFullVolts;
   final double batteryEmptyVolts;
+
+  /// Trigger an automatic stop when any beam in the forward cone is closer
+  /// than this many metres for [_safetyStopRequiredHits] consecutive scans.
+  final double safetyStopDistance;
+  final double safetyConeRad;
+  static const int _safetyStopRequiredHits = 2;
 
   Ros? _ros;
   Topic? _cmdVel;
   Topic? _odom;
   Topic? _voltage;
   Topic? _batteryState;
+  Topic? _scan;
   Timer? _signalTimer;
   bool _loggedFirstOdom = false;
   bool _loggedFirstBattery = false;
@@ -113,14 +167,33 @@ class RobotService {
       StreamController<RobotConnectionState>.broadcast();
   final StreamController<RobotTelemetry> _telemetryCtrl =
       StreamController<RobotTelemetry>.broadcast();
+  final StreamController<RobotLaserScan> _scanCtrl =
+      StreamController<RobotLaserScan>.broadcast();
+  final StreamController<RobotSafetyEvent> _safetyCtrl =
+      StreamController<RobotSafetyEvent>.broadcast();
   RobotConnectionState _state = RobotConnectionState.disconnected;
   RobotTelemetry _telemetry = const RobotTelemetry();
+  RobotLaserScan? _lastScan;
+  int _safetyHitStreak = 0;
+  double _lastCommandedLinear = 0;
+  double _lastCommandedAngular = 0;
+  bool _safetyTripped = false;
+  bool _loggedFirstScan = false;
 
   /// Live stream of connection state changes.
   Stream<RobotConnectionState> get connectionState => _stateCtrl.stream;
 
   /// Live telemetry stream (battery, odom-derived speed/heading, signal).
   Stream<RobotTelemetry> get telemetryStream => _telemetryCtrl.stream;
+
+  /// Live `sensor_msgs/LaserScan` stream.
+  Stream<RobotLaserScan> get scanStream => _scanCtrl.stream;
+
+  /// Fires when the forward-cone safety monitor stops the robot.
+  Stream<RobotSafetyEvent> get safetyStream => _safetyCtrl.stream;
+
+  /// Most recent scan (null until the first packet arrives).
+  RobotLaserScan? get lastScan => _lastScan;
 
   /// Last known telemetry snapshot.
   RobotTelemetry get currentTelemetry => _telemetry;
@@ -203,11 +276,23 @@ class RobotService {
       );
       unawaited(batteryState.subscribe(_handleBatteryState));
 
+      final scan = Topic(
+        ros: ros,
+        name: scanTopic,
+        type: 'sensor_msgs/LaserScan',
+        reconnectOnClose: true,
+        queueLength: 1,
+        queueSize: 1,
+        throttleRate: 100, // 10 Hz is plenty for radar UI + safety.
+      );
+      unawaited(scan.subscribe(_handleScan));
+
       _ros = ros;
       _cmdVel = cmdVel;
       _odom = odom;
       _voltage = voltage;
       _batteryState = batteryState;
+      _scan = scan;
       _startSignalTimer();
       _emit(RobotConnectionState.connected);
     } catch (e, st) {
@@ -385,7 +470,11 @@ class RobotService {
     _odom = null;
     _voltage = null;
     _batteryState = null;
+    _scan = null;
     _ros = null;
+    _safetyHitStreak = 0;
+    _safetyTripped = false;
+    _loggedFirstScan = false;
     _signalTimer?.cancel();
     _signalTimer = null;
     _loggedFirstOdom = false;
@@ -419,6 +508,21 @@ class RobotService {
   }) async {
     final topic = _cmdVel;
     if (topic == null || !isConnected) return;
+    // Block forward motion while the safety monitor has tripped. Reverse and
+    // pure-rotation commands are still allowed so the operator can back away.
+    if (_safetyTripped && linear > 0) {
+      _lastCommandedLinear = 0;
+      _lastCommandedAngular = angular;
+      try {
+        await topic.publish(<String, dynamic>{
+          'linear': {'x': 0.0, 'y': 0.0, 'z': 0.0},
+          'angular': {'x': 0.0, 'y': 0.0, 'z': angular},
+        });
+      } catch (_) {}
+      return;
+    }
+    _lastCommandedLinear = linear;
+    _lastCommandedAngular = angular;
     final msg = <String, dynamic>{
       'linear': {'x': linear, 'y': 0.0, 'z': 0.0},
       'angular': {'x': 0.0, 'y': 0.0, 'z': angular},
@@ -432,7 +536,90 @@ class RobotService {
   }
 
   /// Send a zero-velocity Twist to halt the robot.
-  Future<void> stop() => drive(linear: 0, angular: 0);
+  Future<void> stop() {
+    _lastCommandedLinear = 0;
+    _lastCommandedAngular = 0;
+    return drive(linear: 0, angular: 0);
+  }
+
+  /// Manually clear the safety latch — operator confirms the path is clear.
+  void clearSafetyLatch() {
+    if (_safetyTripped) {
+      _safetyTripped = false;
+      _safetyHitStreak = 0;
+      if (!_safetyCtrl.isClosed) {
+        _safetyCtrl.add(const RobotSafetyEvent.cleared());
+      }
+    }
+  }
+
+  Future<void> _handleScan(Map<String, dynamic> msg) async {
+    if (!_loggedFirstScan) {
+      _loggedFirstScan = true;
+      debugPrint('[RobotService] first $scanTopic packet received');
+    }
+    try {
+      final rangesRaw = msg['ranges'] as List?;
+      if (rangesRaw == null) return;
+      final ranges = List<double>.generate(rangesRaw.length, (i) {
+        final v = rangesRaw[i];
+        if (v is num) return v.toDouble();
+        return double.nan;
+      }, growable: false);
+      final scan = RobotLaserScan(
+        ranges: ranges,
+        angleMin: (msg['angle_min'] as num?)?.toDouble() ?? -math.pi,
+        angleMax: (msg['angle_max'] as num?)?.toDouble() ?? math.pi,
+        angleIncrement:
+            (msg['angle_increment'] as num?)?.toDouble() ??
+                (2 * math.pi / ranges.length),
+        rangeMin: (msg['range_min'] as num?)?.toDouble() ?? 0.05,
+        rangeMax: (msg['range_max'] as num?)?.toDouble() ?? 12.0,
+        timestamp: DateTime.now(),
+      );
+      _lastScan = scan;
+      if (!_scanCtrl.isClosed) _scanCtrl.add(scan);
+      _evaluateSafety(scan);
+    } catch (e) {
+      debugPrint('[RobotService] scan parse failed: $e');
+    }
+  }
+
+  void _evaluateSafety(RobotLaserScan scan) {
+    // Only intervene when the operator is requesting forward motion.
+    if (_lastCommandedLinear <= 0.02) {
+      _safetyHitStreak = 0;
+      return;
+    }
+    final closest = scan.minRangeInCone(safetyConeRad);
+    if (closest == null) return;
+    if (closest < safetyStopDistance) {
+      _safetyHitStreak += 1;
+      if (_safetyHitStreak >= _safetyStopRequiredHits && !_safetyTripped) {
+        _safetyTripped = true;
+        debugPrint(
+          '[RobotService] safety stop: obstacle ${(closest * 100).round()}cm',
+        );
+        // Triple-publish a zero Twist to be sure it lands.
+        final topic = _cmdVel;
+        if (topic != null) {
+          final stopMsg = <String, dynamic>{
+            'linear': {'x': 0.0, 'y': 0.0, 'z': 0.0},
+            'angular': {'x': 0.0, 'y': 0.0, 'z': 0.0},
+          };
+          for (var i = 0; i < 3; i++) {
+            unawaited(topic.publish(stopMsg).catchError((_) {}));
+          }
+        }
+        _lastCommandedLinear = 0;
+        if (!_safetyCtrl.isClosed) {
+          _safetyCtrl.add(RobotSafetyEvent.tripped(distanceMeters: closest));
+        }
+      }
+    } else {
+      _safetyHitStreak = 0;
+    }
+  }
 
   /// Tear down the connection and stop auto-reconnecting.
   Future<void> dispose() async {
@@ -446,6 +633,7 @@ class RobotService {
       await _odom?.unsubscribe();
       await _voltage?.unsubscribe();
       await _batteryState?.unsubscribe();
+      await _scan?.unsubscribe();
       await _cmdVel?.unadvertise();
       await _ros?.close();
     } catch (e) {
@@ -455,6 +643,7 @@ class RobotService {
     _odom = null;
     _voltage = null;
     _batteryState = null;
+    _scan = null;
     _ros = null;
     if (!_stateCtrl.isClosed) {
       await _stateCtrl.close();
@@ -462,5 +651,24 @@ class RobotService {
     if (!_telemetryCtrl.isClosed) {
       await _telemetryCtrl.close();
     }
+    if (!_scanCtrl.isClosed) {
+      await _scanCtrl.close();
+    }
+    if (!_safetyCtrl.isClosed) {
+      await _safetyCtrl.close();
+    }
   }
+}
+
+/// Notification emitted when the forward-cone safety monitor trips/clears.
+@immutable
+class RobotSafetyEvent {
+  const RobotSafetyEvent.tripped({required this.distanceMeters})
+      : tripped = true;
+  const RobotSafetyEvent.cleared()
+      : tripped = false,
+        distanceMeters = null;
+
+  final bool tripped;
+  final double? distanceMeters;
 }

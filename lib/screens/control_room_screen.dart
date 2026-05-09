@@ -1,14 +1,21 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
 import '../services/robot_api_service.dart';
 import '../services/robot_service.dart';
+import '../services/robot_voice_controller.dart';
+import '../services/lidar_map_builder.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../widgets/camera_view.dart';
 import '../widgets/drive_button.dart';
+import '../widgets/robot/lidar_map_panel.dart';
+import '../widgets/robot/lidar_radar_panel.dart';
+import 'lidar_field_mapping_screen.dart';
 
 class ControlRoomScreen extends StatefulWidget {
   const ControlRoomScreen({super.key});
@@ -40,10 +47,13 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
   RobotDescriptor? _activeRobot;
   StreamSubscription<RobotConnectionState>? _robotStateSub;
   StreamSubscription<RobotTelemetry>? _telemetrySub;
+  StreamSubscription<RobotSafetyEvent>? _safetySub;
   Timer? _joyTicker;
   DateTime _lastJoyAuditAt = DateTime.fromMillisecondsSinceEpoch(0);
   String? _robotError;
   bool _loadingRobots = true;
+  bool _exploring = false;
+  bool _savingMap = false;
 
   bool _isConnected = false;
   // -1 means "unknown" — we'll render an em-dash until /voltage publishes.
@@ -128,6 +138,18 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
           }
         });
       });
+      _safetySub = svc.safetyStream.listen((evt) {
+        if (!mounted) return;
+        if (evt.tripped) {
+          final cm = ((evt.distanceMeters ?? 0) * 100).round();
+          _appendEvent(
+            'Auto-stop: obstacle ${cm}cm',
+            AppColorPalette.alertError,
+          );
+        } else {
+          _appendEvent('Safety latch cleared', AppColorPalette.success);
+        }
+      });
       await svc.connect();
       if (!mounted) {
         await svc.dispose();
@@ -155,6 +177,7 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
     _scrollController.dispose();
     _robotStateSub?.cancel();
     _telemetrySub?.cancel();
+    _safetySub?.cancel();
     // Fire-and-forget; we can't await in dispose, but RobotService.dispose()
     // is internally idempotent and sends a final stop().
     _robot?.dispose();
@@ -261,6 +284,15 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
   Future<void> _emergencyStop() async {
     _joyTicker?.cancel();
     _joyTicker = null;
+
+    // 1) Cancel any autonomous explore loop FIRST so it can't keep re-issuing
+    //    drive commands after our zero-twist lands.
+    final voiceCtrl = RobotVoiceController.instance;
+    final wasExploring = _exploring;
+    try {
+      await voiceCtrl.stopExplore();
+    } catch (_) {}
+
     final robot = _robot;
     // Triple-tap stop in case a single Twist gets dropped on a flaky link.
     for (var i = 0; i < 3; i++) {
@@ -279,7 +311,11 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
     setState(() {
       _speed = 0;
       _joystickOffset = Offset.zero;
+      _exploring = false;
       _direction = 'Emergency stop';
+      if (wasExploring) {
+        _appendEvent('Auto-explore disabled by emergency stop', AppColorPalette.alertError);
+      }
       _appendEvent('Emergency stop executed', AppColorPalette.alertError);
     });
   }
@@ -424,6 +460,70 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
     }
   }
 
+  /// Toggle the autonomous explore loop driven by `RobotVoiceController`.
+  Future<void> _toggleExplore() async {
+    final ctrl = RobotVoiceController.instance;
+    if (_exploring) {
+      await ctrl.stopExplore();
+      if (!mounted) return;
+      setState(() => _exploring = false);
+      _appendEvent('Auto-explore stopped', AppColorPalette.softSlate);
+    } else {
+      // RobotVoiceController.startExplore() will lazily auto-connect via the
+      // API and bind to the first registered robot.
+      final ok = await ctrl.startExplore();
+      if (!mounted) return;
+      setState(() => _exploring = ok);
+      _appendEvent(
+        ok ? 'Auto-explore started' : 'Auto-explore failed to start',
+        ok ? AppColorPalette.success : AppColorPalette.alertError,
+      );
+    }
+  }
+
+  /// Persist a snapshot of the live occupancy map to the backend.
+  Future<void> _saveMapSnapshot(LidarMapBuilder builder) async {
+    if (_savingMap) return;
+    final robot = _activeRobot;
+    if (robot == null) {
+      _appendEvent('Cannot save map: no robot bound', AppColorPalette.warning);
+      return;
+    }
+    setState(() => _savingMap = true);
+    try {
+      final pixels = builder.toGreyscalePixels();
+      final cols = builder.cols;
+      final rows = builder.rows;
+      final res = builder.resolutionMeters;
+      // Encode RGBA pixels as a PNG via dart:ui.
+      final completer = Completer<Uint8List>();
+      ui.decodeImageFromPixels(pixels, cols, rows, ui.PixelFormat.rgba8888, (
+        img,
+      ) async {
+        final byteData = await img.toByteData(
+          format: ui.ImageByteFormat.png,
+        );
+        completer.complete(byteData!.buffer.asUint8List());
+      });
+      final png = await completer.future;
+      final meta = await _robotApi.saveMap(
+        robotId: robot.id,
+        pngBytes: png,
+        resolutionMeters: res,
+        cols: cols,
+        rows: rows,
+        label: 'Snapshot ${DateTime.now().toIso8601String()}',
+      );
+      if (!mounted) return;
+      _appendEvent('Map saved: ${meta['id']}', AppColorPalette.success);
+    } catch (e) {
+      if (!mounted) return;
+      _appendEvent('Map save failed: $e', AppColorPalette.alertError);
+    } finally {
+      if (mounted) setState(() => _savingMap = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -451,6 +551,19 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
                   const SizedBox(height: 14),
                   _buildAdaptiveControlArea(),
                   const SizedBox(height: 14),
+                  if (_robot != null) ...[
+                    LidarRadarPanel(
+                      scanStream: _robot!.scanStream,
+                      lastScan: _robot!.lastScan,
+                    ),
+                    const SizedBox(height: 14),
+                    LidarMapPanel(
+                      scanStream: _robot!.scanStream,
+                      telemetryStream: _robot!.telemetryStream,
+                      onSnapshot: _saveMapSnapshot,
+                    ),
+                    const SizedBox(height: 14),
+                  ],
                   _buildQuickCommands(),
                   const SizedBox(height: 14),
                   _buildTelemetryGrid(),
@@ -907,20 +1020,27 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
                 ),
               ],
             ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: ElevatedButton.icon(
-              onPressed: _emergencyStop,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColorPalette.alertError,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          const SizedBox(height: 16),
+          _ActionButtonsBar(
+            canDrive: canDrive,
+            exploring: _exploring,
+            onEmergencyStop: _emergencyStop,
+            onToggleExplore: _toggleExplore,
+            onOpenFieldMapping: () async {
+              final result = await Navigator.of(context).push<
+                  List<List<double>>>(
+                MaterialPageRoute(
+                  builder: (_) => const LidarFieldMappingScreen(),
                 ),
-              ),
-              icon: const Icon(Icons.stop_circle_rounded, size: 18),
-              label: const Text('Emergency Stop'),
-            ),
+              );
+              if (!mounted) return;
+              if (result != null && result.isNotEmpty) {
+                _appendEvent(
+                  'Captured perimeter: ${result.length} vertices',
+                  AppColorPalette.success,
+                );
+              }
+            },
           ),
         ],
       ),
@@ -1190,4 +1310,151 @@ class _ControlEvent {
   final String message;
   final Color color;
   final DateTime timestamp;
+}
+
+/// Compact, professionally-styled action bar for the Control Room.
+///
+/// * Emergency Stop is always visible and visually dominant (red, full-width
+///   on phones, primary on tablets).
+/// * Auto-Explore + Field Mapping are grouped together as the "autonomy"
+///   actions and only appear when the robot can drive.
+/// * On narrow screens the buttons stack into a single column; on wider
+///   screens they sit side-by-side in a balanced row.
+class _ActionButtonsBar extends StatelessWidget {
+  const _ActionButtonsBar({
+    required this.canDrive,
+    required this.exploring,
+    required this.onEmergencyStop,
+    required this.onToggleExplore,
+    required this.onOpenFieldMapping,
+  });
+
+  final bool canDrive;
+  final bool exploring;
+  final VoidCallback onEmergencyStop;
+  final VoidCallback onToggleExplore;
+  final VoidCallback onOpenFieldMapping;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 520;
+
+        final stopButton = _ActionPillButton(
+          icon: Icons.stop_circle_rounded,
+          label: 'Emergency Stop',
+          background: AppColorPalette.alertError,
+          foreground: Colors.white,
+          onPressed: onEmergencyStop,
+        );
+
+        final exploreButton = _ActionPillButton(
+          icon: exploring ? Icons.stop_rounded : Icons.explore_rounded,
+          label: exploring ? 'Stop Auto-Explore' : 'Auto-Explore',
+          background: exploring
+              ? AppColorPalette.warning
+              : AppColorPalette.fieldFreshStart,
+          foreground: Colors.white,
+          onPressed: onToggleExplore,
+        );
+
+        final mapButton = _ActionPillButton(
+          icon: Icons.crop_free_rounded,
+          label: 'Field Mapping',
+          background: Colors.white,
+          foreground: AppColorPalette.charcoalGreen,
+          borderColor: AppColorPalette.charcoalGreen.withValues(alpha: 0.25),
+          onPressed: onOpenFieldMapping,
+        );
+
+        if (isNarrow) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              stopButton,
+              if (canDrive) ...[
+                const SizedBox(height: 10),
+                exploreButton,
+                const SizedBox(height: 10),
+                mapButton,
+              ],
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: stopButton),
+            if (canDrive) ...[
+              const SizedBox(width: 12),
+              Expanded(child: exploreButton),
+              const SizedBox(width: 12),
+              Expanded(child: mapButton),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Pill-shaped action button used in the Control Room action bar.
+class _ActionPillButton extends StatelessWidget {
+  const _ActionPillButton({
+    required this.icon,
+    required this.label,
+    required this.background,
+    required this.foreground,
+    required this.onPressed,
+    this.borderColor,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color background;
+  final Color foreground;
+  final Color? borderColor;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: background,
+          foregroundColor: foreground,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: borderColor != null
+                ? BorderSide(color: borderColor!, width: 1.2)
+                : BorderSide.none,
+          ),
+          textStyle: AppTextStyles.bodyMedium(
+            color: foreground,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 20, color: foreground),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -8,12 +8,15 @@ import '../models/animal.dart';
 import '../providers/asset_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/animal_service.dart';
+import '../services/api_service.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
+import '../utils/asset_image_utils.dart';
 import '../utils/constants.dart';
 import '../widgets/app_drawer.dart';
 import '../l10n/l10n_extensions.dart';
 import '../widgets/language_selector.dart';
+import 'mechanic_chat_screen.dart';
 import 'profile_screen.dart';
 import 'signin_screen.dart';
 
@@ -44,6 +47,29 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
   final TextEditingController _completionStatusController =
       TextEditingController();
 
+  AssetItem? _materialFromSession() {
+    final activeAssetId = _activeMaterialSession?['assetId']?.toString();
+    if (activeAssetId == null || activeAssetId.isEmpty) return null;
+    try {
+      return _assignedMaterials.firstWhere((asset) => asset.id == activeAssetId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  ImageProvider? _materialImageProvider(AssetItem material) {
+    return resolveAssetImageProvider(
+      material.imageUrl,
+      mediaBaseUrl: ApiService.mediaBaseUrl,
+    );
+  }
+  String _normalizeCondition(String raw) {
+    final value = raw.trim().toUpperCase();
+    if (value.contains('CRIT')) return 'CRITICAL';
+    if (value.contains('WARN') || value.contains('PARTIAL')) return 'WARNING';
+    return 'GOOD';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -73,12 +99,10 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
 
       await assetProvider.fetchAssets();
 
-      // Usage stats should not block material visibility.
       try {
         await assetProvider.fetchWeeklyUsageIntensity();
       } catch (_) {}
 
-      // Get animals for assigned field, but never let that block materials.
       List<Animal> animals = [];
       try {
         animals = await _animalService.getAnimals(fieldId: assignedFieldId);
@@ -86,7 +110,6 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
 
       if (!mounted) return;
 
-      // Keep a defensive field filter on client side in case backend payload is broad.
       final assignedMaterials = assetProvider.assets
           .where(
             (asset) =>
@@ -95,7 +118,6 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
           )
           .toList();
 
-      // Get active session if any
       final activeSession = assetProvider.activeUsageSession;
 
       DateTime? startTime;
@@ -201,6 +223,24 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
             icon: const Icon(Icons.language_rounded),
             color: AppColorPalette.charcoalGreen,
             onPressed: () => LanguageSelector.show(context),
+          ),
+          IconButton(
+            tooltip: 'Mechanic AI',
+            icon: const Icon(Icons.auto_awesome_rounded),
+            color: AppColorPalette.charcoalGreen,
+            onPressed: () {
+              final sessionMaterial = _materialFromSession();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => MechanicChatScreen(
+                    assetId: sessionMaterial?.id,
+                    assetBrand: sessionMaterial?.brand,
+                    assetModel: sessionMaterial?.model,
+                    assetCategory: sessionMaterial?.category,
+                  ),
+                ),
+              );
+            },
           ),
           IconButton(
             tooltip: 'Profile',
@@ -401,18 +441,16 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
   }
 
   Widget _buildActiveMaterialCard() {
-    final activeAssetId = _activeMaterialSession?['assetId']?.toString();
-    final activeMaterial = _assignedMaterials.firstWhere(
-      (asset) => asset.id == activeAssetId,
-      orElse: () => AssetItem(
-        id: activeAssetId ?? '',
-        name: 'Unknown',
-        brand: 'Unknown',
-        category: 'Equipment',
-        status: 'IN_USE',
-        serialNumber: '',
-      ),
-    );
+    final activeAssetId = _activeMaterialSession?['assetId']?.toString() ?? '';
+    final activeMaterial = _materialFromSession() ??
+        AssetItem(
+          id: activeAssetId,
+          name: activeAssetId.isEmpty ? 'Unknown' : 'Machine #$activeAssetId',
+          brand: 'Unknown',
+          category: 'Equipment',
+          status: 'IN_USE',
+          serialNumber: '',
+        );
 
     final startedAt = _sessionStartTime ?? DateTime.now();
     final elapsedTime = _formatElapsedTime(startedAt);
@@ -482,19 +520,226 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
               color: Colors.white.withValues(alpha: 0.85),
             ),
           ),
+          const SizedBox(height: 6),
+          Text(
+            'Last service: ${activeMaterial.lastServiceDate != null ? DateFormat('dd MMM yyyy').format(activeMaterial.lastServiceDate!) : 'Not set'}',
+            style: AppTextStyles.caption(color: Colors.white.withValues(alpha: 0.85)),
+          ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => _showCheckInDialog(activeMaterial),
-              icon: const Icon(Icons.check_circle_outline),
-              label: Text(context.l10n.finish),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: AppColors.success,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showCheckInDialog(activeMaterial),
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: Text(context.l10n.finish),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppColors.success,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () => _showMaterialTraceability(activeMaterial),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppColorPalette.charcoalGreen,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                  ),
+                  child: const Icon(Icons.history),
+                ),
+              ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showMaterialTraceability(AssetItem material) async {
+    final provider = context.read<AssetProvider>();
+    if (!provider.assetHistoryById.containsKey(material.id)) {
+      try {
+        await provider.fetchAssetHistory(material.id);
+      } catch (_) {}
+    }
+
+    final history = (provider.assetHistoryById[material.id]?['history'] as List?)
+            ?.cast<Map<String, dynamic>>() ??
+        <Map<String, dynamic>>[];
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Machine Traceability', style: AppTextStyles.h4()),
+              const SizedBox(height: 6),
+              Text('${material.brand} • ${material.name}', style: AppTextStyles.bodySmall()),
+              const SizedBox(height: 4),
+              Text(
+                'Last service: ${material.lastServiceDate != null ? DateFormat('dd MMM yyyy').format(material.lastServiceDate!) : 'Not set'}',
+                style: AppTextStyles.caption(),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: history.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No usage trace yet',
+                          style: AppTextStyles.bodySmall(),
+                        ),
+                      )
+                    : ListView.separated(
+                        itemCount: history.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (_, index) {
+                          final item = history[index];
+                          final started = DateTime.tryParse(item['startTime']?.toString() ?? '');
+                          final ended = DateTime.tryParse(item['endTime']?.toString() ?? '');
+                          final noteParts = <String>[
+                            item['notes']?.toString() ?? '',
+                            item['conditionNote']?.toString() ?? '',
+                            item['issues']?.toString() ?? '',
+                            item['maintenanceNote']?.toString() ?? '',
+                          ]..removeWhere((v) => v.trim().isEmpty);
+                          final durationText = (item['durationHours'] is num)
+                              ? '${(item['durationHours'] as num).toStringAsFixed(2)} h'
+                              : 'N/A';
+
+                          return InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: () => _showTraceabilityEntryDetails(
+                              material: material,
+                              entry: item,
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: AppColorPalette.charcoalGreen.withValues(alpha: 0.12),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          '${item['farmerName'] ?? 'Worker'} • ${item['condition'] ?? 'N/A'}',
+                                          style: AppTextStyles.bodySmall().copyWith(fontWeight: FontWeight.w700),
+                                        ),
+                                      ),
+                                      Text(durationText, style: AppTextStyles.caption()),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${started != null ? DateFormat('dd MMM yyyy, HH:mm').format(started) : '-'} → ${ended != null ? DateFormat('dd MMM yyyy, HH:mm').format(ended) : 'in progress'}',
+                                    style: AppTextStyles.caption(),
+                                  ),
+                                  if (noteParts.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      noteParts.join(' | '),
+                                      style: AppTextStyles.caption(),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showTraceabilityEntryDetails({
+    required AssetItem material,
+    required Map<String, dynamic> entry,
+  }) {
+    final started = DateTime.tryParse(entry['startTime']?.toString() ?? '');
+    final ended = DateTime.tryParse(entry['endTime']?.toString() ?? '');
+    final durationText = (entry['durationHours'] is num)
+        ? '${(entry['durationHours'] as num).toStringAsFixed(2)} hours'
+        : 'N/A';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Session details • ${material.name}', style: AppTextStyles.h4()),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Operator: ${entry['farmerName'] ?? 'Worker'}', style: AppTextStyles.bodySmall()),
+              const SizedBox(height: 6),
+              Text('Condition: ${entry['condition'] ?? 'N/A'}', style: AppTextStyles.bodySmall()),
+              const SizedBox(height: 6),
+              Text('Duration: $durationText', style: AppTextStyles.bodySmall()),
+              const SizedBox(height: 6),
+              Text(
+                'Start: ${started != null ? DateFormat('dd MMM yyyy, HH:mm').format(started) : '-'}',
+                style: AppTextStyles.bodySmall(),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'End: ${ended != null ? DateFormat('dd MMM yyyy, HH:mm').format(ended) : 'In progress'}',
+                style: AppTextStyles.bodySmall(),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Machine last service: ${material.lastServiceDate != null ? DateFormat('dd MMM yyyy').format(material.lastServiceDate!) : 'Not set'}',
+                style: AppTextStyles.bodySmall(),
+              ),
+              const SizedBox(height: 10),
+              Text('Notes', style: AppTextStyles.bodySmall().copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text(entry['notes']?.toString().trim().isNotEmpty == true ? entry['notes'].toString() : '-', style: AppTextStyles.caption()),
+              const SizedBox(height: 8),
+              Text('Issues', style: AppTextStyles.bodySmall().copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text(entry['issues']?.toString().trim().isNotEmpty == true ? entry['issues'].toString() : '-', style: AppTextStyles.caption()),
+              const SizedBox(height: 8),
+              Text('Maintenance note', style: AppTextStyles.bodySmall().copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text(entry['maintenanceNote']?.toString().trim().isNotEmpty == true ? entry['maintenanceNote'].toString() : '-', style: AppTextStyles.caption()),
+              const SizedBox(height: 8),
+              Text('Condition note', style: AppTextStyles.bodySmall().copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text(entry['conditionNote']?.toString().trim().isNotEmpty == true ? entry['conditionNote'].toString() : '-', style: AppTextStyles.caption()),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -646,10 +891,13 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
     final isActive =
         _activeMaterialSession?['assetId']?.toString() == material.id;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => _showMaterialTraceability(material),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
         color: isActive
             ? AppColors.success.withValues(alpha: 0.1)
             : Colors.white,
@@ -668,15 +916,26 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
-                  color: AppColorPalette.charcoalGreen.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
+                  color: AppColorPalette.charcoalGreen.withValues(alpha: 0.1),
                 ),
-                child: Icon(
-                  Icons.precision_manufacturing,
-                  color: AppColorPalette.charcoalGreen,
-                ),
+                clipBehavior: Clip.antiAlias,
+                child: _materialImageProvider(material) == null
+                    ? Icon(
+                        Icons.precision_manufacturing,
+                        color: AppColorPalette.charcoalGreen,
+                      )
+                    : Image(
+                        image: _materialImageProvider(material)!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.precision_manufacturing,
+                          color: AppColorPalette.charcoalGreen,
+                        ),
+                      ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -688,6 +947,11 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
                     Text(
                       '${material.brand}${material.model != null ? ' • ${material.model}' : ''}',
                       style: AppTextStyles.bodySmall(),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Last service: ${material.lastServiceDate != null ? DateFormat('dd MMM yyyy').format(material.lastServiceDate!) : 'Not set'}',
+                      style: AppTextStyles.caption(),
                     ),
                     const SizedBox(height: 4),
                     Container(
@@ -711,11 +975,36 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
                   ],
                 ),
               ),
-              if (!isActive)
-                IconButton(
-                  icon: const Icon(Icons.arrow_forward),
-                  onPressed: () => _showStartSessionDialog(material),
-                ),
+              Column(
+                children: [
+                  if (!isActive)
+                    IconButton(
+                      icon: const Icon(Icons.play_arrow_rounded),
+                      tooltip: 'Start using',
+                      onPressed: () => _showStartSessionDialog(material),
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.history_rounded),
+                    tooltip: 'History timeline',
+                    onPressed: () => _showMaterialTraceability(material),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.auto_awesome_rounded),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => MechanicChatScreen(
+                            assetId: material.id,
+                            assetBrand: material.brand,
+                            assetModel: material.model,
+                            assetCategory: material.category,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ],
           ),
           if (material.mileage != null || material.operatingHours != null) ...[
@@ -763,6 +1052,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
           ],
         ],
       ),
+    ),
     );
   }
 
@@ -921,7 +1211,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    hintText: 'Completed, Partial, etc.',
+                    hintText: 'GOOD, WARNING, CRITICAL or completed/partial',
                   ),
                 ),
               ],
@@ -960,11 +1250,17 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
 
       if (!mounted) return;
 
+      final startedSession = Map<String, dynamic>.from(
+        (response['session'] as Map?) ?? response,
+      );
+      final startedAt = DateTime.tryParse(startedSession['startTime']?.toString() ?? '') ??
+          DateTime.now();
+
       setState(() {
-        _activeMaterialSession = response;
-        _sessionStartTime = DateTime.now();
+        _activeMaterialSession = startedSession;
+        _sessionStartTime = startedAt;
       });
-      _startSessionTimer(DateTime.now());
+      _startSessionTimer(startedAt);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -983,21 +1279,18 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
   Future<void> _endMaterialSession(AssetItem material) async {
     try {
       final assetProvider = context.read<AssetProvider>();
-      final activeSession = _activeMaterialSession;
-
-      if (activeSession == null) {
-        throw Exception('No active session');
-      }
+      final messenger = ScaffoldMessenger.of(context);
 
       await assetProvider.endUsageSession(
-        usageLogId: activeSession['id']?.toString() ?? '',
-        endMileage: material.mileage ?? 0,
-        endOperatingHours: material.operatingHours ?? 0,
-        fuelLevel: 0,
-        conditionNote: _materialNotesController.text,
-        endTime: DateTime.now(),
-        returnConfirmation: true,
-        notes: _completionStatusController.text,
+        assetId: material.id,
+        distanceKm: 0,
+        condition: _normalizeCondition(_completionStatusController.text),
+        issues: _completionStatusController.text.trim().isEmpty
+            ? null
+            : _completionStatusController.text.trim(),
+        maintenanceNote: _materialNotesController.text.trim().isEmpty
+            ? null
+            : _materialNotesController.text.trim(),
       );
 
       if (!mounted) return;
@@ -1011,8 +1304,9 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
       _completionStatusController.clear();
 
       await _loadFarmerDashboard();
+      await assetProvider.fetchAssetHistory(material.id);
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text('${material.name} checked in successfully'),
           backgroundColor: AppColors.success,
@@ -1020,7 +1314,8 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
         SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
       );
     }
