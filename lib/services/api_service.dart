@@ -8,20 +8,25 @@ import '../utils/constants.dart';
 class ApiService {
   // Uses the centralized server config from AppConfig.
   // Physical devices → uses AppConfig.serverHost (your PC's WiFi IP)
-  // Android emulator → uses project WiFi IP fallback when host is localhost
+  // Android emulator → 10.0.2.2 (maps to host localhost)
   // Web / iOS simulator → localhost
   static String get baseUrl {
     final host = AppConfig.serverHost;
     final port = AppConfig.serverPort;
 
     if (kIsWeb) {
-      return 'http://$host:$port/api';
+      return 'http://localhost:$port/api';
     }
     if (Platform.isAndroid) {
+      // Emulator uses 10.0.2.2; real device uses the WiFi IP
       final isEmulator = host == 'localhost' || host == '127.0.0.1';
       return isEmulator
           ? 'http://10.0.2.2:$port/api'
           : 'http://$host:$port/api';
+    }
+    // iOS simulator can use localhost; real iPhone uses WiFi IP
+    if (host == 'localhost' || host == '127.0.0.1') {
+      return 'http://localhost:$port/api';
     }
     return 'http://$host:$port/api';
   }
@@ -30,12 +35,13 @@ class ApiService {
   static String get mediaBaseUrl {
     final host = AppConfig.serverHost;
     final port = AppConfig.serverPort;
-
-    if (kIsWeb) return 'http://$host:$port';
+    if (kIsWeb) return 'http://localhost:$port';
     if (Platform.isAndroid) {
       final isEmulator = host == 'localhost' || host == '127.0.0.1';
       return isEmulator ? 'http://10.0.2.2:$port' : 'http://$host:$port';
     }
+    if (host == 'localhost' || host == '127.0.0.1')
+      return 'http://localhost:$port';
     return 'http://$host:$port';
   }
 
@@ -96,10 +102,10 @@ class ApiService {
       // Decode payload (add padding if necessary)
       String payload = parts[1];
       payload = payload.padRight((payload.length + 3) ~/ 4 * 4, '=');
-
+      
       final decoded = utf8.decode(base64Url.decode(payload));
       final json = jsonDecode(decoded) as Map<String, dynamic>;
-
+      
       return json['sub']?.toString();
     } catch (e) {
       print('[ApiService] Error decoding JWT: $e');
@@ -230,7 +236,8 @@ class ApiService {
     return _handleUploadResponse(response);
   }
 
-  /// Upload a staff member with name + image to the whitelist endpoint.
+  /// Upload a staff member with name, credentials, optional field assignment,
+  /// and a face image to the whitelist endpoint.
   static Future<Map<String, dynamic>> uploadStaff(
     String name,
     String imagePath,
@@ -248,7 +255,7 @@ class ApiService {
     request.fields['name'] = name;
     request.fields['username'] = username;
     request.fields['password'] = password;
-    if (assignedFieldId != null && assignedFieldId.isNotEmpty) {
+    if (assignedFieldId != null) {
       request.fields['assignedFieldId'] = assignedFieldId;
     }
     request.files.add(await http.MultipartFile.fromPath('image', imagePath));

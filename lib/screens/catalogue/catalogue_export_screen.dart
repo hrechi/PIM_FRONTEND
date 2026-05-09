@@ -6,10 +6,9 @@ import '../../providers/catalogue_provider.dart';
 import '../../models/catalogue_models.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/constants.dart';
-<<<<<<< HEAD
+
 import '../../l10n/l10n_extensions.dart';
-=======
->>>>>>> 1295c58cbbf82bfdc67e944527ac70954e4ecd69
+
 import 'catalogue_book_screen.dart';
 
 const _kGreen = Color(0xFF309448);

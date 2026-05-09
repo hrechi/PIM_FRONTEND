@@ -5,10 +5,9 @@ import '../../models/catalogue_models.dart';
 import '../../models/animal.dart';
 import '../../widgets/animal_catalogue_card.dart';
 import '../../utils/currency_converter.dart';
-<<<<<<< HEAD
+
 import '../../l10n/l10n_extensions.dart';
-=======
->>>>>>> 1295c58cbbf82bfdc67e944527ac70954e4ecd69
+
 import '../animal_selector_screen.dart';
 import 'catalogue_preview_screen.dart';
 

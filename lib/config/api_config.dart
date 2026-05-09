@@ -2,15 +2,11 @@
 /// Centralized configuration for API endpoints and settings
 class ApiConfig {
   // Base URLs
-  // Use the WiFi IP for device, emulator, and simulator testing.
-<<<<<<< HEAD
-  static const String _localBaseUrl = 'http://localhost:3000/api';
-=======
-  static const String _localBaseUrl = 'http://192.168.1.151:3000/api';
->>>>>>> 1295c58cbbf82bfdc67e944527ac70954e4ecd69
+  // Use 10.0.2.2 for Android emulator (maps to host machine's localhost)
+  // Use localhost for iOS simulator or web
+  static const String _localBaseUrl = 'http://192.168.1.124:3000/api';
   static const String _productionBaseUrl =
       'https://your-production-api.com/api';
-
   // Environment flag
   static const bool isProduction = false; // Set to true for production
 
@@ -18,7 +14,7 @@ class ApiConfig {
   static String get baseUrl =>
       isProduction ? _productionBaseUrl : _localBaseUrl;
 
-  // API Endpoints 
+  // API Endpoints
   static String get soilEndpoint => '$baseUrl/soil';
   static String get userEndpoint => '$baseUrl/user';
   static String get authEndpoint => '$baseUrl/auth';

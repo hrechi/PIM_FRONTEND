@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
-<<<<<<< HEAD
 import 'package:flutter_localizations/flutter_localizations.dart';
-=======
 import 'dart:async';
->>>>>>> 1295c58cbbf82bfdc67e944527ac70954e4ecd69
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -24,13 +21,13 @@ import 'providers/catalogue_provider.dart';
 import 'providers/voice_access_mode_provider.dart';
 import 'providers/global_voice_controller.dart';
 import 'providers/asset_provider.dart';
-<<<<<<< HEAD
+
 import 'providers/locale_provider.dart';
 import 'providers/animal_health_provider.dart';
 import 'l10n/app_localizations.dart';
-=======
+
 import 'providers/rating_provider.dart';
->>>>>>> 1295c58cbbf82bfdc67e944527ac70954e4ecd69
+
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
@@ -229,19 +226,21 @@ class _FieldlyAppState extends State<FieldlyApp> {
           ),
         ),
         ChangeNotifierProvider(create: (_) => AssetProvider()),
-<<<<<<< HEAD
+
         ChangeNotifierProvider(create: (_) => LocaleProvider()..load()),
+
         ChangeNotifierProvider(create: (_) => AnimalHealthProvider()),
-=======
+
         ChangeNotifierProvider(
           create: (_) {
             final p = RatingProvider();
-            p.init(); // start fetching + polling immediately
+            p.init();
             return p;
           },
         ),
->>>>>>> 1295c58cbbf82bfdc67e944527ac70954e4ecd69
+        
       ],
+
       child: Consumer<LocaleProvider>(
         builder: (context, localeProvider, _) => MaterialApp(
         navigatorKey: navigatorKey,

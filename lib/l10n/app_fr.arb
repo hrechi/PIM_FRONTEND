@@ -306,7 +306,7 @@
   "markedAsFattening": "Marqué en engraissement",
   "startDate": "Date de début",
   "targetSaleDate": "Date de vente cible (optionnel)",
-  "sellAnimal": "Vendre l'animal",
+  "sellAnimal": "Vendre",
   "salePrice": "Prix de vente",
   "saleDate": "Date de vente",
   "buyerName": "Nom de l'acheteur (Optionnel)",

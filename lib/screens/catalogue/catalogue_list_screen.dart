@@ -3,10 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/catalogue_provider.dart';
 import '../../models/catalogue_models.dart';
-<<<<<<< HEAD
+
 import '../../l10n/l10n_extensions.dart';
-=======
->>>>>>> 1295c58cbbf82bfdc67e944527ac70954e4ecd69
+
 import 'catalogue_wizard_screen.dart';
 import 'catalogue_preview_screen.dart';
 import 'catalogue_export_screen.dart';

@@ -306,7 +306,7 @@
   "markedAsFattening": "تم التحديد كمسمَّن",
   "startDate": "تاريخ البدء",
   "targetSaleDate": "تاريخ البيع المستهدف (اختياري)",
-  "sellAnimal": "بيع الحيوان",
+  "sellAnimal": "بيع",
   "salePrice": "سعر البيع",
   "saleDate": "تاريخ البيع",
   "buyerName": "اسم المشتري (اختياري)",

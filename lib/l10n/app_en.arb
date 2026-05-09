@@ -306,7 +306,7 @@
   "markedAsFattening": "Marked as fattening",
   "startDate": "Start date",
   "targetSaleDate": "Target sale date (optional)",
-  "sellAnimal": "Sell Animal",
+  "sellAnimal": "Sell",
   "salePrice": "Sale Price",
   "saleDate": "Sale Date",
   "buyerName": "Buyer Name (Optional)",
