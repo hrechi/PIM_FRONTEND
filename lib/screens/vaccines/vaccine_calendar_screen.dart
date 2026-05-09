@@ -288,16 +288,171 @@ class _VaccineCalendarScreenState extends State<VaccineCalendarScreen> {
   }
 }
 
-class _VaccineEventCard extends StatelessWidget {
+class _VaccineEventCard extends StatefulWidget {
   final VaccineSchedule schedule;
   final DateTime contextDay;
   const _VaccineEventCard({required this.schedule, required this.contextDay});
 
   @override
+  State<_VaccineEventCard> createState() => _VaccineEventCardState();
+}
+
+class _VaccineEventCardState extends State<_VaccineEventCard> {
+  bool _saving = false;
+
+  void _markDone() {
+    final _vetCtrl  = TextEditingController();
+    final _doseCtrl = TextEditingController(text: '1');
+    final _lotCtrl  = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setS) => Container(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40, height: 5,
+                    decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: AppColors.mistBlue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(14)),
+                      child: Icon(Icons.check_circle_rounded, color: AppColors.mistBlue, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Confirm administration', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF141E15))),
+                        Text(
+                          widget.schedule.vaccine?.nameEn ?? widget.schedule.vaccine?.nameFr ?? '',
+                          style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w500, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: _vetCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Veterinarian name *',
+                    prefixIcon: const Icon(Icons.person_outline, color: AppColors.mistBlue),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.mistBlue, width: 2)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _doseCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Dose (ml)',
+                    prefixIcon: const Icon(Icons.water_drop_outlined, color: AppColors.mistBlue),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.mistBlue, width: 2)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _lotCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Lot number (optional)',
+                    prefixIcon: const Icon(Icons.tag_rounded, color: AppColors.mistBlue),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.mistBlue, width: 2)),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.mistBlue,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: _saving ? null : () async {
+                      if (_vetCtrl.text.trim().isEmpty) return;
+                      setS(() => _saving = true);
+                      final ok = await context.read<VaccineProvider>().markDone(
+                        widget.schedule.id,
+                        widget.schedule.animalId,
+                        administeredBy: _vetCtrl.text.trim(),
+                        doseGiven: double.tryParse(_doseCtrl.text) ?? 1,
+                        lotNumber: _lotCtrl.text.trim().isEmpty ? null : _lotCtrl.text.trim(),
+                      );
+                      setS(() => _saving = false);
+                      if (ctx.mounted) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(ok ? '✅ Vaccination recorded' : '❌ Error'),
+                          backgroundColor: ok ? AppColors.mistBlue : Colors.red,
+                        ));
+                      }
+                    },
+                    child: _saving
+                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                        : const Text('Save', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _editDate() async {
+    final newDate = await showDatePicker(
+      context: context,
+      initialDate: widget.schedule.scheduledDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: AppColors.mistBlue)),
+        child: child!,
+      ),
+    );
+    if (newDate != null && mounted) {
+      final ok = await context.read<VaccineProvider>().updateScheduleDate(
+        widget.schedule.id, newDate, widget.schedule.animalId,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(ok ? '✅ Date updated' : '❌ Error'),
+          backgroundColor: ok ? AppColors.mistBlue : Colors.red,
+        ));
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final vaccine = schedule.vaccine;
-    final name = (vaccine?.code == 'OTHER' ? schedule.notes : vaccine?.nameFr) ?? 'Vaccin';
-    final isDone = schedule.status == 'DONE';
+    final vaccine = widget.schedule.vaccine;
+    final name = (vaccine?.code == 'OTHER' ? widget.schedule.notes : vaccine?.nameFr) ?? 'Vaccin';
+    final isDone = widget.schedule.status == 'DONE';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -323,8 +478,15 @@ class _VaccineEventCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Animal: ${schedule.animalId}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF141E15))),
-                    _StatusBadge(schedule: schedule, viewDate: contextDay),
+                    // Fix #2 — affiche le nom de l'animal au lieu de l'UUID
+                    Expanded(
+                      child: Text(
+                        (widget.schedule.animal as Map?)?['name']?.toString() ?? 'Animal',
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF141E15)),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    _StatusBadge(schedule: widget.schedule, viewDate: widget.contextDay),
                   ],
                 ),
                 Text(name, style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
@@ -332,6 +494,7 @@ class _VaccineEventCard extends StatelessWidget {
                   const SizedBox(height: 12),
                   Row(
                     children: [
+                      // Fix #1 — bouton Done branché
                       Expanded(
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
@@ -341,15 +504,21 @@ class _VaccineEventCard extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
-                          onPressed: () {},
-                          child: const Text('Done', style: TextStyle(fontWeight: FontWeight.bold)),
+                          onPressed: _saving ? null : _markDone,
+                          child: _saving
+                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : const Text('Done', style: TextStyle(fontWeight: FontWeight.bold)),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(10)),
-                        child: const Icon(Icons.edit_rounded, size: 18, color: Color(0xFF64748B)),
+                      // Fix #1 — bouton Edit branché
+                      GestureDetector(
+                        onTap: _editDate,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(10)),
+                          child: const Icon(Icons.edit_rounded, size: 18, color: Color(0xFF64748B)),
+                        ),
                       ),
                     ],
                   ),

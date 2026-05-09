@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../providers/catalogue_provider.dart';
-import '../models/catalogue_models.dart';
-import '../catalogue/catalogue_wizard_screen.dart';
-import '../catalogue/catalogue_preview_screen.dart';
-import '../catalogue/catalogue_export_screen.dart';
+import '../../providers/catalogue_provider.dart';
+import '../../models/catalogue_models.dart';
+import '../../l10n/l10n_extensions.dart';
+import 'catalogue_wizard_screen.dart';
+import 'catalogue_preview_screen.dart';
+import 'catalogue_export_screen.dart';
 
 const _kGreen = Color(0xFF309448);
 const _kGreenLight = Color(0xFFE8F5E9);
@@ -68,7 +69,7 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
         backgroundColor: _kGreen,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
-        label: const Text('New Catalogue', style: TextStyle(fontWeight: FontWeight.w600)),
+        label: Text(context.l10n.newCatalogue, style: const TextStyle(fontWeight: FontWeight.w600)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
       ),
     );
@@ -88,14 +89,14 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
             child: const Icon(Icons.menu_book_rounded, color: _kGreen, size: 22),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Sales Catalogues',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A))),
-                Text('Manage your livestock catalogues',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF9E9E9E))),
+                Text(context.l10n.salesCatalogues,
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A))),
+                Text(context.l10n.manageLivestockCatalogues,
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF9E9E9E))),
               ],
             ),
           ),
@@ -126,14 +127,14 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
             const Text('No catalogues yet',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A))),
             const SizedBox(height: 8),
-            const Text('Create your first sales catalogue to showcase your livestock to buyers.',
+            Text(context.l10n.createFirstCatalogue,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Color(0xFF9E9E9E), height: 1.5)),
+                style: const TextStyle(fontSize: 14, color: Color(0xFF9E9E9E), height: 1.5)),
             const SizedBox(height: 28),
             ElevatedButton.icon(
               onPressed: () => _goToWizard(context),
               icon: const Icon(Icons.add),
-              label: const Text('Create Catalogue'),
+              label: Text(context.l10n.createCatalogue),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _kGreen,
                 foregroundColor: Colors.white,
@@ -260,10 +261,10 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
                         ),
                         const Spacer(),
                         // Quick action buttons
-                        _quickBtn(Icons.visibility_outlined, 'Preview',
+                        _quickBtn(Icons.visibility_outlined, context.l10n.preview,
                             () => _openPreview(context, catalogue)),
                         const SizedBox(width: 8),
-                        _quickBtn(Icons.edit_outlined, 'Edit', () {
+                        _quickBtn(Icons.edit_outlined, context.l10n.edit, () {
                           Navigator.push(context, MaterialPageRoute(
                             builder: (_) => CatalogueWizardScreen(catalogue: catalogue)));
                         }),
@@ -318,13 +319,13 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
   _StatusInfo _statusInfo(String status) {
     switch (status.toUpperCase()) {
       case 'PUBLISHED':
-        return _StatusInfo('Published', _kGreen, _kGreenLight, const Color(0xFFA5D6A7));
+        return _StatusInfo(context.l10n.published, _kGreen, _kGreenLight, const Color(0xFFA5D6A7));
       case 'CLOSED':
-        return _StatusInfo('Closed', const Color(0xFFC62828), const Color(0xFFFFEBEE), const Color(0xFFEF9A9A));
+        return _StatusInfo(context.l10n.closed, const Color(0xFFC62828), const Color(0xFFFFEBEE), const Color(0xFFEF9A9A));
       case 'ARCHIVED':
-        return _StatusInfo('Archived', const Color(0xFF37474F), const Color(0xFFECEFF1), const Color(0xFFB0BEC5));
+        return _StatusInfo(context.l10n.archived, const Color(0xFF37474F), const Color(0xFFECEFF1), const Color(0xFFB0BEC5));
       default:
-        return _StatusInfo('Draft', const Color(0xFF757575), const Color(0xFFF5F5F5), const Color(0xFFBDBDBD));
+        return _StatusInfo(context.l10n.draft, const Color(0xFF757575), const Color(0xFFF5F5F5), const Color(0xFFBDBDBD));
     }
   }
 
@@ -351,27 +352,27 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A))),
             ),
             const Divider(height: 1),
-            _actionTile(Icons.visibility_outlined, 'Preview', const Color(0xFF1565C0),
+            _actionTile(Icons.visibility_outlined, context.l10n.preview, const Color(0xFF1565C0),
                 () { Navigator.pop(context); _openPreview(context, catalogue); }),
-            _actionTile(Icons.edit_outlined, 'Edit', const Color(0xFF757575), () {
+            _actionTile(Icons.edit_outlined, context.l10n.edit, const Color(0xFF757575), () {
               Navigator.pop(context);
               Navigator.push(context, MaterialPageRoute(
                   builder: (_) => CatalogueWizardScreen(catalogue: catalogue)));
             }),
-            _actionTile(Icons.ios_share_outlined, 'Export & Share', const Color(0xFF757575), () {
+            _actionTile(Icons.ios_share_outlined, context.l10n.exportShare, const Color(0xFF757575), () {
               Navigator.pop(context);
               Navigator.push(context, MaterialPageRoute(
                   builder: (_) => CatalogueExportScreen(catalogue: catalogue)));
             }),
             if (catalogue.status.toLowerCase() == 'draft') ...[
               const Divider(height: 1),
-              _actionTile(Icons.publish_outlined, 'Publish', _kGreen, () {
+              _actionTile(Icons.publish_outlined, context.l10n.publish, _kGreen, () {
                 Navigator.pop(context);
                 _publish(context, catalogue);
               }),
             ],
             const Divider(height: 1),
-            _actionTile(Icons.delete_outline, 'Delete',
+            _actionTile(Icons.delete_outline, context.l10n.delete,
                 catalogue.status.toLowerCase() == 'draft' ? Colors.red : const Color(0xFFBDBDBD),
                 () {
               Navigator.pop(context);
@@ -417,17 +418,17 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Publish Catalogue'),
-        content: const Text('Publishing will make this catalogue visible to buyers. Continue?'),
+        title: Text(context.l10n.publishCatalogue),
+        content: Text(context.l10n.publishConfirmBody),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.l10n.cancel)),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               context.read<CatalogueProvider>().updateCatalogue(catalogue.id, status: 'PUBLISHED');
             },
             style: ElevatedButton.styleFrom(backgroundColor: _kGreen, foregroundColor: Colors.white),
-            child: const Text('Publish'),
+            child: Text(context.l10n.publish),
           ),
         ],
       ),
@@ -435,14 +436,10 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
   }
 
   void _confirmDelete(BuildContext context, SaleCatalogue catalogue) {
-    // Guard: backend only allows deleting DRAFT catalogues
     if (catalogue.status.toLowerCase() != 'draft') {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Cannot delete a ${catalogue.status.toLowerCase()} catalogue. '
-            'Only draft catalogues can be deleted.',
-          ),
+          content: Text(context.l10n.cannotDeletePublished(catalogue.status.toLowerCase())),
           backgroundColor: Colors.orange[700],
         ),
       );
@@ -452,17 +449,17 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Delete Catalogue'),
-        content: Text('Delete "${catalogue.title}"? This cannot be undone.'),
+        title: Text(context.l10n.deleteCatalogue),
+        content: Text(context.l10n.deleteConfirmTitle(catalogue.title)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.l10n.cancel)),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               context.read<CatalogueProvider>().deleteCatalogue(catalogue.id);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-            child: const Text('Delete'),
+            child: Text(context.l10n.delete),
           ),
         ],
       ),

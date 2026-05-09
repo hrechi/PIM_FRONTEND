@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import '../providers/catalogue_provider.dart';
-import '../models/catalogue_models.dart';
-import '../theme/app_theme.dart';
-import '../utils/constants.dart';
-import '../catalogue/catalogue_book_screen.dart';
+import '../../providers/catalogue_provider.dart';
+import '../../models/catalogue_models.dart';
+import '../../theme/app_theme.dart';
+import '../../utils/constants.dart';
+import '../../l10n/l10n_extensions.dart';
+import 'catalogue_book_screen.dart';
 
 const _kGreen = Color(0xFF309448);
 const _kGreenLight = Color(0xFFE8F5E9);
@@ -50,7 +51,7 @@ class _CatalogueExportScreenState extends State<CatalogueExportScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Export Catalogue'),
+        title: Text(context.l10n.catalogues),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),

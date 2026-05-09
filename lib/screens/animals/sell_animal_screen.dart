@@ -4,10 +4,10 @@ import 'package:intl/intl.dart';
 import '../../models/animal.dart';
 import '../../services/animal_service.dart';
 import '../../utils/constants.dart';
+import '../../l10n/l10n_extensions.dart';
 
 class SellAnimalScreen extends StatefulWidget {
   final Animal animal;
-
   const SellAnimalScreen({super.key, required this.animal});
 
   @override
@@ -24,12 +24,19 @@ class _SellAnimalScreenState extends State<SellAnimalScreen> {
   DateTime _saleDate = DateTime.now();
   bool _isLoading = false;
 
+  @override
+  void dispose() {
+    _priceController.dispose();
+    _buyerController.dispose();
+    _weightController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
     final messenger = ScaffoldMessenger.of(context);
-
     try {
       final payload = <String, dynamic>{
         'salePrice': double.parse(_priceController.text),
@@ -38,37 +45,33 @@ class _SellAnimalScreenState extends State<SellAnimalScreen> {
         if (_weightController.text.isNotEmpty) 'saleWeightKg': double.parse(_weightController.text),
         if (_notesController.text.isNotEmpty) 'notes': _notesController.text,
       };
-
       await AnimalService().sellAnimal(widget.animal.nodeId, payload);
-
       if (mounted) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Animal sold successfully!')),
-        );
-        Navigator.pop(context, true); // Returns true to trigger refresh
+        messenger.showSnackBar(SnackBar(content: Text(context.l10n.animalSoldSuccess)));
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        messenger.showSnackBar(SnackBar(content: Text('${context.l10n.error}: $e')));
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     return Scaffold(
       backgroundColor: AppColors.wheatWarmClay,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: const BackButton(color: Colors.black),
-        title: Text('Sell ${widget.animal.name}', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: Text(
+          '${l.sellAnimal} — ${widget.animal.name}',
+          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -77,14 +80,15 @@ class _SellAnimalScreenState extends State<SellAnimalScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildModernTextField(
+              _buildField(
                 controller: _priceController,
-                label: 'Sale Price',
+                label: l.salePrice,
                 icon: Symbols.payments,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                validator: (val) => val == null || val.isEmpty ? l.distanceRequired : null,
               ),
               const SizedBox(height: 16),
+              // Date picker
               GestureDetector(
                 onTap: () async {
                   final picked = await showDatePicker(
@@ -93,9 +97,7 @@ class _SellAnimalScreenState extends State<SellAnimalScreen> {
                     firstDate: DateTime(2000),
                     lastDate: DateTime.now(),
                   );
-                  if (picked != null) {
-                    setState(() => _saleDate = picked);
-                  }
+                  if (picked != null) setState(() => _saleDate = picked);
                 },
                 child: Container(
                   padding: const EdgeInsets.all(16),
@@ -106,13 +108,14 @@ class _SellAnimalScreenState extends State<SellAnimalScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Symbols.calendar_today, color: AppColors.mistyBlue),
+                      Icon(Symbols.calendar_today, color: AppColors.mistyBlue),
                       const SizedBox(width: 12),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Sale Date', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                          Text(DateFormat('dd MMM yyyy').format(_saleDate), style: const TextStyle(fontWeight: FontWeight.bold)),
+                          Text(l.saleDate, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                          Text(DateFormat('dd MMM yyyy').format(_saleDate),
+                              style: const TextStyle(fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ],
@@ -120,25 +123,16 @@ class _SellAnimalScreenState extends State<SellAnimalScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              _buildModernTextField(
-                controller: _buyerController,
-                label: 'Buyer Name (Optional)',
-                icon: Symbols.person,
-              ),
+              _buildField(controller: _buyerController, label: l.buyerName, icon: Symbols.person),
               const SizedBox(height: 16),
-              _buildModernTextField(
+              _buildField(
                 controller: _weightController,
-                label: 'Sale Weight Kg (Optional)',
+                label: l.saleWeightKg,
                 icon: Symbols.scale,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
               ),
               const SizedBox(height: 16),
-              _buildModernTextField(
-                controller: _notesController,
-                label: 'Notes (Optional)',
-                icon: Symbols.notes,
-                maxLines: 3,
-              ),
+              _buildField(controller: _notesController, label: l.notes, icon: Symbols.notes, maxLines: 3),
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
@@ -149,9 +143,10 @@ class _SellAnimalScreenState extends State<SellAnimalScreen> {
                     backgroundColor: Colors.green,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  child: _isLoading 
-                      ? const CircularProgressIndicator(color: Colors.white) 
-                      : const Text('CONFIRM SALE', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(l.confirmSale,
+                          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -161,7 +156,7 @@ class _SellAnimalScreenState extends State<SellAnimalScreen> {
     );
   }
 
-  Widget _buildModernTextField({
+  Widget _buildField({
     required TextEditingController controller,
     required String label,
     required IconData icon,

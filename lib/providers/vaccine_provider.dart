@@ -39,8 +39,8 @@ class VaccineProvider extends ChangeNotifier {
 
   // ── Load ─────────────────────────────────────────────────────
 
-  Future<void> loadForAnimal(String animalId) async {
-    if (_lastAnimalId == animalId && _schedules.isNotEmpty) return;
+  Future<void> loadForAnimal(String animalId, {bool forceRefresh = false}) async {
+    if (!forceRefresh && _lastAnimalId == animalId && _schedules.isNotEmpty) return;
     _setLoading(true);
     try {
       final results = await Future.wait([
@@ -116,7 +116,7 @@ class VaccineProvider extends ChangeNotifier {
     try {
       await _service.updateSchedule(scheduleId, newDate);
       _lastAnimalId = null;
-      await loadForAnimal(animalId);
+      await loadForAnimal(animalId, forceRefresh: true);
       return true;
     } catch (e) {
       _error = e.toString();
@@ -134,7 +134,7 @@ class VaccineProvider extends ChangeNotifier {
       await _service.markDone(scheduleId,
           administeredBy: administeredBy, doseGiven: doseGiven, lotNumber: lotNumber);
       _lastAnimalId = null;
-      await loadForAnimal(animalId);
+      await loadForAnimal(animalId, forceRefresh: true);
       return true;
     } catch (e) {
       _error = e.toString();

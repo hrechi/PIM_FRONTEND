@@ -11,6 +11,7 @@ import '../utils/responsive.dart';
 import '../utils/constants.dart';
 import '../utils/farm_mood_calculator.dart';
 import '../utils/plant_message_generator.dart';
+import '../l10n/l10n_extensions.dart';
 import '../models/animal.dart';
 import '../models/alert_item.dart';
 import '../models/soil_intelligence.dart';
@@ -39,6 +40,7 @@ import 'chat_assistant_screen.dart';
 import 'notification_center_screen.dart';
 import 'weather_screen.dart';
 import 'shorts_screen.dart';
+import '../widgets/language_selector.dart';
 
 /// Main home screen displaying the farm dashboard
 class HomeScreen extends StatefulWidget {
@@ -781,7 +783,7 @@ class _HomeScreenState extends State<HomeScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Hi, Good Morning',
+                  '${context.l10n.hi}, ${context.l10n.timeBasedGreeting}',
                   style: AppTextStyles.h3().copyWith(
                     color: AppColorPalette.white,
                   ),
@@ -799,6 +801,11 @@ class _HomeScreenState extends State<HomeScreen>
         ],
       ),
       actions: [
+        IconButton(
+          icon: const Icon(Icons.language_rounded, color: AppColorPalette.white),
+          tooltip: 'Language',
+          onPressed: () => LanguageSelector.show(context),
+        ),
         Stack(
           children: [
             IconButton(

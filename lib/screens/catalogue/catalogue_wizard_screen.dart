@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/catalogue_provider.dart';
-import '../models/catalogue_models.dart';
-import '../models/animal.dart';
-import '../widgets/animal_catalogue_card.dart';
-import '../utils/currency_converter.dart';
+import '../../providers/catalogue_provider.dart';
+import '../../models/catalogue_models.dart';
+import '../../models/animal.dart';
+import '../../widgets/animal_catalogue_card.dart';
+import '../../utils/currency_converter.dart';
+import '../../l10n/l10n_extensions.dart';
 import '../animal_selector_screen.dart';
-import '../catalogue/catalogue_preview_screen.dart';
+import 'catalogue_preview_screen.dart';
 
 class CatalogueWizardScreen extends StatefulWidget {
   final SaleCatalogue? catalogue;
@@ -72,7 +73,7 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.catalogue != null ? 'Edit Catalogue' : 'Create Catalogue'),
+        title: Text(widget.catalogue != null ? context.l10n.editAnimal : context.l10n.createCatalogue),
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => _confirmExit(context),
@@ -142,10 +143,10 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
 
   String _getStepTitle(int step) {
     switch (step) {
-      case 0: return 'Info';
-      case 1: return 'Animals';
-      case 2: return 'Settings';
-      case 3: return 'Preview';
+      case 0: return context.l10n.info;
+      case 1: return context.l10n.animals;
+      case 2: return context.l10n.settings;
+      case 3: return context.l10n.preview;
       default: return '';
     }
   }
@@ -168,44 +169,39 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Basic Information',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
+            Text(context.l10n.basicInformation, style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 16),
             TextFormField(
               controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: 'Catalogue Title *',
-                hintText: 'e.g., Spring 2024 Dairy Cattle Sale',
+              decoration: InputDecoration(
+                labelText: context.l10n.catalogueTitle,
+                hintText: context.l10n.catalogueTitleHint,
               ),
               validator: (value) {
-                if (value?.isEmpty ?? true) {
-                  return 'Title is required';
-                }
+                if (value?.isEmpty ?? true) return context.l10n.titleRequired;
                 return null;
               },
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _locationController,
-              decoration: const InputDecoration(
-                labelText: 'Location',
-                hintText: 'e.g., Farm Location, City',
+              decoration: InputDecoration(
+                labelText: context.l10n.location,
+                hintText: context.l10n.locationHint,
               ),
             ),
             const SizedBox(height: 16),
             InkWell(
               onTap: () => _selectDate(context),
               child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Sale Date',
-                  suffixIcon: Icon(Icons.calendar_today),
+                decoration: InputDecoration(
+                  labelText: context.l10n.saleDate,
+                  suffixIcon: const Icon(Icons.calendar_today),
                 ),
                 child: Text(
                   _saleDate != null
                       ? '${_saleDate!.day}/${_saleDate!.month}/${_saleDate!.year}'
-                      : 'Select date',
+                      : context.l10n.selectDate,
                 ),
               ),
             ),
@@ -215,12 +211,9 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     initialValue: _currency,
-                    decoration: const InputDecoration(labelText: 'Currency'),
+                    decoration: InputDecoration(labelText: context.l10n.currency),
                     items: CurrencyConverter.supported.map((c) {
-                      return DropdownMenuItem(
-                        value: c,
-                        child: Text('$c  ${CurrencyConverter.symbol(c)}'),
-                      );
+                      return DropdownMenuItem(value: c, child: Text('$c  ${CurrencyConverter.symbol(c)}'));
                     }).toList(),
                     onChanged: (value) => setState(() => _currency = value!),
                   ),
@@ -228,7 +221,7 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: SwitchListTile(
-                    title: const Text('Show Prices'),
+                    title: Text(context.l10n.showPrices),
                     value: _showPrices,
                     onChanged: (value) => setState(() => _showPrices = value),
                     contentPadding: EdgeInsets.zero,
@@ -251,14 +244,14 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
             children: [
               Expanded(
                 child: Text(
-                  'Selected Animals (${_selectedAnimals.length})',
+                  '${context.l10n.selectedAnimals} (${_selectedAnimals.length})',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
               ElevatedButton.icon(
                 onPressed: () => _navigateToAnimalSelector(),
                 icon: const Icon(Icons.add),
-                label: const Text('Add Animals'),
+                label: Text(context.l10n.addAnimals),
               ),
             ],
           ),
@@ -276,21 +269,16 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'No animals selected',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                        context.l10n.noAnimalsSelected,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Add animals to include in your catalogue',
-                        style: TextStyle(color: Colors.grey),
-                      ),
+                      Text(context.l10n.addAnimalsToInclude, style: const TextStyle(color: Colors.grey)),
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
                         onPressed: () => _navigateToAnimalSelector(),
                         icon: const Icon(Icons.add),
-                        label: const Text('Select Animals'),
+                        label: Text(context.l10n.selectAnimals),
                       ),
                     ],
                   ),
@@ -317,49 +305,22 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Catalogue Settings',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
+          Text(context.l10n.catalogueSettingsTitle, style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 16),
-          _buildSettingsSection(
-            'Sections to Include',
-            [
-              _buildSettingSwitch('Animal Photos', _settings.showPhotos, (value) {
-                setState(() => _settings = _settings.copyWith(showPhotos: value));
-              }),
-              _buildSettingSwitch('Animal Details', _settings.showDetails, (value) {
-                setState(() => _settings = _settings.copyWith(showDetails: value));
-              }),
-              _buildSettingSwitch('Health Records', _settings.showHealth, (value) {
-                setState(() => _settings = _settings.copyWith(showHealth: value));
-              }),
-              _buildSettingSwitch('Vaccination History', _settings.showVaccinations, (value) {
-                setState(() => _settings = _settings.copyWith(showVaccinations: value));
-              }),
-              _buildSettingSwitch('Production Records', _settings.showProduction, (value) {
-                setState(() => _settings = _settings.copyWith(showProduction: value));
-              }),
-              _buildSettingSwitch('Genetic Information', _settings.showGenetics, (value) {
-                setState(() => _settings = _settings.copyWith(showGenetics: value));
-              }),
-            ],
-          ),
+          _buildSettingsSection(context.l10n.sectionsToInclude, [
+            _buildSettingSwitch(context.l10n.animalPhotos, _settings.showPhotos, (v) => setState(() => _settings = _settings.copyWith(showPhotos: v))),
+            _buildSettingSwitch(context.l10n.animalDetailsSection, _settings.showDetails, (v) => setState(() => _settings = _settings.copyWith(showDetails: v))),
+            _buildSettingSwitch(context.l10n.healthRecords, _settings.showHealth, (v) => setState(() => _settings = _settings.copyWith(showHealth: v))),
+            _buildSettingSwitch(context.l10n.vaccinationHistory, _settings.showVaccinations, (v) => setState(() => _settings = _settings.copyWith(showVaccinations: v))),
+            _buildSettingSwitch(context.l10n.productionRecords, _settings.showProduction, (v) => setState(() => _settings = _settings.copyWith(showProduction: v))),
+            _buildSettingSwitch(context.l10n.geneticInformation, _settings.showGenetics, (v) => setState(() => _settings = _settings.copyWith(showGenetics: v))),
+          ]),
           const SizedBox(height: 24),
-          _buildSettingsSection(
-            'Layout Options',
-            [
-              _buildSettingSwitch('Two Column Layout', _settings.twoColumnLayout, (value) {
-                setState(() => _settings = _settings.copyWith(twoColumnLayout: value));
-              }),
-              _buildSettingSwitch('Show QR Codes', _settings.showQrCodes, (value) {
-                setState(() => _settings = _settings.copyWith(showQrCodes: value));
-              }),
-              _buildSettingSwitch('Include Contact Info', _settings.showContactInfo, (value) {
-                setState(() => _settings = _settings.copyWith(showContactInfo: value));
-              }),
-            ],
-          ),
+          _buildSettingsSection(context.l10n.layoutOptions, [
+            _buildSettingSwitch(context.l10n.twoColumnLayout, _settings.twoColumnLayout, (v) => setState(() => _settings = _settings.copyWith(twoColumnLayout: v))),
+            _buildSettingSwitch(context.l10n.showQrCodes, _settings.showQrCodes, (v) => setState(() => _settings = _settings.copyWith(showQrCodes: v))),
+            _buildSettingSwitch(context.l10n.includeContactInfo, _settings.showContactInfo, (v) => setState(() => _settings = _settings.copyWith(showContactInfo: v))),
+          ]),
         ],
       ),
     );
@@ -423,7 +384,7 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
             Expanded(
               child: OutlinedButton(
                 onPressed: () => setState(() => _currentStep--),
-                child: const Text('Back'),
+                child: Text(context.l10n.back),
               ),
             ),
           if (_currentStep > 0) const SizedBox(width: 16),
@@ -450,11 +411,11 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
 
   String _getNextButtonText() {
     switch (_currentStep) {
-      case 0: return 'Select Animals';
-      case 1: return 'Settings';
-      case 2: return widget.catalogue != null ? 'Update' : 'Create';
-      case 3: return 'Done';
-      default: return 'Next';
+      case 0: return context.l10n.selectAnimals;
+      case 1: return context.l10n.settings;
+      case 2: return widget.catalogue != null ? context.l10n.updateRecord : context.l10n.createCatalogue;
+      case 3: return context.l10n.done;
+      default: return context.l10n.next;
     }
   }
 
@@ -473,7 +434,7 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
     // Validate title manually (form may not be in tree at step 2)
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Title is required')),
+        SnackBar(content: Text(context.l10n.titleRequired)),
       );
       setState(() => _currentStep = 0);
       return;
@@ -542,7 +503,7 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(provider.error ?? 'Failed to save catalogue'),
+          content: Text(provider.error ?? context.l10n.error),
           backgroundColor: Colors.red,
         ),
       );
@@ -619,25 +580,20 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Exit Wizard'),
-        content: const Text(
-          'Are you sure you want to exit? Any unsaved changes will be lost.'
-        ),
+        title: Text(context.l10n.exitWizard),
+        content: Text(context.l10n.exitWizardConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Close wizard
+              Navigator.pop(context);
+              Navigator.pop(context);
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Exit'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: Text(context.l10n.exit),
           ),
         ],
       ),

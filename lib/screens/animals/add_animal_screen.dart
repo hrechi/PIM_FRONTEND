@@ -184,6 +184,32 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
             };
           }
         }
+
+        // Fix #4 — pré-cocher les vaccins déjà administrés en mode édition
+        if (isEditMode && widget.animal?.vaccineRecords != null) {
+          for (final record in widget.animal!.vaccineRecords!) {
+            final code = record.vaccine?.code ?? record.vaccineId;
+            if (_vaccineSelections.containsKey(code)) {
+              _vaccineSelections[code]!['checked'] = true;
+              _vaccineSelections[code]!['date'] =
+                  record.administeredAt.toIso8601String().split('T')[0];
+              _vaccineSelections[code]!['dose'] = record.doseGiven;
+            } else {
+              // Vaccin existant non présent dans les réglementations → ajouter comme "OTHER"
+              final otherId = 'OTHER_${record.id}';
+              _vaccineSelections[otherId] = {
+                'checked': true,
+                'date': record.administeredAt.toIso8601String().split('T')[0],
+                'dose': record.doseGiven,
+                'lot': record.lotNumber ?? '',
+                'isOther': true,
+                'name': (record.vaccine?.code == 'OTHER' ? record.notes : record.vaccine?.nameFr)
+                    ?? record.notes
+                    ?? 'Vaccin',
+              };
+            }
+          }
+        }
       });
     } catch (e) {
       debugPrint('Error fetching regulations: $e');
@@ -221,7 +247,9 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         'notes': _notesController.text,
         'fieldId': _selectedFieldId,
         'vaccination': _isVaccinated,
-        'vaccines': _isVaccinated ? _vaccines : null,
+        // Fix #3 — ne pas envoyer vaccines dans le payload animal pour éviter
+        // le double enregistrement (les vaccins sont créés séparément via VaccineService)
+        // 'vaccines': null,
         
         // Financial & Genealogy
         'origin': _selectedOrigin,
@@ -302,7 +330,9 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
       }
 
       // ── Generate Smart Planning ──
-      if (!isEditMode) {
+      // Fix #5 — ne générer le plan que si aucun vaccin n'a déjà été sélectionné
+      // (évite les doublons si l'utilisateur a coché des vaccins à l'étape 3)
+      if (!isEditMode && checkedSelections.isEmpty) {
         try {
           await _vaccineService.generateSmartPlan(animal.id);
         } catch (pe) {

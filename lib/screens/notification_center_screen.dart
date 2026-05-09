@@ -5,6 +5,7 @@ import '../providers/notification_provider.dart';
 import '../models/notification_model.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
+import '../l10n/l10n_extensions.dart';
 
 class NotificationCenterScreen extends StatefulWidget {
   const NotificationCenterScreen({super.key});
@@ -29,11 +30,11 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
     return Scaffold(
       backgroundColor: AppColorPalette.wheatWarmClay,
       appBar: AppBar(
-        title: Text('Notifications', style: AppTextStyles.h3()),
+        title: Text(context.l10n.notifications, style: AppTextStyles.h3()),
         actions: [
           TextButton(
             onPressed: () => context.read<NotificationProvider>().markAllAsRead(),
-            child: const Text('Mark all as read'),
+            child: Text('Mark all as read'),
           ),
           const SizedBox(width: 8),
         ],

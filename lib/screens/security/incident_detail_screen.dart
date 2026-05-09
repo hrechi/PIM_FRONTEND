@@ -6,6 +6,7 @@ import '../../services/api_service.dart';
 import '../../theme/color_palette.dart';
 import '../../theme/text_styles.dart';
 import '../../utils/constants.dart';
+import '../../l10n/l10n_extensions.dart';
 import 'live_feed_screen.dart'; // same security/ folder
 
 class IncidentDetailScreen extends StatefulWidget {
@@ -175,7 +176,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
     if (_sirenActive) _toggleSiren();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Incident marked as resolved'),
+        content: Text(context.l10n.incidentResolved),
         backgroundColor: AppColorPalette.fieldFreshMid,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -196,11 +197,11 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
       setState(() => _sirenActive = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
+          content: Row(
             children: [
-              Icon(Icons.volume_off, color: Colors.white),
-              SizedBox(width: 10),
-              Text('Siren deactivated'),
+              const Icon(Icons.volume_off, color: Colors.white),
+              const SizedBox(width: 10),
+              Text(context.l10n.sirenDeactivated),
             ],
           ),
           backgroundColor: AppColorPalette.charcoalGreen,
@@ -217,11 +218,11 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
       setState(() => _sirenActive = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
+          content: Row(
             children: [
-              Icon(Icons.volume_up, color: Colors.white),
-              SizedBox(width: 10),
-              Text('🚨 Siren activated!'),
+              const Icon(Icons.volume_up, color: Colors.white),
+              const SizedBox(width: 10),
+              Text(context.l10n.sirenActivated),
             ],
           ),
           backgroundColor: AppColorPalette.alertError,
@@ -258,7 +259,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
           ElevatedButton.icon(
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.arrow_back),
-            label: const Text('Go Back'),
+            label: Text(context.l10n.goBack),
           ),
         ],
       ),
@@ -421,7 +422,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
               ),
               const SizedBox(width: 10),
               Text(
-                _isResolved ? 'RESOLVED' : 'ACTIVE THREAT',
+                _isResolved ? context.l10n.done : 'ACTIVE THREAT',
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
@@ -601,7 +602,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
               _isResolved ? Icons.check_circle : Icons.check_circle_outline,
             ),
             label: Text(
-              _isResolved ? 'RESOLVED' : 'MARK AS RESOLVED',
+              _isResolved ? context.l10n.incidentResolved : 'MARK AS RESOLVED',
               style: const TextStyle(
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1,

@@ -9,6 +9,7 @@ import '../services/api_service.dart';
 import '../services/community_service.dart';
 import '../services/voice_number_parser.dart';
 import '../services/voice_page_action_registry.dart';
+import '../l10n/l10n_extensions.dart';
 
 String _normalizeVoiceInput(String input) {
   return input
@@ -191,20 +192,21 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
   }
 
   Future<void> _deletePost(CommunityPost post) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Post?'),
-        content: const Text('This action cannot be undone.'),
+        title: Text(l10n.deletePost),
+        content: Text(l10n.deletePostConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -505,12 +507,12 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Community Feed'),
+        title: Text(context.l10n.communityFeed),
         actions: [
           IconButton(
             onPressed: _openCreatePostSheet,
             icon: const Icon(Icons.add_box_outlined),
-            tooltip: 'Create Post',
+            tooltip: context.l10n.createPost,
           ),
         ],
       ),
@@ -537,7 +539,7 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
                         Center(
                           child: FilledButton(
                             onPressed: _loadPosts,
-                            child: const Text('Retry'),
+                            child: Text(context.l10n.retry),
                           ),
                         ),
                       ],
@@ -604,10 +606,10 @@ class _ComposerCard extends StatelessWidget {
                 child: Icon(Icons.campaign_outlined, color: Colors.white),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Share an update or start a vote with farmers',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  context.l10n.shareUpdate,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                 ),
               ),
               Container(
@@ -616,9 +618,9 @@ class _ComposerCard extends StatelessWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Text(
-                  'Post',
-                  style: TextStyle(
+                child: Text(
+                  context.l10n.post,
+                  style: const TextStyle(
                     color: Color(0xFF0E7A43),
                     fontWeight: FontWeight.w700,
                   ),
@@ -722,25 +724,26 @@ class _PostCard extends StatelessWidget {
                       }
                     },
                     itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                      const PopupMenuItem<String>(
+                      PopupMenuItem<String>(
                         value: 'edit',
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.edit, size: 18),
-                            SizedBox(width: 8),
-                            Text('Edit'),
+                            const Icon(Icons.edit, size: 18),
+                            const SizedBox(width: 8),
+                            Text(context.l10n.edit),
                           ],
                         ),
                       ),
-                      const PopupMenuItem<String>(
+                      PopupMenuItem<String>(
                         value: 'delete',
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.delete, size: 18, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Delete', style: TextStyle(color: Colors.red)),
+                            const Icon(Icons.delete, size: 18, color: Colors.red),
+                            const SizedBox(width: 8),
+                            Text(context.l10n.delete,
+                                style: const TextStyle(color: Colors.red)),
                           ],
                         ),
                       ),

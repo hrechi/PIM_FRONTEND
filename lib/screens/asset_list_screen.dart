@@ -20,6 +20,7 @@ import '../utils/validators.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/asset_suggest_field.dart';
+import '../l10n/l10n_extensions.dart';
 import '../services/asset_ai_service.dart';
 import '../services/api_service.dart';
 
@@ -112,7 +113,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
 
     if (result == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Asset not found for this QR code.')),
+        SnackBar(content: Text(context.l10n.assetNotFound)),
       );
       return;
     }
@@ -157,13 +158,13 @@ class _AssetListScreenState extends State<AssetListScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              '⚠ Machine requires maintenance before use',
+              context.l10n.machineRequiresMaintenance,
               style: AppTextStyles.caption(color: const Color(0xFFE3A77B)),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             CustomButton(
-              text: 'Maintenance Required',
+              text: context.l10n.maintenanceRequired,
               onPressed: null,
               backgroundColor: Colors.red.shade400,
               isLoading: isSessionLoading,
@@ -174,8 +175,8 @@ class _AssetListScreenState extends State<AssetListScreen> {
 
       return CustomButton(
         text: asset.isInUse
-            ? (isCurrentUserUsing ? 'Finish Using' : 'In Use')
-            : 'Start Using',
+            ? (isCurrentUserUsing ? context.l10n.finishUsing : context.l10n.inUse)
+            : context.l10n.startUsing,
         onPressed: isSessionLoading
             ? null
             : isOtherUserUsing
@@ -234,7 +235,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
     } else {
       final provider = context.read<AssetProvider>();
       return CustomButton(
-        text: asset.status == 'IN_USE' ? 'Mark Available' : 'Mark In Use',
+        text: asset.status == 'IN_USE' ? context.l10n.markAvailable : context.l10n.markInUse,
         onPressed: () async {
           await provider.updateAsset(
             assetId: asset.id,
@@ -279,9 +280,9 @@ class _AssetListScreenState extends State<AssetListScreen> {
   String _conditionLabel(String? condition) {
     switch (condition?.toUpperCase()) {
       case 'WARNING':
-        return 'Warning';
+        return context.l10n.warning;
       case 'CRITICAL':
-        return 'Critical';
+        return context.l10n.critical;
       default:
         return '';
     }
@@ -332,8 +333,8 @@ class _AssetListScreenState extends State<AssetListScreen> {
           Expanded(
             child: Text(
               isCurrentUserUsing
-                  ? 'Currently used by you'
-                  : 'Currently used by $whoIsUsing',
+                  ? context.l10n.currentlyUsedByYou
+                  : context.l10n.currentlyUsedBy(whoIsUsing),
               style: AppTextStyles.caption(
                 color: Colors.white.withValues(alpha: 0.92),
               ),
@@ -389,7 +390,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
                           ),
                         ),
                         const SizedBox(height: 18),
-                        Text('Finish & Save', style: AppTextStyles.h3()),
+                        Text(context.l10n.finish, style: AppTextStyles.h3()),
                         const SizedBox(height: 6),
                         Text(
                           '${asset.name}${asset.model != null && asset.model!.isNotEmpty ? ' • ${asset.model}' : ''}${asset.fieldName != null ? ' • ${asset.fieldName}' : ''}',
@@ -402,81 +403,69 @@ class _AssetListScreenState extends State<AssetListScreen> {
                         const SizedBox(height: 8),
                         CustomTextField(
                           controller: distanceController,
-                          label: 'Distance (km)',
-                          hintText: 'Enter distance traveled',
+                          label: context.l10n.distanceKm,
+                          hintText: context.l10n.enterDistanceTraveled,
                           prefixIcon: Icons.route,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           validator: (value) {
                             final raw = value?.trim() ?? '';
-                            if (raw.isEmpty) return 'Distance is required';
+                            if (raw.isEmpty) return context.l10n.distanceRequired;
                             final parsed = double.tryParse(raw);
-                            if (parsed == null) return 'Enter a valid number';
-                            if (parsed < 0)
-                              return 'Distance cannot be negative';
+                            if (parsed == null) return context.l10n.enterValidNumber;
+                            if (parsed < 0) return context.l10n.distanceNegative;
                             return null;
                           },
                         ),
                         const SizedBox(height: 14),
-                        _workerSheetSectionTitle('Issues'),
+                        _workerSheetSectionTitle(context.l10n.issues),
                         const SizedBox(height: 8),
                         CustomTextField(
                           controller: issuesController,
-                          label: 'Issues (Optional)',
-                          hintText: 'Describe issues encountered',
+                          label: context.l10n.issuesOptional,
+                          hintText: context.l10n.describeIssues,
                           prefixIcon: Icons.report_problem_outlined,
                           maxLines: 4,
                         ),
                         const SizedBox(height: 14),
-                        _workerSheetSectionTitle('Maintenance'),
+                        _workerSheetSectionTitle(context.l10n.maintenance),
                         const SizedBox(height: 8),
                         CustomTextField(
                           controller: maintenanceController,
-                          label: 'Maintenance Note (Optional)',
-                          hintText: 'Recommended maintenance actions',
+                          label: context.l10n.maintenanceNote,
+                          hintText: context.l10n.recommendedMaintenance,
                           prefixIcon: Icons.build_circle_outlined,
                           maxLines: 4,
                         ),
                         const SizedBox(height: 14),
-                        _workerSheetSectionTitle('Condition'),
+                        _workerSheetSectionTitle(context.l10n.condition),
                         const SizedBox(height: 10),
                         Wrap(
                           spacing: 10,
                           runSpacing: 10,
                           children: [
                             _conditionChip(
-                              label: 'Good',
+                              label: context.l10n.good,
                               value: 'GOOD',
                               selectedValue: selectedCondition,
                               color: const Color(0xFF61C06F),
-                              onTap: isSubmitting
-                                  ? null
-                                  : () => setLocalState(
-                                      () => selectedCondition = 'GOOD',
-                                    ),
+                              onTap: isSubmitting ? null
+                                  : () => setLocalState(() => selectedCondition = 'GOOD'),
                             ),
                             _conditionChip(
-                              label: 'Warning',
+                              label: context.l10n.warning,
                               value: 'WARNING',
                               selectedValue: selectedCondition,
                               color: const Color(0xFFE3A77B),
-                              onTap: isSubmitting
-                                  ? null
-                                  : () => setLocalState(
-                                      () => selectedCondition = 'WARNING',
-                                    ),
+                              onTap: isSubmitting ? null
+                                  : () => setLocalState(() => selectedCondition = 'WARNING'),
                             ),
                             _conditionChip(
-                              label: 'Critical',
+                              label: context.l10n.critical,
                               value: 'CRITICAL',
                               selectedValue: selectedCondition,
                               color: const Color(0xFFC83E4D),
-                              onTap: isSubmitting
-                                  ? null
-                                  : () => setLocalState(
-                                      () => selectedCondition = 'CRITICAL',
-                                    ),
+                              onTap: isSubmitting ? null
+                                  : () => setLocalState(() => selectedCondition = 'CRITICAL'),
                             ),
                           ],
                         ),
@@ -487,7 +476,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: CustomButton(
-                            text: 'Finish & Save',
+                            text: context.l10n.finish,
                             isLoading: isSubmitting,
                             onPressed: isSubmitting
                                 ? null

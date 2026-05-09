@@ -5,6 +5,8 @@ import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../utils/constants.dart';
 import '../widgets/custom_button.dart';
+import '../l10n/l10n_extensions.dart';
+import '../widgets/language_selector.dart';
 import 'edit_profile_screen.dart';
 import 'signin_screen.dart';
 import '../widgets/app_drawer.dart';
@@ -22,16 +24,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // If user is not loaded after 5 seconds, show timeout error
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         final auth = context.read<AuthProvider>();
-        if (auth.user == null &&
-            auth.errorMessage == null &&
-            !_showTimeoutError) {
-          setState(() {
-            _showTimeoutError = true;
-          });
+        if (auth.user == null && auth.errorMessage == null && !_showTimeoutError) {
+          setState(() => _showTimeoutError = true);
         }
       }
     });
@@ -39,6 +36,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Scaffold(
       drawer: const AppDrawer(),
       body: Consumer<AuthProvider>(
@@ -47,7 +46,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final isWorker = user?.role.toUpperCase() == 'WORKER';
 
           if (user == null) {
-            // Check if there's an error
             if (auth.errorMessage != null || _showTimeoutError) {
               return Center(
                 child: Padding(
@@ -55,64 +53,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: Colors.red,
-                      ),
+                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
                       const SizedBox(height: 16),
                       Text(
-                        _showTimeoutError
-                            ? 'Connection Timeout'
-                            : 'Session Expired',
+                        _showTimeoutError ? 'Connection Timeout' : 'Session Expired',
                         style: GoogleFonts.inter(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryText,
-                        ),
+                          fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primaryText),
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        auth.errorMessage ??
-                            'Could not load profile. Please sign in again.',
+                        auth.errorMessage ?? 'Could not load profile. Please sign in again.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: AppColors.secondaryText,
-                        ),
+                        style: GoogleFonts.inter(fontSize: 14, color: AppColors.secondaryText),
                       ),
                       const SizedBox(height: 32),
                       ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(
-                            context,
-                          ).pushNamedAndRemoveUntil('/', (route) => false);
-                        },
-                        child: Text(
-                          'Go to Sign In',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                        ),
+                        onPressed: () =>
+                            Navigator.of(context).pushNamedAndRemoveUntil('/', (r) => false),
+                        child: Text(l10n.signIn,
+                            style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
                 ),
               );
             }
-
-            // Still loading
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const CircularProgressIndicator(),
                   const SizedBox(height: 16),
-                  Text(
-                    'Loading profile...',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: AppColors.secondaryText,
-                    ),
-                  ),
+                  Text(l10n.loading,
+                      style: GoogleFonts.inter(fontSize: 14, color: AppColors.secondaryText)),
                 ],
               ),
             );
@@ -125,100 +98,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   const SizedBox(height: 24),
 
-                  // Header
+                  // ── Header ──────────────────────────────────────────────
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(
                         children: [
                           Builder(
-                            builder: (context) => IconButton(
-                              onPressed: () =>
-                                  Scaffold.of(context).openDrawer(),
+                            builder: (ctx) => IconButton(
+                              onPressed: () => Scaffold.of(ctx).openDrawer(),
                               icon: const Icon(Icons.menu_rounded),
                               style: IconButton.styleFrom(
-                                foregroundColor: AppColors.primaryText,
-                              ),
+                                  foregroundColor: AppColors.primaryText),
                             ),
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'My Profile',
+                            l10n.profile,
                             style: GoogleFonts.inter(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primaryText,
-                            ),
+                              fontSize: 28, fontWeight: FontWeight.bold,
+                              color: AppColors.primaryText),
                           ),
                         ],
                       ),
-                      IconButton(
-                        onPressed: () async {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: Text(
-                                'Sign Out',
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primaryText,
-                                ),
-                              ),
-                              content: Text(
-                                'Are you sure you want to logout?',
-                                style: GoogleFonts.inter(
-                                  color: AppColors.secondaryText,
-                                ),
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(ctx).pop(false),
-                                  child: Text(
-                                    'Cancel',
-                                    style: GoogleFonts.inter(
-                                      color: AppColors.secondaryText,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.of(ctx).pop(true),
-                                  child: Text(
-                                    'Logout',
-                                    style: GoogleFonts.inter(
-                                      color: AppColors.error,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                          if (confirm == true) {
-                            await auth.signOut();
-                            if (context.mounted) {
-                              Navigator.of(context).pushReplacement(
-                                MaterialPageRoute(
-                                  builder: (_) => const SignInScreen(),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                        icon: const Icon(Icons.logout_rounded),
-                        tooltip: 'Sign Out',
-                        style: IconButton.styleFrom(
-                          foregroundColor: AppColors.error,
-                        ),
+                      Row(
+                        children: [
+                          // Language selector button
+                          IconButton(
+                            onPressed: () => LanguageSelector.show(context),
+                            icon: const Icon(Icons.language_rounded),
+                            tooltip: l10n.language,
+                            style: IconButton.styleFrom(
+                                foregroundColor: AppColors.primaryText),
+                          ),
+                          // Sign out button
+                          IconButton(
+                            onPressed: () => _confirmSignOut(context, auth, l10n),
+                            icon: const Icon(Icons.logout_rounded),
+                            tooltip: l10n.signOut,
+                            style: IconButton.styleFrom(
+                                foregroundColor: AppColors.error),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                   const SizedBox(height: 32),
 
-                  // Profile Picture
+                  // ── Avatar ──────────────────────────────────────────────
                   Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
@@ -230,77 +157,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       backgroundColor: AppColors.wheatWarmClay,
                       backgroundImage: user.profilePicture != null
                           ? NetworkImage(
-                              '${ApiService.mediaBaseUrl}${user.profilePicture}',
-                            )
+                              '${ApiService.mediaBaseUrl}${user.profilePicture}')
                           : null,
                       child: user.profilePicture == null
                           ? Text(
-                              user.name.isNotEmpty
-                                  ? user.name[0].toUpperCase()
-                                  : '?',
+                              user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
                               style: GoogleFonts.inter(
-                                fontSize: 36,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.mistyBlue,
-                              ),
+                                fontSize: 36, fontWeight: FontWeight.bold,
+                                color: AppColors.mistyBlue),
                             )
                           : null,
                     ),
                   ),
                   const SizedBox(height: 16),
 
-                  // Name
+                  // ── Name ────────────────────────────────────────────────
                   Text(
                     user.name,
                     style: GoogleFonts.inter(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryText,
-                    ),
+                      fontSize: 24, fontWeight: FontWeight.bold,
+                      color: AppColors.primaryText),
                   ),
                   const SizedBox(height: 4),
 
-                  // Account type / farm context
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         isWorker ? Icons.badge_outlined : Icons.agriculture_rounded,
-                        size: 16,
-                        color: AppColors.mistyBlue,
-                      ),
+                        size: 16, color: AppColors.mistyBlue),
                       const SizedBox(width: 4),
                       Text(
-                        isWorker ? 'Worker account' : user.farmName,
+                        isWorker ? l10n.workerAccount : user.farmName,
                         style: GoogleFonts.inter(
-                          fontSize: 15,
-                          color: AppColors.mistyBlue,
-                          fontWeight: FontWeight.w500,
-                        ),
+                          fontSize: 15, color: AppColors.mistyBlue,
+                          fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
                   const SizedBox(height: 32),
 
-                  // Info Cards
+                  // ── Language selector tile ───────────────────────────────
+                  const LanguageSelectorTile(),
+                  const SizedBox(height: 12),
+
+                  // ── Info cards ──────────────────────────────────────────
                   if (isWorker && (user.username?.isNotEmpty ?? false)) ...[
-                    _InfoCard(
-                      icon: Icons.alternate_email,
-                      title: 'Username',
-                      value: user.username!,
-                    ),
+                    _InfoCard(icon: Icons.alternate_email, title: 'Username',
+                        value: user.username!),
                     const SizedBox(height: 12),
                   ],
                   _InfoCard(
                     icon: Icons.email_outlined,
-                    title: 'Email',
+                    title: l10n.email,
                     value: user.email ?? 'Not added yet',
                     isEmpty: user.email == null,
                   ),
                   const SizedBox(height: 12),
                   _InfoCard(
                     icon: Icons.phone_outlined,
-                    title: 'Phone',
+                    title: l10n.phone,
                     value: user.phone ?? 'Not added yet',
                     isEmpty: user.phone == null,
                   ),
@@ -310,36 +226,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: 'Member Since',
                     value: _formatDate(user.createdAt),
                   ),
-
                   const SizedBox(height: 32),
 
-                  // Edit Profile button
+                  // ── Edit Profile ─────────────────────────────────────────
                   CustomButton(
                     text: 'Edit Profile',
                     gradient: AppColors.fieldFreshGradient,
                     icon: Icons.edit_outlined,
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const EditProfileScreen(),
-                        ),
-                      );
-                    },
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                    ),
                   ),
                   const SizedBox(height: 12),
 
                   if (!isWorker) ...[
-                    // Delete Account button
                     CustomButton(
-                      text: 'Delete Account',
+                      text: l10n.delete,
                       isOutlined: true,
                       backgroundColor: AppColors.error,
                       textColor: AppColors.error,
                       icon: Icons.delete_outline_rounded,
-                      onPressed: () => _showDeleteDialog(context, auth),
+                      onPressed: () => _showDeleteDialog(context, auth, l10n),
                     ),
                   ],
-
                   const SizedBox(height: 40),
                 ],
               ),
@@ -350,47 +259,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<void> _confirmSignOut(
+      BuildContext context, AuthProvider auth, dynamic l10n) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.signOut,
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold, color: AppColors.primaryText)),
+        content: Text(l10n.signOutConfirm,
+            style: GoogleFonts.inter(color: AppColors.secondaryText)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.cancel,
+                style: GoogleFonts.inter(
+                    color: AppColors.secondaryText, fontWeight: FontWeight.w500)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.signOut,
+                style: GoogleFonts.inter(
+                    color: AppColors.error, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await auth.signOut();
+      if (context.mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const SignInScreen()),
+        );
+      }
+    }
+  }
+
   String _formatDate(DateTime date) {
     const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
-  void _showDeleteDialog(BuildContext context, AuthProvider auth) {
+  void _showDeleteDialog(BuildContext context, AuthProvider auth, dynamic l10n) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Delete Account',
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.bold,
-            color: AppColors.error,
-          ),
-        ),
+        title: Text('Delete Account',
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold, color: AppColors.error)),
         content: Text(
-          'Are you sure you want to delete your account? This action cannot be undone.',
-          style: GoogleFonts.inter(color: AppColors.primaryText),
-        ),
+            'Are you sure you want to delete your account? This action cannot be undone.',
+            style: GoogleFonts.inter(color: AppColors.primaryText)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.inter(color: AppColors.secondaryText),
-            ),
+            child: Text(l10n.cancel,
+                style: GoogleFonts.inter(color: AppColors.secondaryText)),
           ),
           TextButton(
             onPressed: () async {
@@ -402,13 +331,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               }
             },
-            child: Text(
-              'Delete',
-              style: GoogleFonts.inter(
-                color: AppColors.error,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: Text(l10n.delete,
+                style: GoogleFonts.inter(
+                    color: AppColors.error, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -440,8 +365,7 @@ class _InfoCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 40, height: 40,
             decoration: BoxDecoration(
               color: AppColors.mistyBlue.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
@@ -453,26 +377,20 @@ class _InfoCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: AppColors.secondaryText,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text(title,
+                    style: GoogleFonts.inter(
+                        fontSize: 12, color: AppColors.secondaryText,
+                        fontWeight: FontWeight.w500)),
                 const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    color: isEmpty
-                        ? AppColors.secondaryText.withValues(alpha: 0.5)
-                        : AppColors.primaryText,
-                    fontWeight: FontWeight.w500,
-                    fontStyle: isEmpty ? FontStyle.italic : FontStyle.normal,
-                  ),
-                ),
+                Text(value,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: isEmpty
+                          ? AppColors.secondaryText.withValues(alpha: 0.5)
+                          : AppColors.primaryText,
+                      fontWeight: FontWeight.w500,
+                      fontStyle: isEmpty ? FontStyle.italic : FontStyle.normal,
+                    )),
               ],
             ),
           ),

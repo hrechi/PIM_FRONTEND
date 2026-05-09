@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -18,6 +19,9 @@ import 'providers/catalogue_provider.dart';
 import 'providers/voice_access_mode_provider.dart';
 import 'providers/global_voice_controller.dart';
 import 'providers/asset_provider.dart';
+import 'providers/locale_provider.dart';
+import 'providers/animal_health_provider.dart';
+import 'l10n/app_localizations.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
@@ -102,6 +106,8 @@ void main() async {
   }
 
   await initializeDateFormatting('fr_FR', null);
+  await initializeDateFormatting('ar', null);
+  await initializeDateFormatting('en_US', null);
 
   runApp(const FieldlyApp());
 }
@@ -167,21 +173,39 @@ class _FieldlyAppState extends State<FieldlyApp> {
           ),
         ),
         ChangeNotifierProvider(create: (_) => AssetProvider()),
+        ChangeNotifierProvider(create: (_) => LocaleProvider()..load()),
+        ChangeNotifierProvider(create: (_) => AnimalHealthProvider()),
       ],
-      child: MaterialApp(
+      child: Consumer<LocaleProvider>(
+        builder: (context, localeProvider, _) => MaterialApp(
         navigatorKey: navigatorKey,
         navigatorObservers: [routeObserver],
         title: 'Fieldly',
         scrollBehavior: MyScrollBehavior(),
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
+        // ── i18n ──────────────────────────────────────────────────
+        locale: localeProvider.locale,
+        supportedLocales: kSupportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         home: const SplashScreen(),
+        // ── RTL support ───────────────────────────────────────────
         builder: (context, child) {
-          return Stack(
-            children: [
-              child ?? const SizedBox.shrink(),
-              const GlobalVoiceFab(),
-            ],
+          return Directionality(
+            textDirection: localeProvider.isRtl
+                ? TextDirection.rtl
+                : TextDirection.ltr,
+            child: Stack(
+              children: [
+                child ?? const SizedBox.shrink(),
+                const GlobalVoiceFab(),
+              ],
+            ),
           );
         },
         routes: {
@@ -202,8 +226,9 @@ class _FieldlyAppState extends State<FieldlyApp> {
           },
           '/notifications': (context) => const NotificationCenterScreen(),
           '/vaccine-dashboard': (context) =>
-              const VaccineDashboardScreen(), // assuming this exists or maps to the correct screen
+              const VaccineDashboardScreen(),
         },
+      ),
       ),
     );
   }

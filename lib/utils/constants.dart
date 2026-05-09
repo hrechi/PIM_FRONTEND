@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 // physical device. Run `ipconfig` (Windows) or `ifconfig` (Mac/Linux)
 // and use the IPv4 address from your WiFi adapter.
 class AppConfig {
-  static const String serverHost = '192.168.1.140'; // your PC's WiFi IP
+  static const String serverHost = 'localhost'; // use localhost when running on PC; use WiFi IP (e.g. 192.168.0.148) for physical devices
   static const int serverPort = 3000;
   static const int plantDoctorPort = 8012;
 
@@ -14,6 +14,7 @@ class AppConfig {
   static String publicCatalogueUrl(String token) =>
       'http://$serverHost:$serverPort/api/public/catalogues/$token';
 }
+
 
 class AppColors {
   // Primary Surface Colors

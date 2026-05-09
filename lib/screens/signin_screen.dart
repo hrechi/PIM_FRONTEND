@@ -6,6 +6,7 @@ import '../utils/constants.dart';
 import '../utils/validators.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/custom_button.dart';
+import '../l10n/l10n_extensions.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 
@@ -80,7 +81,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   offset: const Offset(0, -8),
                   child: Center(
                     child: Text(
-                      'Welcome Back',
+                      context.l10n.welcomeBack,
                       style: GoogleFonts.inter(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -93,7 +94,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   offset: const Offset(0, -12),
                   child: Center(
                     child: Text(
-                      'Sign in to continue to Fieldly',
+                      context.l10n.signInToContinue,
                       style: GoogleFonts.inter(
                         fontSize: 15,
                         color: AppColors.secondaryText,
@@ -106,20 +107,20 @@ class _SignInScreenState extends State<SignInScreen> {
                 // Email or Phone field
                 CustomTextField(
                   controller: _identifierController,
-                  hintText: 'Email or phone number',
-                  label: 'Email or Phone',
+                  hintText: context.l10n.emailOrPhone,
+                  label: context.l10n.emailOrPhoneLabel,
                   prefixIcon: Icons.person_outline_rounded,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) =>
-                      Validators.required(value, 'Email or phone'),
+                      Validators.required(value, context.l10n.emailOrPhoneLabel),
                 ),
                 const SizedBox(height: 20),
 
                 // Password field
                 CustomTextField(
                   controller: _passwordController,
-                  hintText: 'Enter your password',
-                  label: 'Password',
+                  hintText: context.l10n.enterPassword,
+                  label: context.l10n.password,
                   prefixIcon: Icons.lock_outline_rounded,
                   isPassword: true,
                   validator: Validators.password,
@@ -152,7 +153,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             setState(() => _rememberMe = !_rememberMe);
                           },
                           child: Text(
-                            'Remember me',
+                            context.l10n.rememberMe,
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               color: AppColors.secondaryText,
@@ -170,7 +171,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         );
                       },
                       child: Text(
-                        'Forgot Password?',
+                        context.l10n.forgotPassword,
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           color: AppColors.mistyBlue,
@@ -223,7 +224,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 Consumer<AuthProvider>(
                   builder: (context, auth, _) {
                     return CustomButton(
-                      text: 'Sign In',
+                      text: context.l10n.signIn,
                       gradient: AppColors.fieldFreshGradient,
                       isLoading: auth.isLoading,
                       onPressed: _handleSignIn,
@@ -239,7 +240,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        "Don't have an account? ",
+                        context.l10n.dontHaveAccount,
                         style: GoogleFonts.inter(
                           color: AppColors.secondaryText,
                           fontSize: 14,
@@ -253,7 +254,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           );
                         },
                         child: Text(
-                          'Sign Up',
+                          context.l10n.signUp,
                           style: GoogleFonts.inter(
                             color: AppColors.mistyBlue,
                             fontSize: 14,

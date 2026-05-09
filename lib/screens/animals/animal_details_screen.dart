@@ -1,13 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../models/animal.dart';
 import '../../services/animal_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/animal_utils.dart';
+import '../../l10n/l10n_extensions.dart';
+import '../../models/vaccine_models.dart' as vms;
+import '../../models/animal_health_models.dart';
+import '../../providers/animal_health_provider.dart';
+import '../../providers/vaccine_provider.dart';
+import '../../services/animal_health_service.dart';
+import '../../services/sensor_simulator_service.dart';
 import 'add_animal_screen.dart';
 import 'animal_finance_screen.dart';
 import 'sell_animal_screen.dart';
+import 'medical_event_form_screen.dart';
+import '../../services/medical_event_service.dart';
+import 'diagnosis_detail_screen.dart';
+import '../animal_health/sensor_graph_screen.dart';
+import 'weight_tracking_screen.dart';
 
 const _kGreen = Color(0xFF309448);
 const _kDark = Color(0xFF0F172A);
@@ -26,6 +39,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
   final AnimalService _animalService = AnimalService();
   late Animal _animal;
   bool _isDeleting = false;
+  bool _isRefreshing = false;
   final DateFormat _df = DateFormat('MMM dd, yyyy');
   final NumberFormat _nf = NumberFormat.currency(symbol: 'TND ', decimalDigits: 0);
 
@@ -33,6 +47,29 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
   void initState() {
     super.initState();
     _animal = widget.animal;
+    // Recharge les données fraîches depuis l'API au démarrage
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _refreshAnimal();
+      // Charge les vaccins via VaccineProvider
+      try {
+        context.read<VaccineProvider>().loadForAnimal(_animal.id, forceRefresh: true);
+      } catch (_) {}
+    });
+  }
+
+  /// Recharge l'animal complet depuis l'API (health, vaccins, events à jour)
+  Future<void> _refreshAnimal() async {
+    if (!mounted) return;
+    setState(() => _isRefreshing = true);
+    try {
+      final updated = await _animalService.getAnimalById(_animal.id);
+      if (mounted) setState(() => _animal = updated);
+    } catch (_) {
+      // Silently fail — keep existing data
+    } finally {
+      if (mounted) setState(() => _isRefreshing = false);
+    }
   }
 
   String _formattedAge() {
@@ -64,11 +101,11 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Delete Animal'),
-        content: Text('Delete ${_animal.name}? This cannot be undone.'),
+        title: Text(context.l10n.deleteAnimal),
+        content: Text(context.l10n.deleteAnimalConfirm(_animal.name)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.l10n.cancel)),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(context.l10n.delete, style: const TextStyle(color: Colors.red))),
         ],
       ),
     );
@@ -77,13 +114,66 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
     try {
       await _animalService.deleteAnimal(_animal.nodeId);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Animal deleted'), backgroundColor: Color(0xFFEF4444)));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.animalDeleted), backgroundColor: const Color(0xFFEF4444)));
         Navigator.pop(context, true);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.l10n.error}: $e')));
     } finally {
       if (mounted) setState(() => _isDeleting = false);
+    }
+  }
+
+  Future<void> _confirmMarkDeceased() async {
+    final notesController = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.heart_broken, color: Color(0xFF616161)),
+            SizedBox(width: 8),
+            Text('Mark as Deceased', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Mark ${_animal.name} as deceased? This cannot be undone easily.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: notesController,
+              decoration: InputDecoration(
+                labelText: 'Cause / notes (optional)',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.l10n.cancel)),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF616161), foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await _animalService.markAsDeceased(_animal.nodeId, notes: notesController.text.trim().isEmpty ? null : notesController.text.trim());
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${_animal.name} marked as deceased'), backgroundColor: const Color(0xFF616161)),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
     }
   }
 
@@ -94,25 +184,25 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setS) => AlertDialog(
-          title: const Text('Mark as Fattening'),
+          title: Text(context.l10n.markAsFattening),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Start date:', style: TextStyle(fontWeight: FontWeight.w600)),
+                Text(context.l10n.startDate, style: const TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 _datePicker(ctx, startDate, DateTime.now().subtract(const Duration(days: 365)), DateTime.now(), (d) => setS(() => startDate = d)),
                 const SizedBox(height: 16),
-                const Text('Target sale date (optional):', style: TextStyle(fontWeight: FontWeight.w600)),
+                Text(context.l10n.targetSaleDate, style: const TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 _datePicker(ctx, targetDate, DateTime.now(), DateTime.now().add(const Duration(days: 730)), (d) => setS(() => targetDate = d)),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton(onPressed: () async { Navigator.pop(ctx); await _markAsFattening(startDate, targetDate); }, child: const Text('Confirm')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.l10n.cancel)),
+            ElevatedButton(onPressed: () async { Navigator.pop(ctx); await _markAsFattening(startDate, targetDate); }, child: Text(context.l10n.confirm)),
           ],
         ),
       ),
@@ -145,7 +235,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
       if (mounted) {
         Navigator.pop(context);
         setState(() => _animal = updated);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Marked as fattening'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.markedAsFattening), backgroundColor: Colors.green));
       }
     } catch (e) {
       if (mounted) {
@@ -174,8 +264,11 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
                     children: [
                       const SizedBox(height: 16),
                       _buildQuickStats(),
-                      const SizedBox(height: 16),
-                      _buildHealthRiskBanner(),
+                      // ── AI health features: cows only ──────────────
+                      if (_animal.animalType.toLowerCase() == 'cow') ...[
+                        const SizedBox(height: 16),
+                        _buildHealthRiskBanner(),
+                      ],
                       const SizedBox(height: 16),
                       _buildHealthCard(),
                       const SizedBox(height: 16),
@@ -322,13 +415,13 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
   Widget _buildQuickStats() {
     return Row(
       children: [
-        _statCard('Age', _formattedAge(), Icons.cake_outlined, const Color(0xFF1565C0), const Color(0xFFE3F2FD)),
+        _statCard(context.l10n.age, _formattedAge(), Icons.cake_outlined, const Color(0xFF1565C0), const Color(0xFFE3F2FD)),
         const SizedBox(width: 10),
-        _statCard('Weight', _animal.weight != null ? '${_animal.weight!.toStringAsFixed(0)} kg' : 'N/A', Icons.monitor_weight_outlined, const Color(0xFFE65100), const Color(0xFFFFF3E0)),
+        _statCard(context.l10n.weight, _animal.weight != null ? '${_animal.weight!.toStringAsFixed(0)} kg' : 'N/A', Icons.monitor_weight_outlined, const Color(0xFFE65100), const Color(0xFFFFF3E0)),
         const SizedBox(width: 10),
-        _statCard('Sex', _animal.sex == 'female' ? 'Female' : 'Male', _animal.sex == 'female' ? Icons.female : Icons.male, const Color(0xFFC2185B), const Color(0xFFFCE4EC)),
+        _statCard(context.l10n.sex, _animal.sex == 'female' ? context.l10n.female : context.l10n.male, _animal.sex == 'female' ? Icons.female : Icons.male, const Color(0xFFC2185B), const Color(0xFFFCE4EC)),
         const SizedBox(width: 10),
-        _statCard('Origin', _animal.origin == 'born' ? 'Born' : 'Bought', Icons.home_outlined, const Color(0xFF6A1B9A), const Color(0xFFF3E5F5)),
+        _statCard(context.l10n.origin, _animal.origin == 'born' ? 'Born' : 'Bought', Icons.home_outlined, const Color(0xFF6A1B9A), const Color(0xFFF3E5F5)),
       ],
     );
   }
@@ -358,39 +451,625 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
   // ── HEALTH RISK BANNER ───────────────────────────────────
 
   Widget _buildHealthRiskBanner() {
-    final score = _animal.healthRiskScore ?? 0.0;
+    final provider = context.watch<AnimalHealthProvider>();
+    final diagResult = provider.resultFor(_animal.id);
+    final isLoading  = provider.isLoading(_animal.id);
+    final error      = provider.errorFor(_animal.id);
+
+    // Score en temps réel depuis le provider, sinon depuis l'animal
+    final score = diagResult != null
+        ? diagResult.riskScore
+        : (_animal.healthRiskScore ?? 0.0);
+
     Color color;
     String label;
     IconData icon;
-    if (score > 0.6) { color = const Color(0xFFDC2626); label = 'High Risk'; icon = Symbols.error; }
+    if (score > 0.6)      { color = const Color(0xFFDC2626); label = 'High Risk';     icon = Symbols.error; }
     else if (score > 0.3) { color = const Color(0xFFD97706); label = 'Moderate Risk'; icon = Symbols.warning; }
-    else { color = const Color(0xFF16A34A); label = 'Low Risk'; icon = Symbols.check_circle; }
+    else                  { color = const Color(0xFF16A34A); label = 'Low Risk';      icon = Symbols.check_circle; }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withAlpha(20),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withAlpha(80), width: 1.5),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('AI HEALTH RISK', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF757575), letterSpacing: 1)),
-                Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: color)),
-              ],
+    return Column(
+      children: [
+        // ── Score banner ──────────────────────────────────
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: color.withAlpha(20),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withAlpha(80), width: 1.5),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: color, size: 28),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.l10n.aiHealthRisk,
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF757575), letterSpacing: 1),
+                    ),
+                    Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: color)),
+                    if (diagResult?.predictedDisease != null)
+                      Text(
+                        '🦠 ${diagResult!.predictedDisease}',
+                        style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600),
+                      ),
+                    if (diagResult?.isStaticFallback == true)
+                      const Text(
+                        '⚠ Based on static fields — add sensors for precision',
+                        style: TextStyle(fontSize: 10, color: Color(0xFF94A3B8), fontStyle: FontStyle.italic),
+                      ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(color: color.withAlpha(30), borderRadius: BorderRadius.circular(12)),
+                child: Text(
+                  '${(score * 100).toInt()}%',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: color),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        // ── Bouton diagnostic ─────────────────────────────
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isLoading ? const Color(0xFF64748B) : _kGreen,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            onPressed: isLoading ? null : () => _runDiagnostic(),
+            icon: isLoading
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : const Icon(Symbols.biotech, size: 18),
+            label: Text(
+              isLoading ? 'Analysing...' : 'Run AI Diagnostic',
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(color: color.withAlpha(30), borderRadius: BorderRadius.circular(12)),
-            child: Text('${(score * 100).toInt()}%', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: color)),
+        ),
+
+        const SizedBox(height: 8),
+
+        // ── Bouton simulateur (test sans IoT) ─────────────
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF6A1B9A),
+              side: const BorderSide(color: Color(0xFF6A1B9A)),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            onPressed: isLoading ? null : () => _showSimulatorSheet(),
+            icon: const Icon(Symbols.science, size: 18),
+            label: const Text('Simulate Sensor Data', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
           ),
+        ),
+
+        // ── Bouton "See explanation" (visible après diagnostic) ──
+        if (diagResult != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _kGreen,
+                  side: const BorderSide(color: _kGreen),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => DiagnosisDetailScreen(
+                      result: diagResult,
+                      animalName: _animal.name,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Symbols.info, size: 18),
+                label: const Text('See full explanation', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              ),
+            ),
+          ),
+
+        // ── Erreur ────────────────────────────────────────
+        if (error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      error.contains('FastAPI') ? 'AI service offline — start pastureai-ai server' : error,
+                      style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+        // ── Détail probabilités ───────────────────────────
+        if (diagResult != null && diagResult.allProbabilities.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: _buildProbabilityBars(diagResult),
+          ),
+      ],
+    );
+  }
+
+  // ── SIMULATOR BOTTOM SHEET ───────────────────────────────
+
+  void _showSimulatorSheet() {
+    SimulatorScenario _selectedScenario = SimulatorScenario.saine;
+    int _selectedDays = 2;
+    bool _isRunning = false;
+    String? _statusMessage;
+    bool _success = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheet) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                20, 16, 20,
+                MediaQuery.of(ctx).viewInsets.bottom + 28,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Title
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6A1B9A).withAlpha(20),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.science, color: Color(0xFF6A1B9A), size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Sensor Simulator',
+                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                            ),
+                            Text(
+                              'Inject synthetic sensor data & run AI diagnostic',
+                              style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Scenario picker
+                  const Text(
+                    'SCENARIO',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 1),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: SimulatorScenario.values.map((s) {
+                      final selected = _selectedScenario == s;
+                      return GestureDetector(
+                        onTap: _isRunning ? null : () => setSheet(() => _selectedScenario = s),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                          decoration: BoxDecoration(
+                            color: selected ? const Color(0xFF6A1B9A) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: selected ? const Color(0xFF6A1B9A) : const Color(0xFFE2E8F0),
+                              width: selected ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Text(
+                            s.label,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: selected ? Colors.white : const Color(0xFF475569),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+
+                  // Scenario description
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6A1B9A).withAlpha(12),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF6A1B9A).withAlpha(40)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline, size: 14, color: Color(0xFF6A1B9A)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _selectedScenario.description,
+                            style: const TextStyle(fontSize: 12, color: Color(0xFF475569), height: 1.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Days picker
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'HISTORY (DAYS)',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 1),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'More days = richer AI context',
+                              style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          _dayBtn(1, _selectedDays, _isRunning, (d) => setSheet(() => _selectedDays = d)),
+                          const SizedBox(width: 6),
+                          _dayBtn(2, _selectedDays, _isRunning, (d) => setSheet(() => _selectedDays = d)),
+                          const SizedBox(width: 6),
+                          _dayBtn(5, _selectedDays, _isRunning, (d) => setSheet(() => _selectedDays = d)),
+                          const SizedBox(width: 6),
+                          _dayBtn(7, _selectedDays, _isRunning, (d) => setSheet(() => _selectedDays = d)),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Status message
+                  if (_statusMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: _success ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: _success ? const Color(0xFF86EFAC) : const Color(0xFFFECACA),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _success ? Icons.check_circle_outline : Icons.error_outline,
+                              size: 16,
+                              color: _success ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _statusMessage!,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: _success ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // Launch button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _isRunning ? const Color(0xFF64748B) : const Color(0xFF6A1B9A),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: _isRunning
+                          ? null
+                          : () async {
+                              setSheet(() {
+                                _isRunning = true;
+                                _statusMessage = null;
+                                _success = false;
+                              });
+
+                              try {
+                                // 1. Generate simulated sensor history
+                                await SensorSimulatorService.generateHistory(
+                                  animalId: _animal.id,
+                                  scenario: _selectedScenario,
+                                  days: _selectedDays,
+                                );
+
+                                setSheet(() => _statusMessage = '✓ ${_selectedDays}d of ${_selectedScenario.label} data injected — running AI...');
+
+                                // 2. Run diagnostic automatically
+                                final provider = context.read<AnimalHealthProvider>();
+                                final result = await provider.runDiagnostic(_animal.id);
+
+                                setSheet(() {
+                                  _isRunning = false;
+                                  _success = true;
+                                  _statusMessage = result != null
+                                      ? '✓ Diagnostic complete — ${result.predictedDisease ?? 'saine'} (${(result.riskScore * 100).toInt()}% risk)'
+                                      : '✓ Data injected. Tap "Run AI Diagnostic" to analyse.';
+                                });
+
+                                // Close sheet after short delay and refresh
+                                await Future.delayed(const Duration(seconds: 2));
+                                if (ctx.mounted) Navigator.pop(ctx);
+                              } catch (e) {
+                                setSheet(() {
+                                  _isRunning = false;
+                                  _success = false;
+                                  _statusMessage = 'Error: ${e.toString().replaceAll('Exception: ', '')}';
+                                });
+                              }
+                            },
+                      icon: _isRunning
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Icon(Icons.play_arrow_rounded, size: 20),
+                      label: Text(
+                        _isRunning ? 'Simulating & Diagnosing...' : 'Launch Simulation + Diagnostic',
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _dayBtn(int days, int selected, bool disabled, ValueChanged<int> onTap) {
+    final isSelected = days == selected;
+    return GestureDetector(
+      onTap: disabled ? null : () => onTap(days),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 42,
+        height: 38,
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF6A1B9A) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF6A1B9A) : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Center(
+          child: Text(
+            '$days',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: isSelected ? Colors.white : const Color(0xFF475569),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _runDiagnostic() async {
+    final provider = context.read<AnimalHealthProvider>();
+    final result = await provider.runDiagnostic(_animal.id);
+    if (result != null && mounted) {
+      // Mettre à jour les champs locaux immédiatement depuis le résultat du diagnostic
+      setState(() {
+        _animal = Animal(
+          id: _animal.id,
+          nodeId: _animal.nodeId,
+          farmerId: _animal.farmerId,
+          fieldId: _animal.fieldId,
+          name: _animal.name,
+          animalType: _animal.animalType,
+          breed: _animal.breed,
+          age: _animal.age,
+          ageYears: _animal.ageYears,
+          sex: _animal.sex,
+          weight: _animal.weight,
+          healthStatus: result.alertLevel == 'critical' ? 'CRITICAL'
+              : result.alertLevel == 'medium' ? 'WARNING' : 'OPTIMAL',
+          vitalityScore: result.healthScore.round().clamp(0, 100),
+          bodyTemp: _animal.bodyTemp,
+          activityLevel: _animal.activityLevel,
+          lastVetCheck: _animal.lastVetCheck,
+          vaccination: _animal.vaccination,
+          profileImage: _animal.profileImage,
+          tagNumber: _animal.tagNumber,
+          notes: _animal.notes,
+          isPregnant: _animal.isPregnant,
+          lastInseminationDate: _animal.lastInseminationDate,
+          lastBirthDate: _animal.lastBirthDate,
+          expectedBirthDate: _animal.expectedBirthDate,
+          birthCount: _animal.birthCount,
+          status: _animal.status,
+          healthRiskScore: result.riskScore,
+          diseaseHistoryCount: _animal.diseaseHistoryCount,
+          fatContent: _animal.fatContent,
+          protein: _animal.protein,
+          feedIntakeRecorded: _animal.feedIntakeRecorded,
+          dewormingScheduled: _animal.dewormingScheduled,
+          productionHabit: _animal.productionHabit,
+          vaccines: _animal.vaccines,
+          birthHistory: _animal.birthHistory,
+          dailyMilkAvgL: _animal.dailyMilkAvgL,
+          milkPeakDate: _animal.milkPeakDate,
+          lactationNumber: _animal.lactationNumber,
+          raceCategory: _animal.raceCategory,
+          bestRaceTime: _animal.bestRaceTime,
+          trainingLevel: _animal.trainingLevel,
+          woolLastShearDate: _animal.woolLastShearDate,
+          meatGrade: _animal.meatGrade,
+          dogRole: _animal.dogRole,
+          purchasePrice: _animal.purchasePrice,
+          purchaseDate: _animal.purchaseDate,
+          estimatedValue: _animal.estimatedValue,
+          salePrice: _animal.salePrice,
+          saleDate: _animal.saleDate,
+          buyerName: _animal.buyerName,
+          saleWeightKg: _animal.saleWeightKg,
+          isFattening: _animal.isFattening,
+          fatteningStartDate: _animal.fatteningStartDate,
+          targetSaleDate: _animal.targetSaleDate,
+          origin: _animal.origin,
+          motherId: _animal.motherId,
+          fatherId: _animal.fatherId,
+          birthWeightKg: _animal.birthWeightKg,
+          birthCost: _animal.birthCost,
+          createdAt: _animal.createdAt,
+          updatedAt: _animal.updatedAt,
+          vaccineRecords: _animal.vaccineRecords,
+          medicalEvents: _animal.medicalEvents,
+        );
+      });
+      // Recharger l'animal depuis l'API pour récupérer bodyTemp et activityLevel
+      // mis à jour par le backend après le diagnostic (données capteurs simulées)
+      _refreshAnimal();
+    }
+  }
+
+  Widget _buildProbabilityBars(DiagnosisResult result) {
+    final sorted = result.allProbabilities.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    final diseaseColors = {
+      'saine':            const Color(0xFF16A34A),
+      'mammite':          const Color(0xFFDC2626),
+      'fievre':           const Color(0xFFEF4444),
+      'boiterie':         const Color(0xFFD97706),
+      'stress_thermique': const Color(0xFFF59E0B),
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'DISEASE PROBABILITIES',
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B), letterSpacing: 1),
+          ),
+          const SizedBox(height: 10),
+          ...sorted.map((e) {
+            final color = diseaseColors[e.key] ?? _kGreen;
+            final pct   = (e.value * 100).toInt();
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 100,
+                    child: Text(
+                      e.key,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                    ),
+                  ),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: e.value,
+                        minHeight: 8,
+                        backgroundColor: const Color(0xFFF1F5F9),
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 36,
+                    child: Text(
+                      '$pct%',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -401,33 +1080,170 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
   Widget _buildHealthCard() {
     final hc = _healthColor(_animal.healthStatus);
     return _sectionCard(
-      title: 'Health & Vitals',
+      title: context.l10n.healthAndVitals,
       icon: Symbols.health_and_safety,
       color: const Color(0xFF16A34A),
+      trailing: _isRefreshing
+          ? const SizedBox(
+              width: 14, height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF16A34A)),
+            )
+          : GestureDetector(
+              onTap: _refreshAnimal,
+              child: const Icon(Icons.refresh_rounded, size: 18, color: Color(0xFF16A34A)),
+            ),
       child: Column(
         children: [
-          _infoRow('Status', _animal.healthStatus, valueColor: hc),
+          // Health Status — dynamique depuis l'API
+          _infoRow(
+            context.l10n.healthStatus,
+            _animal.healthStatus,
+            valueColor: hc,
+          ),
           _divider(),
+
+          // Vitality Score — dynamique
           _buildVitalityBar(),
           _divider(),
-          _infoRow('Temperature', _animal.bodyTemp != null ? '${_animal.bodyTemp!.toStringAsFixed(1)} °C' : 'N/A'),
+
+          // Body Temperature — dynamique (mis à jour par le diagnostic IA)
+          _infoRow(
+            context.l10n.temperature,
+            _animal.bodyTemp != null
+                ? '${_animal.bodyTemp!.toStringAsFixed(1)} °C'
+                : 'N/A',
+            valueColor: _animal.bodyTemp != null && _animal.bodyTemp! > 39.5
+                ? const Color(0xFFDC2626)
+                : null,
+          ),
           _divider(),
-          _infoRow('Activity', _animal.activityLevel),
+
+          // Activity Level — dynamique
+          _infoRow(
+            context.l10n.activityLevel,
+            _animal.activityLevel,
+            valueColor: _animal.activityLevel == 'LOW'
+                ? const Color(0xFFDC2626)
+                : _animal.activityLevel == 'HIGH'
+                    ? const Color(0xFF16A34A)
+                    : null,
+          ),
           _divider(),
-          _infoRow('Vaccination', _animal.vaccination ? '✓ Up to date' : '✗ Not vaccinated',
-              valueColor: _animal.vaccination ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
+
+          // Deworming — dynamique
+          if (_animal.dewormingScheduled != null) ...[
+            _infoRow(
+              'Deworming',
+              _df.format(_animal.dewormingScheduled!),
+              valueColor: _animal.dewormingScheduled!.isBefore(DateTime.now())
+                  ? const Color(0xFFDC2626)
+                  : null,
+            ),
+            _divider(),
+          ],
+
+          // Last vet check — dynamique
           if (_animal.lastVetCheck != null) ...[
             _divider(),
-            _infoRow('Last vet check', _df.format(_animal.lastVetCheck!)),
+            _infoRow(
+              context.l10n.lastVetCheck,
+              _df.format(_animal.lastVetCheck!),
+              valueColor: DateTime.now().difference(_animal.lastVetCheck!).inDays > 180
+                  ? const Color(0xFFD97706)
+                  : null,
+            ),
           ],
+
+          // ── Boutons accès rapide ──────────────────────────
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              // Graphiques capteurs — vaches uniquement (modèle IA cow-only)
+              if (_animal.animalType.toLowerCase() == 'cow') ...[
+                Expanded(
+                  child: _quickAccessBtn(
+                    icon: Symbols.monitoring,
+                    label: 'Sensor Charts',
+                    color: const Color(0xFF7C3AED),
+                    bg: const Color(0xFFF5F3FF),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SensorGraphScreen(
+                          animalId: _animal.id,
+                          animalName: _animal.name,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+              // Courbe de poids — tous les animaux
+              Expanded(
+                child: _quickAccessBtn(
+                  icon: Symbols.scale,
+                  label: 'Weight Curve',
+                  color: const Color(0xFFE65100),
+                  bg: const Color(0xFFFFF3E0),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => WeightTrackingScreen(animal: _animal),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _quickAccessBtn({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required Color bg,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withAlpha(60)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Symbols.arrow_forward_ios, size: 11, color: color),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildVitalityBar() {
     final score = _animal.vitalityScore.clamp(0, 100);
-    final color = score >= 70 ? const Color(0xFF16A34A) : score >= 40 ? const Color(0xFFD97706) : const Color(0xFFDC2626);
+    final color = score >= 70
+        ? const Color(0xFF16A34A)
+        : score >= 40
+            ? const Color(0xFFD97706)
+            : const Color(0xFFDC2626);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
@@ -436,8 +1252,14 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Vitality Score', style: TextStyle(fontSize: 13, color: Color(0xFF757575), fontWeight: FontWeight.w500)),
-              Text('$score%', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color)),
+              Text(
+                context.l10n.vitalityScore,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF757575), fontWeight: FontWeight.w500),
+              ),
+              Text(
+                '$score%',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -461,32 +1283,38 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
     final type = _animal.animalType.toLowerCase();
     final isFemale = _animal.sex == 'female';
     final rows = <Widget>[];
+    final l = context.l10n;
 
     if (type == 'cow' && isFemale) {
-      rows.add(_infoRow('Pregnant', _animal.isPregnant == true ? '✓ Yes' : _animal.isPregnant == false ? '✗ No' : 'Unknown',
+      rows.add(_infoRow(l.pregnant, _animal.isPregnant == true ? '✓ ${l.yes}' : _animal.isPregnant == false ? '✗ ${l.no}' : l.unknown,
           valueColor: _animal.isPregnant == true ? const Color(0xFF16A34A) : null));
       if (_animal.expectedBirthDate != null) rows.add(_infoRow('Expected birth', _df.format(_animal.expectedBirthDate!)));
-      rows.add(_infoRow('Birth count', '${_animal.birthCount}'));
-      if (_animal.dailyMilkAvgL != null) rows.add(_infoRow('Avg milk/day', '${_animal.dailyMilkAvgL!.toStringAsFixed(1)} L'));
-      if (_animal.lactationNumber != null) rows.add(_infoRow('Lactation #', '${_animal.lactationNumber}'));
+      rows.add(_infoRow(l.birthCount, '${_animal.birthCount}'));
+      if (_animal.dailyMilkAvgL != null) rows.add(_infoRow(l.avgMilkPerDay, '${_animal.dailyMilkAvgL!.toStringAsFixed(1)} L'));
+      if (_animal.lactationNumber != null) rows.add(_infoRow(l.lactationNumber, '${_animal.lactationNumber}'));
     } else if (type == 'horse') {
-      if (_animal.raceCategory != null) rows.add(_infoRow('Category', _animal.raceCategory!.toUpperCase()));
-      if (_animal.bestRaceTime != null) rows.add(_infoRow('Best time', '${_animal.bestRaceTime}s'));
-      if (_animal.trainingLevel != null) rows.add(_infoRow('Training level', _animal.trainingLevel!.toUpperCase()));
+      if (_animal.raceCategory != null) rows.add(_infoRow(l.category, _animal.raceCategory!.toUpperCase()));
+      if (_animal.bestRaceTime != null) rows.add(_infoRow(l.bestTime, '${_animal.bestRaceTime}s'));
+      if (_animal.trainingLevel != null) rows.add(_infoRow(l.trainingLevel, _animal.trainingLevel!.toUpperCase()));
     } else if (type == 'sheep') {
-      if (_animal.woolLastShearDate != null) rows.add(_infoRow('Last shearing', _df.format(_animal.woolLastShearDate!)));
-      if (_animal.meatGrade != null) rows.add(_infoRow('Meat grade', _animal.meatGrade!));
+      if (_animal.woolLastShearDate != null) rows.add(_infoRow(l.lastShearing, _df.format(_animal.woolLastShearDate!)));
+      if (_animal.meatGrade != null) rows.add(_infoRow(l.meatGrade, _animal.meatGrade!));
     } else if (type == 'dog') {
-      if (_animal.dogRole != null) rows.add(_infoRow('Role', _animal.dogRole!.toUpperCase()));
+      if (_animal.dogRole != null) rows.add(_infoRow(l.role, _animal.dogRole!.toUpperCase()));
     }
 
     if (rows.isEmpty) return const SizedBox.shrink();
 
     final emoji = {'cow': '🐄', 'horse': '🐴', 'sheep': '🐑', 'dog': '🐕'}[type] ?? '🐾';
-    final label = {'cow': 'Dairy & Reproduction', 'horse': 'Performance', 'sheep': 'Production', 'dog': 'Working Dog'}[type] ?? 'Species Info';
+    final sectionLabel = {
+      'cow': l.dairyAndReproduction,
+      'horse': l.performance,
+      'sheep': l.productionRecords,
+      'dog': 'Working Dog',
+    }[type] ?? l.species;
 
     return _sectionCard(
-      title: '$emoji $label',
+      title: '$emoji $sectionLabel',
       icon: Symbols.pets,
       color: const Color(0xFF0277BD),
       child: Column(children: _intersperse(rows, _divider())),
@@ -497,24 +1325,24 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
 
   Widget _buildFatteningCard() {
     final daysIn = _animal.fatteningStartDate != null
-        ? DateTime.now().difference(_animal.fatteningStartDate!).inDays
-        : 0;
+        ? DateTime.now().difference(_animal.fatteningStartDate!).inDays : 0;
     final daysLeft = _animal.targetSaleDate?.difference(DateTime.now()).inDays;
-
+    final l = context.l10n;
     return _sectionCard(
-      title: '📊 Fattening Progress',
+      title: '📊 ${l.fatteningProgress}',
       icon: Symbols.trending_up,
       color: const Color(0xFFE65100),
       child: Column(
         children: [
-          if (_animal.fatteningStartDate != null) _infoRow('Started', _df.format(_animal.fatteningStartDate!)),
+          if (_animal.fatteningStartDate != null) _infoRow(l.started, _df.format(_animal.fatteningStartDate!)),
           _divider(),
-          _infoRow('Days in fattening', '$daysIn days'),
+          _infoRow(l.daysInFattening, '$daysIn days'),
           if (_animal.targetSaleDate != null) ...[
             _divider(),
-            _infoRow('Target sale date', _df.format(_animal.targetSaleDate!)),
+            _infoRow(l.targetSaleDate, _df.format(_animal.targetSaleDate!)),
             _divider(),
-            _infoRow('Days remaining', daysLeft != null && daysLeft >= 0 ? '$daysLeft days' : 'Ready for sale',
+            _infoRow(l.daysRemaining,
+                daysLeft != null && daysLeft >= 0 ? '$daysLeft days' : l.readyForSale,
                 valueColor: daysLeft != null && daysLeft <= 7 ? const Color(0xFFDC2626) : null),
           ],
         ],
@@ -526,16 +1354,16 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
 
   Widget _buildGenealogyCard() {
     return _sectionCard(
-      title: 'Genealogy',
+      title: context.l10n.genealogy,
       icon: Symbols.account_tree,
       color: const Color(0xFF6A1B9A),
       child: Column(
         children: [
-          if (_animal.motherId != null) _buildParentRow('Mother', _animal.motherId!),
+          if (_animal.motherId != null) _buildParentRow(context.l10n.mother, _animal.motherId!),
           if (_animal.motherId != null && _animal.fatherId != null) _divider(),
-          if (_animal.fatherId != null) _buildParentRow('Father', _animal.fatherId!),
+          if (_animal.fatherId != null) _buildParentRow(context.l10n.father, _animal.fatherId!),
           _divider(),
-          _infoRow('Birth count', '${_animal.birthCount}'),
+          _infoRow(context.l10n.birthCount, '${_animal.birthCount}'),
         ],
       ),
     );
@@ -557,7 +1385,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
             ),
           );
         }
-        if (!snap.hasData) return _infoRow(label, 'Unknown');
+        if (!snap.hasData) return _infoRow(label, context.l10n.unknown);
         final p = snap.data!;
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
@@ -579,40 +1407,41 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
   // ── FINANCE CARD ─────────────────────────────────────────
 
   Widget _buildFinanceCard() {
+    final l = context.l10n;
     return _sectionCard(
-      title: 'Finance',
+      title: l.finance,
       icon: Symbols.payments,
       color: const Color(0xFFD97706),
       trailing: GestureDetector(
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AnimalFinanceScreen(animal: _animal))),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Details', style: TextStyle(fontSize: 12, color: Color(0xFFD97706), fontWeight: FontWeight.w600)),
-            SizedBox(width: 4),
-            Icon(Symbols.arrow_forward_ios, size: 14, color: Color(0xFFD97706)),
+            Text(l.financeDetails, style: const TextStyle(fontSize: 12, color: Color(0xFFD97706), fontWeight: FontWeight.w600)),
+            const SizedBox(width: 4),
+            const Icon(Symbols.arrow_forward_ios, size: 14, color: Color(0xFFD97706)),
           ],
         ),
       ),
       child: Column(
         children: [
           if (_animal.origin == 'purchased') ...[
-            _infoRow('Purchase price', _animal.purchasePrice != null ? _nf.format(_animal.purchasePrice) : 'N/A'),
+            _infoRow(l.purchasePrice, _animal.purchasePrice != null ? _nf.format(_animal.purchasePrice) : 'N/A'),
             _divider(),
-            _infoRow('Purchase date', _animal.purchaseDate != null ? _df.format(_animal.purchaseDate!) : 'N/A'),
+            _infoRow(l.purchaseDate, _animal.purchaseDate != null ? _df.format(_animal.purchaseDate!) : 'N/A'),
           ] else ...[
-            _infoRow('Birth cost', _animal.birthCost != null ? _nf.format(_animal.birthCost) : 'N/A'),
+            _infoRow(l.birthCost, _animal.birthCost != null ? _nf.format(_animal.birthCost) : 'N/A'),
             _divider(),
-            _infoRow('Birth weight', _animal.birthWeightKg != null ? '${_animal.birthWeightKg} kg' : 'N/A'),
+            _infoRow(l.birthWeight, _animal.birthWeightKg != null ? '${_animal.birthWeightKg} kg' : 'N/A'),
           ],
           _divider(),
-          _infoRow('Estimated value', _animal.estimatedValue != null ? _nf.format(_animal.estimatedValue) : 'N/A',
+          _infoRow(l.estimatedValue, _animal.estimatedValue != null ? _nf.format(_animal.estimatedValue) : 'N/A',
               valueColor: const Color(0xFF16A34A)),
           if (_animal.status == 'sold') ...[
             _divider(),
-            _infoRow('Sale price', _animal.salePrice != null ? _nf.format(_animal.salePrice) : 'N/A', valueColor: const Color(0xFF1565C0)),
-            if (_animal.saleDate != null) ...[_divider(), _infoRow('Sale date', _df.format(_animal.saleDate!))],
-            if (_animal.buyerName != null) ...[_divider(), _infoRow('Buyer', _animal.buyerName!)],
+            _infoRow(l.salePrice, _animal.salePrice != null ? _nf.format(_animal.salePrice) : 'N/A', valueColor: const Color(0xFF1565C0)),
+            if (_animal.saleDate != null) ...[_divider(), _infoRow(l.saleDate, _df.format(_animal.saleDate!))],
+            if (_animal.buyerName != null) ...[_divider(), _infoRow(l.buyerName, _animal.buyerName!)],
           ],
         ],
       ),
@@ -622,46 +1451,347 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
   // ── MEDICAL CARD ─────────────────────────────────────────
 
   Widget _buildMedicalCard() {
+    final l = context.l10n;
+    // Vaccins dynamiques depuis VaccineProvider
+    final vaccProv = context.watch<VaccineProvider>();
+    final liveRecords = vaccProv.records;
+    final vaccLoading = vaccProv.isLoading;
+
     return _sectionCard(
-      title: 'Medical History',
+      title: l.medicalHistory,
       icon: Symbols.medical_services,
       color: const Color(0xFF1565C0),
-      trailing: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(color: const Color(0xFFFFEBEE), borderRadius: BorderRadius.circular(12)),
-        child: Text('${_animal.diseaseHistoryCount} events', style: const TextStyle(fontSize: 11, color: Color(0xFFDC2626), fontWeight: FontWeight.bold)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(color: const Color(0xFFFFEBEE), borderRadius: BorderRadius.circular(12)),
+            child: Text(
+              '${_animal.diseaseHistoryCount} events',
+              style: const TextStyle(fontSize: 11, color: Color(0xFFDC2626), fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () async {
+              final added = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MedicalEventFormScreen(
+                    animalId: _animal.id,
+                    animalName: _animal.name,
+                  ),
+                ),
+              );
+              if (added == true && mounted) {
+                final updated = await _animalService.getAnimalById(_animal.id);
+                setState(() => _animal = updated);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1565C0).withAlpha(20),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.add, size: 16, color: Color(0xFF1565C0)),
+            ),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Vaccines
-          if (_animal.vaccineRecords != null && _animal.vaccineRecords!.isNotEmpty) ...[
-            _subHeader('Vaccinations', Icons.vaccines, const Color(0xFF2E7D32)),
+
+          // ── Vaccinations — données live depuis VaccineProvider ──
+          Row(
+            children: [
+              _subHeader(l.vaccinations, Icons.vaccines, const Color(0xFF2E7D32)),
+              const Spacer(),
+              if (vaccLoading)
+                const SizedBox(
+                  width: 12, height: 12,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2E7D32)),
+                )
+              else
+                GestureDetector(
+                  onTap: () => context.read<VaccineProvider>().loadForAnimal(_animal.id, forceRefresh: true),
+                  child: const Icon(Icons.refresh_rounded, size: 14, color: Color(0xFF2E7D32)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          if (vaccLoading && liveRecords.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2E7D32))),
+            )
+          else if (liveRecords.isNotEmpty)
+            ...liveRecords.map((v) => _vaccineRecordItem(v))
+          else
+            _emptyMedical(l.noVaccinationsRecorded),
+
+          // ── Upcoming vaccine schedules ──────────────────────
+          if (vaccProv.mandatorySchedules.isNotEmpty || vaccProv.overdueSchedules.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _subHeader('Upcoming Vaccines', Icons.event_available, const Color(0xFFF59E0B)),
             const SizedBox(height: 8),
-            ..._animal.vaccineRecords!.map((v) => _medicalItem(
-              v.vaccine?.nameEn ?? v.vaccine?.code ?? 'Vaccine',
-              _df.format(v.administeredAt),
-              Icons.vaccines,
-              const Color(0xFF2E7D32),
-            )),
-          ] else
-            _emptyMedical('No vaccinations recorded'),
-          // Medical events
+            ...vaccProv.overdueSchedules.take(2).map((s) => _scheduleItem(s, isOverdue: true)),
+            ...vaccProv.mandatorySchedules
+                .where((s) => !s.isOverdue)
+                .take(3)
+                .map((s) => _scheduleItem(s, isOverdue: false)),
+          ],
+
+          // ── Medical Events — données live depuis l'animal rechargé ──
+          const SizedBox(height: 16),
           if (_animal.medicalEvents != null && _animal.medicalEvents!.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            _subHeader('Medical Events', Symbols.medical_services, const Color(0xFF1565C0)),
+            _subHeader(l.medicalEvents, Symbols.medical_services, const Color(0xFF1565C0)),
             const SizedBox(height: 8),
-            ..._animal.medicalEvents!.map((e) => _medicalItem(
-              e.eventType.toUpperCase(),
-              _df.format(e.eventDate),
-              Symbols.medical_services,
-              const Color(0xFF1565C0),
-              subtitle: e.diagnosis,
-            )),
+            ..._animal.medicalEvents!.map((e) => _buildMedicalEventItem(e)),
+          ] else ...[
+            _emptyMedical('No medical events yet — tap + to add one'),
           ],
         ],
       ),
     );
+  }
+
+  Widget _vaccineRecordItem(vms.VaccineRecord v) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2E7D32).withAlpha(20),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.vaccines, size: 14, color: Color(0xFF2E7D32)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  (v.vaccine?.code == 'OTHER' ? v.notes : v.vaccine?.nameEn ?? v.vaccine?.nameFr)
+                      ?? v.notes ?? 'Vaccine',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF212121)),
+                ),
+                if (v.administeredBy.isNotEmpty)
+                  Text(
+                    'By ${v.administeredBy}${v.doseGiven > 0 ? ' · ${v.doseGiven} ${v.doseUnit}' : ''}',
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                  ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _df.format(v.administeredAt),
+                style: const TextStyle(fontSize: 11, color: Color(0xFF9E9E9E)),
+              ),
+              if (v.nextDueDate != null)
+                Text(
+                  'Next: ${_df.format(v.nextDueDate!)}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: v.nextDueDate!.isBefore(DateTime.now())
+                        ? const Color(0xFFDC2626)
+                        : const Color(0xFF16A34A),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _scheduleItem(vms.VaccineSchedule s, {required bool isOverdue}) {
+    final color = isOverdue ? const Color(0xFFDC2626) : const Color(0xFFF59E0B);
+    final daysLeft = s.daysUntil;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withAlpha(15),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withAlpha(60)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isOverdue ? Icons.warning_amber_rounded : Icons.schedule_rounded,
+            size: 14, color: color,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              s.vaccine?.nameEn ?? s.vaccine?.nameFr ?? 'Vaccine',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
+            ),
+          ),
+          Text(
+            isOverdue
+                ? 'Overdue ${-daysLeft}d'
+                : daysLeft == 0
+                    ? 'Due today'
+                    : 'In ${daysLeft}d',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMedicalEventItem(vms.MedicalEvent e) {
+    final color = _eventTypeColor(e.eventType);
+    final icon  = _eventTypeIcon(e.eventType);
+    return Dismissible(
+      key: Key(e.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFDC2626).withAlpha(20),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(Icons.delete_outline, color: Color(0xFFDC2626)),
+      ),
+      confirmDismiss: (_) async {
+        return await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Delete event?'),
+            content: const Text('This action cannot be undone.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Delete', style: TextStyle(color: Color(0xFFDC2626))),
+              ),
+            ],
+          ),
+        );
+      },
+      onDismissed: (_) async {
+        try {
+          await MedicalEventService.delete(_animal.id, e.id);
+          final updated = await _animalService.getAnimalById(_animal.id);
+          if (mounted) setState(() => _animal = updated);
+        } catch (err) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error: $err'), backgroundColor: Colors.red),
+            );
+          }
+        }
+      },
+      child: GestureDetector(
+        onTap: () async {
+          final updated = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MedicalEventFormScreen(
+                animalId: _animal.id,
+                animalName: _animal.name,
+                existingEvent: e,
+              ),
+            ),
+          );
+          if (updated == true && mounted) {
+            final refreshed = await _animalService.getAnimalById(_animal.id);
+            setState(() => _animal = refreshed);
+          }
+        },
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: color.withAlpha(12),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withAlpha(40)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: color.withAlpha(30), shape: BoxShape.circle),
+                child: Icon(icon, size: 16, color: color),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _eventTypeLabel(e.eventType),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color),
+                    ),
+                    if (e.diagnosis != null && e.diagnosis!.isNotEmpty)
+                      Text(e.diagnosis!, style: const TextStyle(fontSize: 12, color: Color(0xFF475569)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    if (e.vetName != null && e.vetName!.isNotEmpty)
+                      Text(e.vetName!, style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(_df.format(e.eventDate), style: const TextStyle(fontSize: 11, color: Color(0xFF9E9E9E))),
+                  if (e.cost != null)
+                    Text('${e.cost!.toStringAsFixed(0)} TND', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
+                ],
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right, size: 16, color: Color(0xFFCBD5E1)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _eventTypeColor(String type) {
+    switch (type.toLowerCase()) {
+      case 'disease':   return const Color(0xFFDC2626);
+      case 'surgery':   return const Color(0xFF7B1FA2);
+      case 'treatment': return const Color(0xFFE65100);
+      case 'checkup':   return const Color(0xFF2E7D32);
+      case 'visit':     return const Color(0xFF1565C0);
+      default:          return const Color(0xFF546E7A);
+    }
+  }
+
+  IconData _eventTypeIcon(String type) {
+    switch (type.toLowerCase()) {
+      case 'disease':   return Icons.coronavirus;
+      case 'surgery':   return Icons.healing;
+      case 'treatment': return Icons.medication;
+      case 'checkup':   return Icons.fact_check;
+      case 'visit':     return Icons.medical_services;
+      default:          return Icons.more_horiz;
+    }
+  }
+
+  String _eventTypeLabel(String type) {
+    switch (type.toLowerCase()) {
+      case 'disease':   return 'Disease';
+      case 'surgery':   return 'Surgery';
+      case 'treatment': return 'Treatment';
+      case 'checkup':   return 'Checkup';
+      case 'visit':     return 'Vet Visit';
+      default:          return 'Other';
+    }
   }
 
   Widget _subHeader(String title, IconData icon, Color color) {
@@ -727,7 +1857,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Notes', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFE65100))),
+                Text(context.l10n.notes, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFE65100))),
                 const SizedBox(height: 6),
                 Text(_animal.notes!, style: const TextStyle(fontSize: 13, color: Color(0xFF33691E), height: 1.6)),
               ],
@@ -769,8 +1899,8 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
                     Expanded(
                       child: Text(
                         _animal.targetSaleDate != null
-                            ? 'Fattening — target: ${_df.format(_animal.targetSaleDate!)}'
-                            : 'Fattening in progress',
+                            ? '${context.l10n.fattening} — ${context.l10n.targetSaleDate}: ${_df.format(_animal.targetSaleDate!)}'
+                            : '${context.l10n.fattening} in progress',
                         style: const TextStyle(fontSize: 12, color: Color(0xFF1565C0), fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -804,7 +1934,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
                 if (_animal.status == 'active') ...[
                   const SizedBox(width: 8),
                   _actionBtn(
-                    label: 'Sell',
+                    label: context.l10n.sellAnimal,
                     color: Colors.white,
                     bg: const Color(0xFF16A34A),
                     border: const Color(0xFF16A34A),
@@ -814,12 +1944,22 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
                     },
                     flex: 1,
                   ),
+                  const SizedBox(width: 8),
+                  _actionBtn(
+                    icon: Symbols.heart_broken,
+                    label: '',
+                    color: Colors.white,
+                    bg: const Color(0xFF616161),
+                    border: const Color(0xFF616161),
+                    onTap: _confirmMarkDeceased,
+                    flex: 1,
+                  ),
                 ],
                 const SizedBox(width: 8),
                 // Edit
                 _actionBtn(
                   icon: Symbols.edit,
-                  label: 'Edit',
+                  label: context.l10n.edit,
                   color: Colors.white,
                   bg: _kGreen,
                   border: _kGreen,
@@ -910,9 +2050,23 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 13, color: Color(0xFF757575), fontWeight: FontWeight.w500)),
-          Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: valueColor ?? _kDark)),
+          Flexible(
+            flex: 2,
+            child: Text(label, style: const TextStyle(fontSize: 13, color: Color(0xFF757575), fontWeight: FontWeight.w500)),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            flex: 3,
+            child: Text(
+              value,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: valueColor ?? _kDark),
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
+          ),
         ],
       ),
     );

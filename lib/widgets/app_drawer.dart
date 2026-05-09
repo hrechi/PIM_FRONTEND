@@ -5,6 +5,8 @@ import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
+import '../l10n/l10n_extensions.dart';
+import '../widgets/language_selector.dart';
 
 // Top-level / Account
 import '../screens/home_screen.dart';
@@ -139,7 +141,7 @@ class _AppDrawerState extends State<AppDrawer>
     final role = user?.role.toUpperCase() ?? 'OWNER';
     final isWorker = role == 'WORKER';
 
-    final groups = isWorker ? _workerGroups() : _ownerGroups();
+    final groups = isWorker ? _workerGroups(context) : _ownerGroups(context);
 
     final mediaWidth = MediaQuery.of(context).size.width;
     final drawerWidth = mediaWidth * 0.84;
@@ -161,9 +163,9 @@ class _AppDrawerState extends State<AppDrawer>
           children: [
             _buildHeader(
               context,
-              displayName: user?.name ?? (isWorker ? 'Worker' : 'Farmer'),
+              displayName: user?.name ?? (isWorker ? context.l10n.worker : 'Farmer'),
               tagline: isWorker
-                  ? 'Material operations'
+                  ? context.l10n.manageYourMaterials
                   : ((user?.farmName.isNotEmpty ?? false)
                       ? user!.farmName
                       : 'Smart Farm System'),
@@ -402,47 +404,72 @@ class _AppDrawerState extends State<AppDrawer>
   Widget _buildFooter(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Column(
         children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ProfileScreen(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.workspace_premium_rounded, size: 18),
-              label: const Text('Go Pro'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColorPalette.fieldFreshStart,
-                foregroundColor: AppColorPalette.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
-                ),
+          // Language selector
+          InkWell(
+            onTap: () {
+              Navigator.pop(context);
+              LanguageSelector.show(context);
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0EDE6),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.language_rounded, size: 20, color: Color(0xFF1F2933)),
+                  const SizedBox(width: 10),
+                  Text(context.l10n.language,
+                      style: AppTextStyles.bodySmall(color: const Color(0xFF1F2933))
+                          .copyWith(fontWeight: FontWeight.w500)),
+                  const Spacer(),
+                  const Icon(Icons.chevron_right, size: 18, color: Color(0xFF9AA0A6)),
+                ],
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () => Navigator.pop(context),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _ink,
-                side: const BorderSide(color: _hairline),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                  },
+                  icon: const Icon(Icons.workspace_premium_rounded, size: 18),
+                  label: const Text('Go Pro'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColorPalette.fieldFreshStart,
+                    foregroundColor: AppColorPalette.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28)),
+                  ),
                 ),
               ),
-              child: const Text('Rate App'),
-            ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _ink,
+                    side: const BorderSide(color: _hairline),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28)),
+                  ),
+                  child: const Text('Rate App'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -485,252 +512,156 @@ class _AppDrawerState extends State<AppDrawer>
 
   // ───────────────────────────── Content ───────────────────────────────────
 
-  List<_DrawerGroup> _ownerGroups() => [
+  List<_DrawerGroup> _ownerGroups(BuildContext context) {
+    final l = context.l10n;
+    return [
         _DrawerGroup(
-          label: 'General',
+          label: l.home,
           flatItems: [
             _DrawerItem(
               icon: Icons.home_outlined,
-              title: 'Home',
+              title: l.home,
               builder: (_) => const HomeScreen(),
             ),
           ],
           categories: [
             _DrawerCategory(
               icon: Icons.agriculture_outlined,
-              title: 'Farm',
+              title: l.fields,
               items: [
-                _DrawerItem(
-                  icon: Icons.grass_outlined,
-                  title: 'My Parcels',
-                  builder: (_) => const ParcelListScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.science_outlined,
-                  title: 'Soil Health',
-                  builder: (_) => const SoilMeasurementsListScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.local_florist_outlined,
-                  title: 'AI Plant Doctor',
-                  builder: (_) => const PlantDoctorScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.bar_chart_outlined,
-                  title: 'Harvest Analytics',
-                  builder: (_) => const HarvestAnalyticsScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.map_outlined,
-                  title: 'Aero-Twin NDVI',
-                  builder: (_) => const AeroTwinScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.calendar_month_outlined,
-                  title: 'Crop Calendar',
-                  builder: (_) => const CropCalendarScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.cloud_outlined,
-                  title: 'Weather & Advice',
-                  builder: (_) => const WeatherScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.water_drop_outlined,
-                  title: 'Irrigation Scheduler',
-                  builder: (_) => const IrrigationSchedulerScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.article_outlined,
-                  title: 'Agricultural News',
-                  builder: (_) => AgriculturalNewsScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.play_circle_outline,
-                  title: 'Farm Reels',
-                  builder: (_) => const ShortsScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.forum_outlined,
-                  title: 'Community Feed',
-                  builder: (_) => const CommunityFeedScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.quiz_outlined,
-                  title: 'Farm Quiz',
-                  builder: (_) => const FarmQuizScreen(),
-                ),
+                _DrawerItem(icon: Icons.grass_outlined, title: l.parcels,
+                    builder: (_) => const ParcelListScreen()),
+                _DrawerItem(icon: Icons.science_outlined, title: l.soilMeasurements,
+                    builder: (_) => const SoilMeasurementsListScreen()),
+                _DrawerItem(icon: Icons.local_florist_outlined, title: l.plantDoctor,
+                    builder: (_) => const PlantDoctorScreen()),
+                _DrawerItem(icon: Icons.bar_chart_outlined, title: 'Harvest Analytics',
+                    builder: (_) => const HarvestAnalyticsScreen()),
+                _DrawerItem(icon: Icons.map_outlined, title: 'Aero-Twin NDVI',
+                    builder: (_) => const AeroTwinScreen()),
+                _DrawerItem(icon: Icons.calendar_month_outlined, title: 'Crop Calendar',
+                    builder: (_) => const CropCalendarScreen()),
+                _DrawerItem(icon: Icons.cloud_outlined, title: l.weather,
+                    builder: (_) => const WeatherScreen()),
+                _DrawerItem(icon: Icons.water_drop_outlined, title: l.irrigationScheduler,
+                    builder: (_) => const IrrigationSchedulerScreen()),
+                _DrawerItem(icon: Icons.article_outlined, title: l.news,
+                    builder: (_) => AgriculturalNewsScreen()),
+                _DrawerItem(icon: Icons.play_circle_outline, title: l.shorts,
+                    builder: (_) => const ShortsScreen()),
+                _DrawerItem(icon: Icons.forum_outlined, title: l.communityFeed,
+                    builder: (_) => const CommunityFeedScreen()),
+                _DrawerItem(icon: Icons.quiz_outlined, title: l.farmQuiz,
+                    builder: (_) => const FarmQuizScreen()),
               ],
             ),
             _DrawerCategory(
               icon: Icons.pets_outlined,
-              title: 'Animals',
+              title: l.animals,
               items: [
-                _DrawerItem(
-                  icon: Icons.list_alt_outlined,
-                  title: 'Animal List',
-                  builder: (_) => const AnimalListScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.add_circle_outline,
-                  title: 'Add Animal',
-                  builder: (_) => const AddAnimalScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.sell_outlined,
-                  title: 'Planned Sales',
-                  builder: (_) => const PlannedSalesScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.water_drop_outlined,
-                  title: 'Milk Production',
-                  builder: (_) => const MilkProductionScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.show_chart_outlined,
-                  title: 'Milk Analytics',
-                  builder: (_) => const MilkAnalyticsScreen(),
-                ),
+                _DrawerItem(icon: Icons.list_alt_outlined, title: l.animalList,
+                    builder: (_) => const AnimalListScreen()),
+                _DrawerItem(icon: Icons.add_circle_outline, title: l.addAnimal,
+                    builder: (_) => const AddAnimalScreen()),
+                _DrawerItem(icon: Icons.sell_outlined, title: l.plannedSales,
+                    builder: (_) => const PlannedSalesScreen()),
+                _DrawerItem(icon: Icons.water_drop_outlined, title: l.milkProduction,
+                    builder: (_) => const MilkProductionScreen()),
+                _DrawerItem(icon: Icons.show_chart_outlined, title: 'Milk Analytics',
+                    builder: (_) => const MilkAnalyticsScreen()),
               ],
             ),
             _DrawerCategory(
               icon: Icons.health_and_safety_outlined,
-              title: 'Health',
+              title: l.vaccines,
               items: [
-                _DrawerItem(
-                  icon: Icons.vaccines_outlined,
-                  title: 'Vaccination',
-                  builder: (_) => const VaccineDashboardScreen(),
-                ),
+                _DrawerItem(icon: Icons.vaccines_outlined, title: l.vaccineDashboard,
+                    builder: (_) => const VaccineDashboardScreen()),
               ],
             ),
             _DrawerCategory(
               icon: Icons.payments_outlined,
-              title: 'Finance & Catalogue',
+              title: '${l.finance} & ${l.catalogues}',
               items: [
-                _DrawerItem(
-                  icon: Icons.attach_money_rounded,
-                  title: 'Finance Dashboard',
-                  builder: (_) => const FinanceDashboardScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.menu_book_outlined,
-                  title: 'Product Catalogue',
-                  builder: (_) => const CatalogueListScreen(),
-                ),
+                _DrawerItem(icon: Icons.attach_money_rounded, title: l.financeDetails,
+                    builder: (_) => const FinanceDashboardScreen()),
+                _DrawerItem(icon: Icons.menu_book_outlined, title: l.catalogues,
+                    builder: (_) => const CatalogueListScreen()),
               ],
             ),
             _DrawerCategory(
               icon: Icons.shield_outlined,
-              title: 'Security',
+              title: l.security,
               items: [
-                _DrawerItem(
-                  icon: Icons.shield_outlined,
-                  title: 'Security Whitelist',
-                  builder: (_) => const StaffListScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.person_add_outlined,
-                  title: 'Add Staff',
-                  builder: (_) => const AddStaffScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.history_outlined,
-                  title: 'Incident History',
-                  builder: (_) => const IncidentHistoryScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.videocam_outlined,
-                  title: 'Live Feed',
-                  builder: (_) => const LiveFeedScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.assessment_outlined,
-                  title: 'Daily Reports',
-                  builder: (_) => const DailyReportScreen(),
-                ),
-                _DrawerItem(
-                  icon: Icons.graphic_eq_outlined,
-                  title: 'Acoustic Monitor',
-                  builder: (_) => const AcousticMonitorScreen(),
-                ),
+                _DrawerItem(icon: Icons.shield_outlined, title: l.staffList,
+                    builder: (_) => const StaffListScreen()),
+                _DrawerItem(icon: Icons.person_add_outlined, title: l.addStaff,
+                    builder: (_) => const AddStaffScreen()),
+                _DrawerItem(icon: Icons.history_outlined, title: l.incidentHistory,
+                    builder: (_) => const IncidentHistoryScreen()),
+                _DrawerItem(icon: Icons.videocam_outlined, title: l.liveFeed,
+                    builder: (_) => const LiveFeedScreen()),
+                _DrawerItem(icon: Icons.assessment_outlined, title: l.dailyReport,
+                    builder: (_) => const DailyReportScreen()),
+                _DrawerItem(icon: Icons.graphic_eq_outlined, title: l.acousticMonitor,
+                    builder: (_) => const AcousticMonitorScreen()),
               ],
             ),
-            const _DrawerCategory(
-              icon: Icons.precision_manufacturing_outlined,
-              title: 'Operations',
-              items: [
-                _DrawerItem(
-                  icon: Icons.videogame_asset_outlined,
-                  title: 'Control Room',
-                  routeName: '/control_room',
-                ),
-                _DrawerItem(
-                  icon: Icons.workspace_premium_outlined,
-                  title: 'Skill Certification',
-                  routeName: '/skill_certification',
-                ),
-              ],
-            ),
-          ],
-        ),
-        _DrawerGroup(
-          label: 'Profile',
-          flatItems: [
-            _DrawerItem(
-              icon: Icons.settings_outlined,
-              title: 'Settings',
-              builder: (_) => const ProfileScreen(),
-            ),
-            _DrawerItem(
-              icon: Icons.account_circle_outlined,
-              title: 'Account',
-              builder: (_) => const ProfileScreen(),
-            ),
-          ],
-        ),
-      ];
-
-  List<_DrawerGroup> _workerGroups() => [
-        _DrawerGroup(
-          label: 'General',
-          flatItems: [
-            _DrawerItem(
-              icon: Icons.home_outlined,
-              title: 'Home',
-              builder: (_) => const FarmerHomeScreenV2(),
-            ),
-          ],
-          categories: const [
             _DrawerCategory(
               icon: Icons.precision_manufacturing_outlined,
-              title: 'Operations',
+              title: l.controlRoom,
               items: [
-                _DrawerItem(
-                  icon: Icons.videogame_asset_outlined,
-                  title: 'Control Room',
-                  routeName: '/control_room',
-                ),
-                _DrawerItem(
-                  icon: Icons.workspace_premium_outlined,
-                  title: 'Skill Certification',
-                  routeName: '/skill_certification',
-                ),
+                _DrawerItem(icon: Icons.videogame_asset_outlined, title: l.controlRoom,
+                    routeName: '/control_room'),
+                _DrawerItem(icon: Icons.workspace_premium_outlined, title: l.skillCertification,
+                    routeName: '/skill_certification'),
               ],
             ),
           ],
         ),
         _DrawerGroup(
-          label: 'Profile',
+          label: l.profile,
           flatItems: [
-            _DrawerItem(
-              icon: Icons.account_circle_outlined,
-              title: 'Account',
-              builder: (_) => const ProfileScreen(),
-            ),
+            _DrawerItem(icon: Icons.settings_outlined, title: l.settings,
+                builder: (_) => const ProfileScreen()),
+            _DrawerItem(icon: Icons.account_circle_outlined, title: l.profile,
+                builder: (_) => const ProfileScreen()),
           ],
         ),
       ];
+  }
+
+  List<_DrawerGroup> _workerGroups(BuildContext context) {
+    final l = context.l10n;
+    return [
+        _DrawerGroup(
+          label: l.home,
+          flatItems: [
+            _DrawerItem(icon: Icons.home_outlined, title: l.home,
+                builder: (_) => const FarmerHomeScreenV2()),
+          ],
+          categories: [
+            _DrawerCategory(
+              icon: Icons.precision_manufacturing_outlined,
+              title: l.controlRoom,
+              items: [
+                _DrawerItem(icon: Icons.videogame_asset_outlined, title: l.controlRoom,
+                    routeName: '/control_room'),
+                _DrawerItem(icon: Icons.workspace_premium_outlined, title: l.skillCertification,
+                    routeName: '/skill_certification'),
+              ],
+            ),
+          ],
+        ),
+        _DrawerGroup(
+          label: l.profile,
+          flatItems: [
+            _DrawerItem(icon: Icons.account_circle_outlined, title: l.profile,
+                builder: (_) => const ProfileScreen()),
+          ],
+        ),
+      ];
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────

@@ -8,19 +8,19 @@ import '../../utils/animal_utils.dart';
 import '../../widgets/app_drawer.dart';
 import '../../services/field_service.dart';
 import '../../models/field_model.dart';
+import '../../l10n/l10n_extensions.dart';
 import 'add_animal_screen.dart';
 import 'animal_details_screen.dart';
 
 class AnimalListScreen extends StatefulWidget {
   const AnimalListScreen({super.key, this.showFatteningOnly = false});
-
   final bool showFatteningOnly;
-
   @override
   State<AnimalListScreen> createState() => _AnimalListScreenState();
 }
 
-class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver, RouteAware {
+class _AnimalListScreenState extends State<AnimalListScreen>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver, RouteAware {
   final AnimalService _animalService = AnimalService();
   final FieldService _fieldService = FieldService();
   late Future<List<Animal>> _animalsFuture;
@@ -47,9 +47,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
   void didChangeDependencies() {
     super.didChangeDependencies();
     final route = ModalRoute.of(context);
-    if (route is PageRoute) {
-      routeObserver.subscribe(this, route);
-    }
+    if (route is PageRoute) routeObserver.subscribe(this, route);
   }
 
   @override
@@ -63,27 +61,18 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
 
   @override
   void didPopNext() {
-    if (mounted) {
-      debugPrint('↩️ Returned to AnimalListScreen - refreshing animal list');
-      _refreshData();
-    }
+    if (mounted) _refreshData();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Refresh when app resumes (in case a sale was made from planned sales page)
-    if (state == AppLifecycleState.resumed && mounted) {
-      debugPrint('📱 App resumed - refreshing animal list');
-      _refreshData();
-    }
+    if (state == AppLifecycleState.resumed && mounted) _refreshData();
   }
 
   Future<void> _fetchFields() async {
     try {
       final fields = await _fieldService.getFields();
-      setState(() {
-        _fields = fields;
-      });
+      if (mounted) setState(() => _fields = fields);
     } catch (e) {
       debugPrint('Error fetching fields: $e');
     }
@@ -97,26 +86,25 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
       );
       _statsFuture = _animalService.getStatistics(fieldId: _selectedFieldId);
     });
-    debugPrint('🔄 Animal list refreshed - ActiveTab, FieldId: $_selectedFieldId, Type: $_selectedType, Fattening: $_showFatteningOnly');
   }
 
   void _showCancelSaleDialog(Animal animal) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Annuler la vente'),
-        content: Text('Êtes-vous sûr de vouloir annuler la vente de ${animal.name}?\n\nL\'animal sera marqué comme actif.'),
+        title: Text(context.l10n.cancelSaleConfirmTitle),
+        content: Text(context.l10n.cancelSaleConfirmBody(animal.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Non'),
+            child: Text(context.l10n.no),
           ),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
               await _cancelSale(animal);
             },
-            child: const Text('Oui, annuler'),
+            child: Text(context.l10n.yes),
           ),
         ],
       ),
@@ -128,32 +116,24 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        builder: (_) => const Center(child: CircularProgressIndicator()),
       );
-
       await _animalService.cancelSale(animal.nodeId);
-
       if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('La vente de ${animal.name} a été annulée'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(context.l10n.saleCancelled(animal.name)),
+          backgroundColor: Colors.green,
+        ));
         _refreshData();
       }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('${context.l10n.error}: $e'),
+          backgroundColor: Colors.red,
+        ));
       }
     }
   }
@@ -173,64 +153,12 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
               _buildSearchSection(),
               _buildCategoryFilters(),
               _buildStatusTabs(),
-              Expanded(
-                child: _buildAnimalList(),
-              ),
+              Expanded(child: _buildAnimalList()),
             ],
           ),
         ),
       ),
       floatingActionButton: _buildFab(),
-    );
-  }
-
-  Widget _buildHeaderBackground() {
-    return Positioned(
-      top: -100,
-      left: -100,
-      right: -100,
-      height: 400,
-      child: Opacity(
-        opacity: 0.6,
-        child: Stack(
-          children: [
-            Positioned(
-              top: 0,
-              left: 0,
-              child: Container(
-                width: 400,
-                height: 400,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.fieldFreshStart.withValues(alpha: 0.2),
-                      AppColors.fieldFreshStart.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: -50,
-              right: -50,
-              child: Container(
-                width: 350,
-                height: 350,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.mistyBlue.withValues(alpha: 0.2),
-                      AppColors.mistyBlue.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -243,21 +171,15 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
           Row(
             children: [
               Builder(
-                builder: (context) => GestureDetector(
-                  onTap: () => Scaffold.of(context).openDrawer(),
+                builder: (ctx) => GestureDetector(
+                  onTap: () => Scaffold.of(ctx).openDrawer(),
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     margin: const EdgeInsets.only(right: 12),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
                     ),
                     child: const Icon(Icons.menu_rounded, color: Color(0xFF141E15), size: 24),
                   ),
@@ -265,25 +187,13 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
               ),
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.mistBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Symbols.pets,
-                  color: AppColors.mistBlue,
-                  size: 24,
-                ),
+                decoration: BoxDecoration(color: AppColors.mistBlue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Symbols.pets, color: AppColors.mistBlue, size: 24),
               ),
               const SizedBox(width: 12),
-              const Text(
-                'Livestock',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF141E15),
-                  letterSpacing: -0.5,
-                ),
+              Text(
+                context.l10n.livestock,
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF141E15), letterSpacing: -0.5),
               ),
             ],
           ),
@@ -291,13 +201,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
             ),
             child: IconButton(
               icon: const Icon(Symbols.notifications, color: Color(0xFF64748B)),
@@ -316,31 +220,19 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
         ),
         child: TextField(
           controller: _searchController,
           onChanged: (val) => setState(() => _searchQuery = val),
           decoration: InputDecoration(
-            hintText: 'Search by name or node ID...',
+            hintText: context.l10n.searchByNameOrId,
             hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(vertical: 16),
             prefixIcon: const Icon(Symbols.search, color: Color(0xFF94A3B8), size: 22),
             suffixIcon: _searchQuery.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Symbols.close, size: 18),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() => _searchQuery = '');
-                    },
-                  )
+                ? IconButton(icon: const Icon(Symbols.close, size: 18), onPressed: () { _searchController.clear(); setState(() => _searchQuery = ''); })
                 : null,
           ),
         ),
@@ -349,6 +241,14 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
   }
 
   Widget _buildCategoryFilters() {
+    final l = context.l10n;
+    final typeLabels = {
+      'cow': l.cow,
+      'horse': l.horse,
+      'sheep': l.sheep,
+      'dog': l.dog,
+    };
+
     return Container(
       height: 60,
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -361,20 +261,18 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
           final isFatteningFilter = index == AppConstants.animalTypes.length + 1;
           final type = isAll ? null : !isFatteningFilter ? AppConstants.animalTypes[index - 1] : null;
           final label = isAll
-              ? 'All'
+              ? l.all
               : isFatteningFilter
-                  ? 'Vente planifiée'
-                  : type![0].toUpperCase() + type.substring(1).toLowerCase();
-          final isSelected = isFatteningFilter
-              ? _showFatteningOnly
-              : _selectedType == type;
+                  ? l.plannedSales
+                  : typeLabels[type] ?? (type![0].toUpperCase() + type.substring(1));
+          final isSelected = isFatteningFilter ? _showFatteningOnly : _selectedType == type;
 
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: ChoiceChip(
               label: Text(label),
               selected: isSelected,
-              onSelected: (bool selected) {
+              onSelected: (selected) {
                 setState(() {
                   if (isFatteningFilter) {
                     _showFatteningOnly = selected;
@@ -393,10 +291,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: BorderSide(
-                  color: isSelected ? AppColors.mistBlue : const Color(0xFFE2E8F0),
-                  width: 1,
-                ),
+                side: BorderSide(color: isSelected ? AppColors.mistBlue : const Color(0xFFE2E8F0)),
               ),
               showCheckmark: false,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -410,20 +305,16 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
   Widget _buildStatusTabs() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1),
-        ),
-      ),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0)))),
       child: TabBar(
         controller: _tabController,
-        tabs: const [
-          Tab(text: 'Active'),
-          Tab(text: 'Sold'),
-          Tab(text: 'Deceased'),
+        tabs: [
+          Tab(text: context.l10n.active),
+          Tab(text: context.l10n.sold),
+          Tab(text: context.l10n.deceased),
         ],
         labelColor: AppColors.mistBlue,
-        unselectedLabelColor: Color(0xFF64748B),
+        unselectedLabelColor: const Color(0xFF64748B),
         labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
         indicatorColor: AppColors.mistBlue,
@@ -458,12 +349,9 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
               children: [
                 const Icon(Symbols.error_outline, color: Colors.red, size: 48),
                 const SizedBox(height: 16),
-                Text(
-                  'Error: ${snapshot.error}',
-                  style: const TextStyle(color: Color(0xFFEF4444)),
-                  textAlign: TextAlign.center,
-                ),
-                TextButton(onPressed: _refreshData, child: const Text('Retry')),
+                Text('${context.l10n.error}: ${snapshot.error}',
+                    style: const TextStyle(color: Color(0xFFEF4444)), textAlign: TextAlign.center),
+                TextButton(onPressed: _refreshData, child: Text(context.l10n.retry)),
               ],
             ),
           );
@@ -471,23 +359,11 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
 
         final list = snapshot.data ?? [];
         final filteredList = list.where((a) {
-          // Filter by status tab
           if (a.status.toLowerCase() != status.toLowerCase()) return false;
-          
-          // Filter by search query
           final query = _searchQuery.toLowerCase();
-          final matchesSearch = a.name.toLowerCase().contains(query) ||
-              (a.nodeId.toLowerCase().contains(query));
-          if (!matchesSearch) return false;
-
-          // Filter by species if selected
-          if (_selectedType != null) {
-            if (a.animalType.toUpperCase() != _selectedType!.toUpperCase()) return false;
-          }
-
-          // Filter by fattening / planned sale view
+          if (!a.name.toLowerCase().contains(query) && !a.nodeId.toLowerCase().contains(query)) return false;
+          if (_selectedType != null && a.animalType.toUpperCase() != _selectedType!.toUpperCase()) return false;
           if (_showFatteningOnly && a.isFattening != true) return false;
-
           return true;
         }).toList();
 
@@ -496,18 +372,11 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Opacity(
-                  opacity: 0.2,
-                  child: Icon(Symbols.inventory_2, size: 80, color: AppColors.mistBlue),
-                ),
+                Opacity(opacity: 0.2, child: Icon(Symbols.inventory_2, size: 80, color: AppColors.mistBlue)),
                 const SizedBox(height: 16),
                 Text(
-                  'No $status livestock found',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF94A3B8),
-                  ),
+                  context.l10n.noAnimalsFound,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8)),
                 ),
               ],
             ),
@@ -515,16 +384,14 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
         }
 
         return RefreshIndicator(
-        onRefresh: () async => _refreshData(),
-        child: ListView.builder(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 100),
-          physics: const AlwaysScrollableScrollPhysics(),
-          itemCount: filteredList.length,
-          itemBuilder: (context, index) {
-            return _buildAnimalCard(filteredList[index]);
-          },
-        ),
-      );
+          onRefresh: () async => _refreshData(),
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 100),
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: filteredList.length,
+            itemBuilder: (context, index) => _buildAnimalCard(filteredList[index]),
+          ),
+        );
       },
     );
   }
@@ -534,14 +401,8 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(32), // Shape preserved
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Material(
         color: Colors.transparent,
@@ -550,9 +411,7 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
           onTap: () async {
             final result = await Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => AnimalDetailsScreen(animal: animal),
-              ),
+              MaterialPageRoute(builder: (_) => AnimalDetailsScreen(animal: animal)),
             );
             if (result == true) _refreshData();
           },
@@ -570,27 +429,17 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Expanded(
-                            child: Text(
-                              animal.name,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF141E15),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            child: Text(animal.name,
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF141E15)),
+                                overflow: TextOverflow.ellipsis),
                           ),
                           _buildHealthBadge(animal.vitalityScore),
                         ],
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${animal.breed ?? "Unknown"} • ${animal.age}m',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF64748B),
-                          fontWeight: FontWeight.w500,
-                        ),
+                        '${animal.breed ?? context.l10n.unknown} • ${animal.age}m',
+                        style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
                       ),
                       const SizedBox(height: 12),
                       Row(
@@ -598,33 +447,16 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
                         children: [
                           Row(
                             children: [
-                              Icon(
-                                AnimalUtils.getAnimalIcon(animal.animalType),
-                                size: 16,
-                                color: const Color(0xFF94A3B8),
-                              ),
+                              Icon(AnimalUtils.getAnimalIcon(animal.animalType), size: 16, color: const Color(0xFF94A3B8)),
                               const SizedBox(width: 8),
-                              const Icon(
-                                Symbols.event_repeat,
-                                size: 16,
-                                color: Color(0xFF94A3B8),
-                              ),
+                              const Icon(Symbols.event_repeat, size: 16, color: Color(0xFF94A3B8)),
                               if (animal.isFattening == true) ...[
                                 const SizedBox(width: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFE0F2FE),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Text(
-                                    'En engraissement',
-                                    style: TextStyle(
-                                      color: Color(0xFF0369A1),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
+                                  decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(12)),
+                                  child: Text(context.l10n.fattening,
+                                      style: const TextStyle(color: Color(0xFF0369A1), fontSize: 11, fontWeight: FontWeight.w600)),
                                 ),
                               ],
                             ],
@@ -637,24 +469,14 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFEF4444).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFFEF4444), width: 1),
+                                  border: Border.all(color: const Color(0xFFEF4444)),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   children: [
-                                    Icon(
-                                      Symbols.close,
-                                      color: Color(0xFFEF4444),
-                                      size: 14,
-                                    ),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'Cancel Sale',
-                                      style: TextStyle(
-                                        color: Color(0xFFEF4444),
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 11,
-                                      ),
-                                    ),
+                                    const Icon(Symbols.close, color: Color(0xFFEF4444), size: 14),
+                                    const SizedBox(width: 4),
+                                    Text(context.l10n.cancelSale,
+                                        style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 11)),
                                   ],
                                 ),
                               ),
@@ -662,20 +484,10 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
                           else
                             Row(
                               children: [
-                                const Text(
-                                  'View Details',
-                                  style: TextStyle(
-                                    color: AppColors.mistBlue,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
+                                Text(context.l10n.viewDetails,
+                                    style: const TextStyle(color: AppColors.mistBlue, fontWeight: FontWeight.bold, fontSize: 13)),
                                 const SizedBox(width: 4),
-                                const Icon(
-                                  Symbols.chevron_right,
-                                  color: AppColors.mistBlue,
-                                  size: 16,
-                                ),
+                                const Icon(Symbols.chevron_right, color: AppColors.mistBlue, size: 16),
                               ],
                             ),
                         ],
@@ -692,7 +504,6 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
   }
 
   Widget _buildCardImage(Animal animal) {
-    // Resolve relative paths like /uploads/animals/xxx.jpg to full URL
     String? imageUrl;
     if (animal.profileImage != null && animal.profileImage!.isNotEmpty) {
       final p = animal.profileImage!;
@@ -700,64 +511,33 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
           ? p
           : 'http://${AppConfig.serverHost}:${AppConfig.serverPort}${p.startsWith('/') ? '' : '/'}$p';
     }
-
     return Container(
-      width: 96,
-      height: 96,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(24),
-      ),
+      width: 96, height: 96,
+      decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(24)),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: imageUrl != null
-            ? Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    _buildFallbackIcon(animal.animalType),
-              )
+            ? Image.network(imageUrl, fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _buildFallbackIcon(animal.animalType))
             : _buildFallbackIcon(animal.animalType),
       ),
     );
   }
 
   Widget _buildFallbackIcon(String type) {
-    return Center(
-      child: Icon(
-        AnimalUtils.getAnimalIcon(type),
-        size: 40,
-        color: AppColors.mistBlue.withValues(alpha: 0.3),
-      ),
-    );
+    return Center(child: Icon(AnimalUtils.getAnimalIcon(type), size: 40, color: AppColors.mistBlue.withValues(alpha: 0.3)));
   }
 
   Widget _buildHealthBadge(int score) {
-    Color bg = AppColors.mistBlue.withValues(alpha: 0.1); // Updated to match mistBlue
+    Color bg = AppColors.mistBlue.withValues(alpha: 0.1);
     Color text = AppColors.mistBlue;
-    
-    if (score < 50) {
-      bg = const Color(0xFFFEF2F2); // Redish
-      text = const Color(0xFFEF4444);
-    } else if (score < 80) {
-      bg = const Color(0xFFFFFBEB); // Yellowish
-      text = const Color(0xFFF59E0B);
-    }
-
+    if (score < 50) { bg = const Color(0xFFFEF2F2); text = const Color(0xFFEF4444); }
+    else if (score < 80) { bg = const Color(0xFFFFFBEB); text = const Color(0xFFF59E0B); }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        'Health: $score',
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: text,
-        ),
-      ),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
+      child: Text('${context.l10n.healthStatus}: $score',
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: text)),
     );
   }
 
@@ -768,14 +548,12 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
         onPressed: () async {
           final result = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const AddAnimalScreen()),
+            MaterialPageRoute(builder: (_) => const AddAnimalScreen()),
           );
           if (result == true) _refreshData();
         },
-        label: const Text(
-          'Add Livestock',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
+        label: Text(context.l10n.addLivestock,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         icon: const Icon(Icons.add, size: 28),
         backgroundColor: AppColors.mistBlue,
         foregroundColor: Colors.white,
@@ -783,21 +561,6 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
       ),
     );
-  }
-
-
-
-  Color _getHealthStatusColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'OPTIMAL':
-        return const Color(0xFF22C55E);
-      case 'WARNING':
-        return const Color(0xFFF59E0B);
-      case 'CRITICAL':
-        return const Color(0xFFEF4444);
-      default:
-        return const Color(0xFF94A3B8);
-    }
   }
 
   Widget _buildFieldFilter() {
@@ -808,37 +571,20 @@ class _AnimalListScreenState extends State<AnimalListScreen> with SingleTickerPr
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
         ),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<String>(
             value: _selectedFieldId,
             isExpanded: true,
-            hint: const Text('All Farms / Fields', style: TextStyle(color: Color(0xFF64748B), fontSize: 14)),
+            hint: Text(context.l10n.allFields, style: const TextStyle(color: Color(0xFF64748B), fontSize: 14)),
             icon: const Icon(Symbols.filter_list, color: AppColors.mistBlue),
             items: [
-              const DropdownMenuItem<String>(
-                value: null,
-                child: Text('All Farms / Fields'),
-              ),
-              ..._fields.map((field) {
-                return DropdownMenuItem<String>(
-                  value: field.id,
-                  child: Text(field.name),
-                );
-              }),
+              DropdownMenuItem<String>(value: null, child: Text(context.l10n.allFields)),
+              ..._fields.map((field) => DropdownMenuItem<String>(value: field.id, child: Text(field.name))),
             ],
             onChanged: (value) {
-              setState(() {
-                _selectedFieldId = value;
-                _refreshData();
-              });
+              setState(() { _selectedFieldId = value; _refreshData(); });
             },
           ),
         ),

@@ -6,6 +6,7 @@ import '../../providers/parcel_provider.dart';
 import '../../services/soil_intelligence_service.dart';
 import '../../theme/color_palette.dart';
 import '../../theme/text_styles.dart';
+import '../../l10n/l10n_extensions.dart';
 
 class SoilAlertNotificationsScreen extends StatefulWidget {
   const SoilAlertNotificationsScreen({super.key});
@@ -108,7 +109,7 @@ class _SoilAlertNotificationsScreenState
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to mark alert as read: $error'),
+          content: Text('${context.l10n.error}: $error'),
           backgroundColor: AppColorPalette.alertError,
         ),
       );
@@ -148,12 +149,9 @@ class _SoilAlertNotificationsScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Soil Alert Notifications'),
+        title: Text(context.l10n.soilAlertNotifications),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadAlerts,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadAlerts),
         ],
       ),
       body: RefreshIndicator(
@@ -190,10 +188,8 @@ class _SoilAlertNotificationsScreenState
                           const SizedBox(height: 12),
                           Center(
                             child: Text(
-                              'No active soil alerts',
-                              style: AppTextStyles.bodyLarge(
-                                color: AppColorPalette.softSlate,
-                              ),
+                              context.l10n.noData,
+                              style: AppTextStyles.bodyLarge(color: AppColorPalette.softSlate),
                             ),
                           ),
                         ],
@@ -274,7 +270,7 @@ class _SoilAlertNotificationsScreenState
                                     TextButton.icon(
                                       onPressed: () => _markAsRead(alert),
                                       icon: const Icon(Icons.check, size: 16),
-                                      label: const Text('Mark read'),
+                                      label: Text(context.l10n.markRead),
                                     ),
                                   ],
                                 ),

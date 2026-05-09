@@ -154,6 +154,15 @@ class AnimalService {
     return Animal.fromJson(response);
   }
 
+  Future<Animal> markAsDeceased(String nodeId, {String? notes}) async {
+    final response = await ApiService.patch(
+      '/animals/$nodeId/mark-deceased',
+      {if (notes != null) 'notes': notes},
+      withAuth: true,
+    );
+    return Animal.fromJson(response);
+  }
+
   Future<List<Animal>> getSoldAnimals({String? fieldId}) async {
     String endpoint = '/animals/sold';
     if (fieldId != null) {

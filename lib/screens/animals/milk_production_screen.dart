@@ -5,6 +5,7 @@ import '../../services/animal_service.dart';
 import '../../services/milk_production_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/app_drawer.dart';
+import '../../l10n/l10n_extensions.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../../utils/animal_utils.dart';
 import 'package:intl/intl.dart';
@@ -20,13 +21,12 @@ class MilkProductionScreen extends StatefulWidget {
 class _MilkProductionScreenState extends State<MilkProductionScreen> {
   final MilkProductionService _milkService = MilkProductionService();
   final AnimalService _animalService = AnimalService();
-  
+
   List<MilkProduction> _records = [];
   Map<String, dynamic> _stats = {};
   List<Animal> _cows = [];
   bool _isLoading = true;
 
-  // Search state
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -35,9 +35,7 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
     super.initState();
     _loadData();
     _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text.toLowerCase();
-      });
+      setState(() => _searchQuery = _searchController.text.toLowerCase());
     });
   }
 
@@ -55,7 +53,6 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
         _milkService.getStatistics(),
         _animalService.getAnimals(animalType: 'cow'),
       ]);
-
       setState(() {
         _records = results[0] as List<MilkProduction>;
         _stats = results[1] as Map<String, dynamic>;
@@ -65,7 +62,7 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading data: $e')),
+          SnackBar(content: Text('${context.l10n.error}: $e')),
         );
       }
       setState(() => _isLoading = false);
@@ -73,17 +70,18 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
   }
 
   void _showEntryDialog({MilkProduction? existingRecord}) {
+    final l = context.l10n;
     if (_cows.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No cows found. Please add a cow first.')),
+        SnackBar(content: Text(context.l10n.noAnimalsFound)),
       );
       return;
     }
 
-    Animal? selectedCow = existingRecord != null 
+    Animal? selectedCow = existingRecord != null
         ? _cows.firstWhere((c) => c.id == existingRecord.animalId, orElse: () => _cows.first)
         : _cows.first;
-    
+
     final morningController = TextEditingController(text: existingRecord?.morningL.toString() ?? '');
     final eveningController = TextEditingController(text: existingRecord?.eveningL.toString() ?? '');
     final notesController = TextEditingController(text: existingRecord?.notes ?? '');
@@ -101,25 +99,20 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
           ),
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
-            top: 24,
-            left: 24,
-            right: 24,
+            top: 24, left: 24, right: 24,
           ),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Header
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      existingRecord == null ? 'New Milk Record' : 'Edit Milk Record',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF1E293B),
-                      ),
+                      existingRecord == null ? l.newMilkRecord : l.editMilkRecord,
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF1E293B)),
                     ),
                     Row(
                       children: [
@@ -137,11 +130,9 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                // Cow Selector
-                const Text(
-                  'Select Cow',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
-                ),
+
+                // Cow selector
+                Text(l.selectCow, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: existingRecord != null ? null : () async {
@@ -151,22 +142,21 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
                         String dialogSearch = '';
                         return StatefulBuilder(
                           builder: (context, setDialogState) {
-                            final filteredCows = _cows.where((c) => 
-                              c.name.toLowerCase().contains(dialogSearch.toLowerCase()) || 
+                            final filteredCows = _cows.where((c) =>
+                              c.name.toLowerCase().contains(dialogSearch.toLowerCase()) ||
                               c.nodeId.toLowerCase().contains(dialogSearch.toLowerCase())
                             ).toList();
-
                             return AlertDialog(
-                              title: const Text('Select Cow'),
+                              title: Text(l.selectCow),
                               content: SizedBox(
                                 width: double.maxFinite,
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     TextField(
-                                      decoration: const InputDecoration(
-                                        hintText: 'Search by name or tag...',
-                                        prefixIcon: Icon(Icons.search),
+                                      decoration: InputDecoration(
+                                        hintText: l.searchByNameOrId,
+                                        prefixIcon: const Icon(Icons.search),
                                       ),
                                       onChanged: (v) => setDialogState(() => dialogSearch = v),
                                     ),
@@ -194,9 +184,7 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
                         );
                       },
                     );
-                    if (picked != null) {
-                      setModalState(() => selectedCow = picked);
-                    }
+                    if (picked != null) setModalState(() => selectedCow = picked);
                   },
                   child: Container(
                     padding: const EdgeInsets.all(16),
@@ -208,18 +196,16 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(selectedCow?.name ?? 'Select a cow'),
+                        Text(selectedCow?.name ?? l.selectCow),
                         if (existingRecord == null) const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Date Selector
-                const Text(
-                  'Date',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
-                ),
+
+                // Date selector
+                Text(l.saleDate, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () async {
@@ -229,9 +215,7 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
                       firstDate: DateTime(2020),
                       lastDate: DateTime.now(),
                     );
-                    if (date != null) {
-                      setModalState(() => selectedDate = date);
-                    }
+                    if (date != null) setModalState(() => selectedDate = date);
                   },
                   child: Container(
                     padding: const EdgeInsets.all(16),
@@ -250,17 +234,15 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Volumes
+
+                // Morning / Evening volumes
                 Row(
                   children: [
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Morning (L)',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
-                          ),
+                          Text(l.morningL, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
                           const SizedBox(height: 8),
                           TextField(
                             controller: morningController,
@@ -282,10 +264,7 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Evening (L)',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
-                          ),
+                          Text(l.eveningL, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
                           const SizedBox(height: 8),
                           TextField(
                             controller: eveningController,
@@ -305,10 +284,9 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Notes',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
-                ),
+
+                // Notes
+                Text(l.notes, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
                 const SizedBox(height: 8),
                 TextField(
                   controller: notesController,
@@ -323,13 +301,14 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
+
+                // Save button
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
                     onPressed: () async {
                       if (selectedCow == null) return;
-                      
                       final data = {
                         'animalId': selectedCow!.id,
                         'date': selectedDate.toIso8601String(),
@@ -337,7 +316,6 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
                         'eveningL': double.tryParse(eveningController.text) ?? 0,
                         'notes': notesController.text,
                       };
-
                       try {
                         MilkProduction result;
                         if (existingRecord == null) {
@@ -345,27 +323,16 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
                         } else {
                           result = await _milkService.updateRecord(existingRecord.id, data);
                         }
-                        
-                        // Close current entry dialog
                         if (mounted) Navigator.pop(context);
-                        
-                        // Navigate to success screen
                         if (mounted) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => MilkRecordSuccessScreen(
-                                record: result,
-                                isUpdate: existingRecord != null,
-                              ),
-                            ),
-                          );
+                          Navigator.push(context, MaterialPageRoute(
+                            builder: (_) => MilkRecordSuccessScreen(record: result, isUpdate: existingRecord != null),
+                          ));
                         }
-                        
-                        _loadData(); // Refresh list in background
+                        _loadData();
                       } catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: $e')),
+                          SnackBar(content: Text('${context.l10n.error}: $e')),
                         );
                       }
                     },
@@ -374,8 +341,8 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                     child: Text(
-                      existingRecord == null ? 'Save Record' : 'Update Record', 
-                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)
+                      existingRecord == null ? l.saveRecord : l.updateRecord,
+                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -392,35 +359,29 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Record'),
-        content: const Text('Are you sure you want to delete this milk production record?'),
+        title: Text(context.l10n.deleteRecord),
+        content: Text(context.l10n.deleteRecordConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
-              // 1. Close the confirmation dialog
               Navigator.of(context).pop();
-              
-              // 2. If called from the edit bottom sheet, close the sheet too
-              if (fromBottomSheet) {
-                Navigator.of(this.context).pop();
-              }
-              
+              if (fromBottomSheet) Navigator.of(this.context).pop();
               try {
                 await _milkService.deleteRecord(record.id);
                 _loadData();
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(this.context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
+                    SnackBar(content: Text('${context.l10n.error}: $e')),
                   );
                 }
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+            child: Text(context.l10n.delete, style: const TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
@@ -429,173 +390,93 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     return Scaffold(
       backgroundColor: AppColors.wheatWarmClay,
       drawer: const AppDrawer(),
-      body: Stack(
-        children: [
-          // Background Mesh Gradient
-          Positioned(
-            top: -100,
-            left: -100,
-            right: -100,
-            height: 400,
-            child: Opacity(
-              opacity: 0.6,
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    child: Container(
-                      width: 400,
-                      height: 400,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            AppColors.fieldFreshStart.withValues(alpha: 0.2),
-                            AppColors.fieldFreshStart.withValues(alpha: 0.0),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: -50,
-                    right: -50,
-                    child: Container(
-                      width: 350,
-                      height: 350,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            AppColors.mistyBlue.withValues(alpha: 0.2),
-                            AppColors.mistyBlue.withValues(alpha: 0.0),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          
-          SafeArea(
-            child: _isLoading 
-                ? const Center(child: CircularProgressIndicator())
-                : RefreshIndicator(
-                    onRefresh: _loadData,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _loadData,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(l),
+                      const SizedBox(height: 32),
+                      _buildStatsGrid(l),
+                      const SizedBox(height: 32),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildHeader(),
-                          const SizedBox(height: 32),
-                          _buildStatsGrid(),
-                          const SizedBox(height: 32),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Production History',
-                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-                              ),
-                              TextButton.icon(
-                                onPressed: () => _showEntryDialog(),
-                                icon: const Icon(Icons.add_rounded, size: 20),
-                                label: const Text('Add Entry'),
-                                style: TextButton.styleFrom(foregroundColor: AppColors.mistBlue),
-                              ),
-                            ],
+                          Text(l.productionHistory,
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                          TextButton.icon(
+                            onPressed: () => _showEntryDialog(),
+                            icon: const Icon(Icons.add_rounded, size: 20),
+                            label: Text(l.addEntry),
+                            style: TextButton.styleFrom(foregroundColor: AppColors.mistBlue),
                           ),
-                          const SizedBox(height: 16),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.03),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: TextField(
-                              controller: _searchController,
-                              decoration: InputDecoration(
-                                hintText: 'Search by cow name or tag...',
-                                hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-                                prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B)),
-                                suffixIcon: _searchQuery.isNotEmpty 
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear_rounded, size: 20),
-                                      onPressed: () => _searchController.clear(),
-                                    ) 
-                                  : null,
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          _buildHistoryList(),
                         ],
                       ),
-                    ),
+                      const SizedBox(height: 16),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: l.searchByNameOrId,
+                            hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                            prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B)),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? IconButton(icon: const Icon(Icons.clear_rounded, size: 20), onPressed: () => _searchController.clear())
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      _buildHistoryList(l),
+                    ],
                   ),
-          ),
-        ],
+                ),
+              ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(dynamic l) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            Builder(
-              builder: (context) => GestureDetector(
-                onTap: () => Scaffold.of(context).openDrawer(),
-                child: _buildCircleIconButton(Icons.menu_rounded),
+        Builder(
+          builder: (context) => GestureDetector(
+            onTap: () => Scaffold.of(context).openDrawer(),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
               ),
+              child: const Icon(Icons.menu_rounded, color: Color(0xFF64748B), size: 22),
             ),
-            const SizedBox(width: 12),
-            const Text(
-              'Milk Production',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF141E15)),
-            ),
-          ],
+          ),
         ),
+        const SizedBox(width: 12),
+        Text(l.milkProduction,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF141E15))),
       ],
     );
   }
 
-  Widget _buildCircleIconButton(IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Icon(icon, color: const Color(0xFF64748B), size: 22),
-    );
-  }
-
-  Widget _buildStatsGrid() {
+  Widget _buildStatsGrid(dynamic l) {
     final totalVol = _toDouble(_stats['totalLiters']);
     final herd = _stats['herdDetails'] as List?;
     final herdCount = herd?.length ?? 0;
@@ -604,9 +485,9 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
       children: [
         Expanded(
           child: _buildStatCard(
-            'Total Yield',
+            l.totalYield,
             '${totalVol.toStringAsFixed(1)}L',
-            'All time',
+            l.allTime,
             Symbols.water_drop,
             const Color(0xFF3B82F6),
           ),
@@ -614,7 +495,7 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
         const SizedBox(width: 16),
         Expanded(
           child: _buildStatCard(
-            'Top Producer',
+            l.topProducer,
             herdCount > 0 ? herd![0]['name'] : 'N/A',
             herdCount > 0 ? '${_toDouble(herd![0]['totalL'])}L' : '--',
             Symbols.star,
@@ -639,23 +520,14 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 20, offset: const Offset(0, 10))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
             child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(height: 16),
@@ -669,7 +541,7 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
     );
   }
 
-  Widget _buildHistoryList() {
+  Widget _buildHistoryList(dynamic l) {
     final filteredRecords = _records.where((record) {
       final name = record.animal?.name.toLowerCase() ?? '';
       final tag = record.animal?.nodeId.toLowerCase() ?? '';
@@ -680,16 +552,13 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(40),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-        ),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
         child: Column(
           children: [
             const Icon(Symbols.history, size: 48, color: Color(0xFFCBD5E1)),
             const SizedBox(height: 16),
             Text(
-              _searchQuery.isEmpty ? 'No records yet' : 'No records found for "$_searchQuery"',
+              _searchQuery.isEmpty ? l.noRecordsYet : '${l.noData}: "$_searchQuery"',
               style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold),
             ),
           ],
@@ -701,7 +570,7 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: filteredRecords.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final record = filteredRecords[index];
         return InkWell(
@@ -712,23 +581,13 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))],
             ),
             child: Row(
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.mistBlue.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
+                  width: 48, height: 48,
+                  decoration: BoxDecoration(color: AppColors.mistBlue.withValues(alpha: 0.1), shape: BoxShape.circle),
                   child: const Icon(Symbols.water_drop, color: AppColors.mistBlue, size: 24),
                 ),
                 const SizedBox(width: 16),
@@ -736,28 +595,20 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        record.animal?.name ?? 'Unknown Cow',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-                      ),
-                      Text(
-                        DateFormat('MMM dd, yyyy').format(record.date),
-                        style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
-                      ),
+                      Text(record.animal?.name ?? l.unknown,
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                      Text(DateFormat('MMM dd, yyyy').format(record.date),
+                          style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
                     ],
                   ),
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      '${record.totalL}L',
-                      style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.mistBlue, fontSize: 16),
-                    ),
-                    Text(
-                      'M:${record.morningL} E:${record.eveningL}',
-                      style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
-                    ),
+                    Text('${record.totalL}L',
+                        style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.mistBlue, fontSize: 16)),
+                    Text('M:${record.morningL} E:${record.eveningL}',
+                        style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
                   ],
                 ),
                 const SizedBox(width: 8),

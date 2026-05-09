@@ -12,6 +12,8 @@ import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
 import '../utils/constants.dart';
 import '../widgets/app_drawer.dart';
+import '../l10n/l10n_extensions.dart';
+import '../widgets/language_selector.dart';
 import 'profile_screen.dart';
 import 'signin_screen.dart';
 
@@ -112,14 +114,14 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
         _activeMaterialSession = activeSession;
         _sessionStartTime = startTime;
         _error = assignedFieldId == null
-            ? 'No field is assigned to this worker account yet.'
+            ? context.l10n.noFieldAssigned
             : null;
         _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Failed to load dashboard: $e';
+        _error = '${context.l10n.failedToLoad}: $e';
         _isLoading = false;
       });
     }
@@ -143,16 +145,16 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Sign out'),
-        content: const Text('Do you want to sign out of this worker account?'),
+        title: Text(context.l10n.signOut),
+        content: Text(context.l10n.signOutConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Sign out'),
+            child: Text(context.l10n.signOut),
           ),
         ],
       ),
@@ -187,13 +189,19 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
       drawer: const AppDrawer(),
       appBar: AppBar(
         title: Text(
-          'My Materials & Equipment',
+          context.l10n.myMaterials,
           style: AppTextStyles.h3(color: AppColorPalette.charcoalGreen),
         ),
         backgroundColor: AppColorPalette.wheatWarmClay,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         actions: [
+          IconButton(
+            tooltip: 'Language',
+            icon: const Icon(Icons.language_rounded),
+            color: AppColorPalette.charcoalGreen,
+            onPressed: () => LanguageSelector.show(context),
+          ),
           IconButton(
             tooltip: 'Profile',
             icon: const Icon(Icons.person_outline_rounded),
@@ -377,12 +385,12 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Welcome, ${user?.name ?? 'Worker'}',
+            '${context.l10n.welcome}, ${user?.name ?? context.l10n.worker}',
             style: AppTextStyles.h3(color: Colors.white),
           ),
           const SizedBox(height: 8),
           Text(
-            'Manage your materials and equipment for today\'s work',
+            context.l10n.manageYourMaterials,
             style: AppTextStyles.bodySmall(
               color: Colors.white.withValues(alpha: 0.8),
             ),
@@ -445,7 +453,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Currently in Use',
+                      context.l10n.currentlyInUse,
                       style: AppTextStyles.buttonSmall(color: Colors.white),
                     ),
                     const SizedBox(height: 4),
@@ -480,7 +488,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
             child: ElevatedButton.icon(
               onPressed: () => _showCheckInDialog(activeMaterial),
               icon: const Icon(Icons.check_circle_outline),
-              label: const Text('Check-in Material'),
+              label: Text(context.l10n.finish),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: AppColors.success,
@@ -499,7 +507,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
         Expanded(
           child: _statCard(
             icon: Icons.construction,
-            label: 'Available',
+            label: context.l10n.available,
             value: _assignedMaterials.length.toString(),
           ),
         ),
@@ -507,7 +515,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
         Expanded(
           child: _statCard(
             icon: Icons.pets,
-            label: 'Animals',
+            label: context.l10n.animals,
             value: _animals.length.toString(),
           ),
         ),
@@ -515,7 +523,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
         Expanded(
           child: _statCard(
             icon: Icons.timer,
-            label: 'Active',
+            label: context.l10n.active,
             value: _activeMaterialSession != null ? '1' : '0',
           ),
         ),
@@ -553,7 +561,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Start Using Material', style: AppTextStyles.h4()),
+        Text(context.l10n.startUsingMaterial, style: AppTextStyles.h4()),
         const SizedBox(height: 12),
         if (_assignedMaterials.isEmpty)
           Container(
@@ -564,7 +572,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
             ),
             child: Center(
               child: Text(
-                'No materials assigned yet',
+                context.l10n.noMaterialsAssigned,
                 style: AppTextStyles.bodySmall(),
               ),
             ),
@@ -588,7 +596,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
                     isExpanded: true,
                     underline: const SizedBox(),
                     hint: Text(
-                      'Select material...',
+                      context.l10n.selectMaterial,
                       style: AppTextStyles.bodySmall(),
                     ),
                     items: _assignedMaterials.map((material) {
@@ -610,7 +618,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
                 onPressed: () =>
                     _showStartSessionDialog(_assignedMaterials.first),
                 icon: const Icon(Icons.play_arrow),
-                label: const Text('Start'),
+                label: Text(context.l10n.start),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColorPalette.charcoalGreen,
                   foregroundColor: Colors.white,
@@ -627,7 +635,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Your Materials & Equipment', style: AppTextStyles.h4()),
+        Text(context.l10n.myMaterials, style: AppTextStyles.h4()),
         const SizedBox(height: 12),
         ..._assignedMaterials.map((material) => _buildMaterialCard(material)),
       ],
@@ -762,7 +770,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Your Animals', style: AppTextStyles.h4()),
+        Text(context.l10n.animals, style: AppTextStyles.h4()),
         const SizedBox(height: 12),
         ..._animals.take(3).map((animal) {
           return Container(
@@ -839,13 +847,14 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Start Using: ${material.name}', style: AppTextStyles.h4()),
+        title: Text('${context.l10n.startUsing}: ${material.name}',
+            style: AppTextStyles.h4()),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${material.brand} • ${material.model ?? 'N/A'}',
+              '${material.brand} • ${material.model ?? context.l10n.unknown}',
               style: AppTextStyles.bodySmall(),
             ),
             const SizedBox(height: 16),
@@ -858,7 +867,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -866,7 +875,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
               _startMaterialSession(material);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
-            child: const Text('Start'),
+            child: Text(context.l10n.start),
           ),
         ],
       ),
@@ -878,7 +887,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          'Return Material: ${material.name}',
+          '${context.l10n.finish}: ${material.name}',
           style: AppTextStyles.h4(),
         ),
         content: Form(
@@ -889,18 +898,18 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${material.brand} • ${material.model ?? 'N/A'}',
+                  '${material.brand} • ${material.model ?? context.l10n.unknown}',
                   style: AppTextStyles.bodySmall(),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _materialNotesController,
                   decoration: InputDecoration(
-                    labelText: 'Notes (optional)',
+                    labelText: context.l10n.issuesOptional,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    hintText: 'Any observations or condition notes',
+                    hintText: context.l10n.describeIssues,
                   ),
                   maxLines: 3,
                 ),
@@ -908,7 +917,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
                 TextFormField(
                   controller: _completionStatusController,
                   decoration: InputDecoration(
-                    labelText: 'Completion Status',
+                    labelText: context.l10n.condition,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -922,7 +931,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -930,7 +939,7 @@ class _FarmerHomeScreenV2State extends State<FarmerHomeScreenV2> {
               _endMaterialSession(material);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
-            child: const Text('Check-in'),
+            child: Text(context.l10n.finish),
           ),
         ],
       ),
