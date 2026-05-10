@@ -7,8 +7,10 @@ import '../../services/field_service.dart';
 import '../../models/field_model.dart';
 import '../../utils/constants.dart';
 import '../../utils/animal_utils.dart';
+import '../../l10n/l10n_extensions.dart';
 import 'animal_details_screen.dart';
 import 'sell_animal_screen.dart';
+import 'animals_design.dart';
 
 class PlannedSalesScreen extends StatefulWidget {
   const PlannedSalesScreen({super.key});
@@ -37,8 +39,8 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
       setState(() {
         _fields = fields;
       });
-    } catch (e) {
-      debugPrint('Error fetching fields: $e');
+    } catch (_) {
+      // Silently fail — fields list is optional
     }
   }
 
@@ -52,19 +54,19 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Vendre l\'animal'),
-        content: Text('Êtes-vous sûr de vouloir vendre ${animal.name}?'),
+        title: Text(context.l10n.sellAnimalTitle),
+        content: Text(context.l10n.sellAnimalConfirm(animal.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
+            child: Text(context.l10n.cancel),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               _sellAnimal(animal);
             },
-            child: const Text('Vendre'),
+            child: Text(context.l10n.sell),
           ),
         ],
       ),
@@ -86,7 +88,7 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
         await Future.delayed(const Duration(milliseconds: 500));
         messenger.showSnackBar(
           SnackBar(
-            content: Text('${animal.name} a été vendu avec succès'),
+            content: Text(context.l10n.animalSoldSuccessName(animal.name)),
             backgroundColor: Colors.green,
           ),
         );
@@ -95,7 +97,7 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
       if (mounted) {
         messenger.showSnackBar(
           SnackBar(
-            content: Text('Erreur: $e'),
+            content: Text(context.l10n.errorPrefix(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -107,13 +109,7 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.wheatWarmClay,
-      appBar: AppBar(
-        title: const Text('Ventes Saisonnières'),
-        backgroundColor: AppColors.mistBlue,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: false,
-      ),
+      appBar: AnimalsDesign.animalsAppBar(title: context.l10n.seasonalSales),
       body: Column(
         children: [
           _buildFieldFilter(),
@@ -127,7 +123,7 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
 
   Widget _buildFieldFilter() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: AnimalsDesign.screenHorizontalPadding, vertical: 12),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
@@ -145,12 +141,12 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
           child: DropdownButton<String>(
             value: _selectedFieldId,
             isExpanded: true,
-            hint: const Text('Toutes les parcelles', style: TextStyle(color: Color(0xFF64748B), fontSize: 14)),
+            hint: Text(context.l10n.allParcels, style: const TextStyle(color: Color(0xFF64748B), fontSize: 14)),
             icon: const Icon(Symbols.filter_list, color: AppColors.mistBlue),
             items: [
-              const DropdownMenuItem<String>(
+              DropdownMenuItem<String>(
                 value: null,
-                child: Text('Toutes les parcelles'),
+                child: Text(context.l10n.allParcels),
               ),
               ..._fields.map((field) {
                 return DropdownMenuItem<String>(
@@ -176,7 +172,7 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
       future: _animalsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator(color: AppColors.mistyBlue));
         }
         if (snapshot.hasError) {
           return Center(
@@ -186,11 +182,11 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
                 const Icon(Symbols.error_outline, color: Colors.red, size: 48),
                 const SizedBox(height: 16),
                 Text(
-                  'Erreur: ${snapshot.error}',
+                  context.l10n.errorPrefix(snapshot.error.toString()),
                   style: const TextStyle(color: Color(0xFFEF4444)),
                   textAlign: TextAlign.center,
                 ),
-                TextButton(onPressed: _refreshData, child: const Text('Réessayer')),
+                TextButton(onPressed: _refreshData, child: Text(context.l10n.retry)),
               ],
             ),
           );
@@ -207,9 +203,9 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
                   child: Icon(Symbols.inventory_2, size: 80, color: AppColors.mistBlue),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Aucun animal en engraissement',
-                  style: TextStyle(
+                Text(
+                  context.l10n.noFatteningAnimals,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF94A3B8),
@@ -223,7 +219,7 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
         return RefreshIndicator(
           onRefresh: () async => _refreshData(),
           child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            padding: const EdgeInsets.fromLTRB(AnimalsDesign.screenHorizontalPadding, 16, AnimalsDesign.screenHorizontalPadding, 16),
             itemCount: animals.length,
             itemBuilder: (context, index) {
               return _buildAnimalCard(animals[index]);
@@ -322,7 +318,7 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              'En engraissement depuis $daysInFat j',
+                              context.l10n.fatteningDays(daysInFat),
                               style: const TextStyle(
                                 fontSize: 11,
                                 color: Color(0xFF0369A1),
@@ -349,15 +345,15 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Date de vente prévue',
-                            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                          Text(
+                            context.l10n.targetSaleDateLabel,
+                            style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             animal.targetSaleDate != null
                                 ? DateFormat('dd MMM yyyy').format(animal.targetSaleDate!)
-                                : 'Non définie',
+                                : context.l10n.notDefined,
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -377,10 +373,8 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
                           ),
                           child: Text(
                             daysUntilSale <= 0
-                                ? 'PRÊT'
-                                : daysUntilSale <= 7
-                                    ? '$daysUntilSale j'
-                                    : '$daysUntilSale j',
+                                ? context.l10n.ready
+                                : '$daysUntilSale j',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
@@ -416,13 +410,13 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: AppColors.mistBlue, width: 1.5),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Symbols.info, color: AppColors.mistBlue, size: 16),
-                              SizedBox(width: 6),
+                              const Icon(Symbols.info, color: AppColors.mistBlue, size: 16),
+                              const SizedBox(width: 6),
                               Text(
-                                'Détails',
+                                context.l10n.details,
                                 style: TextStyle(
                                   color: AppColors.mistBlue,
                                   fontWeight: FontWeight.bold,
@@ -451,13 +445,13 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
                               ),
                             ],
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Symbols.check_circle, color: Colors.white, size: 16),
-                              SizedBox(width: 6),
+                              const Icon(Symbols.check_circle, color: Colors.white, size: 16),
+                              const SizedBox(width: 6),
                               Text(
-                                'Vendre',
+                                context.l10n.sell,
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,

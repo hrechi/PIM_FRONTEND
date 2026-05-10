@@ -73,8 +73,8 @@ class _AnimalListScreenState extends State<AnimalListScreen>
     try {
       final fields = await _fieldService.getFields();
       if (mounted) setState(() => _fields = fields);
-    } catch (e) {
-      debugPrint('Error fetching fields: $e');
+    } catch (_) {
+      // Silently fail — fields list is optional
     }
   }
 
@@ -467,7 +467,7 @@ class _AnimalListScreenState extends State<AnimalListScreen>
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFEF4444).withOpacity(0.1),
+                                  color: const Color(0xFFEF4444).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(color: const Color(0xFFEF4444)),
                                 ),

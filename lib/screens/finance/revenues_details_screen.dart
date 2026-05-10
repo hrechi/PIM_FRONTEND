@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import '../../models/field_model.dart';
 import '../../models/revenue_detail_model.dart';
 import '../../services/finance_details_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/animal_utils.dart';
+import '../../l10n/l10n_extensions.dart';
+import 'add_revenue_screen.dart';
 
 class RevenuesDetailsScreen extends StatefulWidget {
   final String fieldId;
   final String fieldName;
+  final FieldModel? field;
 
   const RevenuesDetailsScreen({
     required this.fieldId,
     required this.fieldName,
+    this.field,
     super.key,
   });
 
@@ -41,7 +47,6 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
       _isLoading = true;
       _error = null;
     });
-
     try {
       final data = await _financeService.getRevenuesDetails(
         fieldId: widget.fieldId,
@@ -49,14 +54,13 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
         skip: _currentPage * _pageSize,
         take: _pageSize,
       );
-
       setState(() {
         _currentData = data;
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
-        _error = 'Erreur: $e';
+        _error = '${context.l10n.error}: $e';
         _isLoading = false;
       });
     }
@@ -64,35 +68,56 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
 
   List<RevenueDetail> _getFilteredData() {
     if (_currentData == null) return [];
-
-    if (_searchQuery.isEmpty) {
-      return _currentData!.data;
-    }
-
-    return _currentData!.data.where((revenue) {
-      return revenue.animalName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          (revenue.buyerName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) ||
-          revenue.type.toLowerCase().contains(_searchQuery.toLowerCase());
+    if (_searchQuery.isEmpty) return _currentData!.data;
+    return _currentData!.data.where((r) {
+      final q = _searchQuery.toLowerCase();
+      return (r.animalName?.toLowerCase().contains(q) ?? false) ||
+          (r.buyerName?.toLowerCase().contains(q) ?? false) ||
+          r.type.toLowerCase().contains(q) ||
+          (r.description?.toLowerCase().contains(q) ?? false);
     }).toList();
+  }
+
+  void _openAddRevenue() async {
+    if (widget.field == null) return;
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddRevenueScreen(field: widget.field!),
+      ),
+    );
+    if (result == true) _loadRevenuesData();
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: Text('Revenus - ${widget.fieldName}'),
+        title: Text('${l10n.revenues} — ${widget.fieldName}'),
         backgroundColor: AppColors.mistyBlue,
         foregroundColor: Colors.white,
         elevation: 0,
-        centerTitle: false,
       ),
+      floatingActionButton: widget.field != null
+          ? FloatingActionButton.extended(
+              onPressed: _openAddRevenue,
+              backgroundColor: const Color(0xFF10B981),
+              foregroundColor: Colors.white,
+              icon: const Icon(Symbols.add),
+              label: Text(l10n.addRevenue),
+            )
+          : null,
       body: Column(
         children: [
-          // Header with filters
+          // Header filters
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.mistyBlue, AppColors.mistyBlue.withValues(alpha: 0.8)],
+                colors: [
+                  AppColors.mistyBlue,
+                  AppColors.mistyBlue.withValues(alpha: 0.8)
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -101,45 +126,56 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Period selector
                 Text(
-                  'Période',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white70,
-                      ),
+                  l10n.period,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: Colors.white70),
                 ),
                 const SizedBox(height: 8),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
-                    children: ['month', 'quarter', 'year'].map((period) {
-                      final labels = {'month': 'Mois', 'quarter': 'Trimestre', 'year': 'Année'};
-                      final isSelected = _selectedPeriod == period;
+                    children: ['month', 'quarter', 'year'].map((p) {
+                      final labels = {
+                        'month': l10n.periodMonth,
+                        'quarter': l10n.periodQuarter,
+                        'year': l10n.periodYear,
+                      };
+                      final isSelected = _selectedPeriod == p;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: FilterChip(
                           selected: isSelected,
-                          onSelected: (selected) {
+                          onSelected: (_) {
                             setState(() {
-                              _selectedPeriod = period;
+                              _selectedPeriod = p;
                               _currentPage = 0;
                             });
                             _loadRevenuesData();
                           },
-                          label: Text(labels[period] ?? period),
-                          backgroundColor: Colors.white.withValues(alpha: 0.2),
+                          label: Text(labels[p] ?? p),
+                          backgroundColor:
+                              Colors.white.withValues(alpha: 0.2),
                           selectedColor: AppColors.mistyBlue,
                           checkmarkColor: Colors.white,
                           labelStyle: TextStyle(
-                            color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.9),
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                            color: isSelected
+                                ? Colors.white
+                                : Colors.white.withValues(alpha: 0.9),
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.w500,
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                             side: BorderSide(
-                              color: isSelected ? AppColors.mistyBlue : Colors.white.withValues(alpha: 0.3),
-                              width: 1,
+                              color: isSelected
+                                  ? AppColors.mistyBlue
+                                  : Colors.white.withValues(alpha: 0.3),
                             ),
                           ),
                         ),
@@ -148,24 +184,22 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Search box
                 TextField(
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value;
-                    });
-                  },
+                  onChanged: (v) => setState(() => _searchQuery = v),
                   decoration: InputDecoration(
-                    hintText: 'Rechercher par animal, acheteur...',
+                    hintText: l10n.revenueSearchHint,
                     hintStyle: const TextStyle(color: Colors.white70),
-                    prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                    prefixIcon:
+                        const Icon(Icons.search, color: Colors.white70),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Colors.white24),
+                      borderSide:
+                          const BorderSide(color: Colors.white24),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Colors.white24),
+                      borderSide:
+                          const BorderSide(color: Colors.white24),
                     ),
                     filled: true,
                     fillColor: Colors.white.withValues(alpha: 0.1),
@@ -188,52 +222,57 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
                             const SizedBox(height: 16),
                             ElevatedButton(
                               onPressed: _loadRevenuesData,
-                              child: const Text('Réessayer'),
+                              child: Text(l10n.retry),
                             ),
                           ],
                         ),
                       )
                     : _currentData == null || _currentData!.data.isEmpty
-                        ? const Center(child: Text('Aucun revenu trouvé'))
-                        : _buildRevenuesList(),
+                        ? Center(child: Text(l10n.noRevenuesFound))
+                        : _buildList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildRevenuesList() {
-    final filteredData = _getFilteredData();
-
-    if (filteredData.isEmpty) {
-      return const Center(child: Text('Aucun résultat trouvé'));
+  Widget _buildList() {
+    final filtered = _getFilteredData();
+    if (filtered.isEmpty) {
+      return Center(child: Text(context.l10n.noRevenuesFound));
     }
-
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: filteredData.length + 1,
-      itemBuilder: (context, index) {
-        if (index == filteredData.length) {
-          return _buildPagination();
-        }
-
-        final revenue = filteredData[index];
-        return _buildRevenueCard(revenue);
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
+      itemCount: filtered.length + 1,
+      itemBuilder: (ctx, i) {
+        if (i == filtered.length) return _buildPagination();
+        return _buildCard(filtered[i]);
       },
     );
   }
 
-  Widget _buildRevenueCard(RevenueDetail revenue) {
-    final formatter = DateFormat('dd/MM/yyyy HH:mm');
+  Widget _buildCard(RevenueDetail revenue) {
+    final formatter = DateFormat('dd/MM/yyyy');
+    final isManual = revenue.source == RevenueSource.manual;
+
+    final Color cardColor =
+        isManual ? const Color(0xFF8B5CF6) : Colors.green.shade600;
+    final IconData cardIcon =
+        isManual ? _manualCategoryIcon(revenue.type) : Symbols.pets;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           gradient: LinearGradient(
-            colors: [Colors.white, Colors.green.shade50.withValues(alpha: 0.3)],
+            colors: [
+              Colors.white,
+              cardColor.withValues(alpha: 0.06),
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -243,19 +282,20 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with animal name and price
               Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade100,
+                      color: cardColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
-                      AnimalUtils.getAnimalEmoji(revenue.type),
-                      style: const TextStyle(fontSize: 20),
-                    ),
+                    child: isManual
+                        ? Icon(cardIcon, size: 20, color: cardColor)
+                        : Text(
+                            AnimalUtils.getAnimalEmoji(revenue.type),
+                            style: const TextStyle(fontSize: 20),
+                          ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -263,7 +303,10 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          revenue.animalName,
+                          isManual
+                              ? _manualCategoryLabel(
+                                  revenue.type, context)
+                              : (revenue.animalName ?? '—'),
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -271,51 +314,49 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
-                        Text(
-                          revenue.type,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[600],
+                        Container(
+                          margin: const EdgeInsets.only(top: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: cardColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          overflow: TextOverflow.ellipsis,
+                          child: Text(
+                            isManual
+                                ? context.l10n.revenueSourceManual
+                                : context.l10n.revenueSourceAnimalSale,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: cardColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade500,
+                      color: cardColor,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '+${revenue.salePrice.toStringAsFixed(2)} DT',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: Colors.white,
-                          ),
-                        ),
-                        if (revenue.saleWeightKg != null)
-                          Text(
-                            '${revenue.saleWeightKg!.toStringAsFixed(1)} kg',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Colors.white70,
-                            ),
-                          ),
-                      ],
+                    child: Text(
+                      '+${revenue.salePrice.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              // Details
+              const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(8),
@@ -323,18 +364,18 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: _buildDetailRow(
-                        'Date',
+                      child: _detailRow(
+                        context.l10n.date,
                         formatter.format(revenue.saleDate),
                         Icons.calendar_today,
                         Colors.blue.shade600,
                       ),
                     ),
-                    if (revenue.buyerName != null)
+                    if (!isManual && revenue.buyerName != null)
                       Expanded(
-                        child: _buildDetailRow(
-                          'Acheteur',
-                          revenue.buyerName ?? '',
+                        child: _detailRow(
+                          context.l10n.buyerName,
+                          revenue.buyerName!,
                           Icons.person,
                           Colors.purple.shade600,
                         ),
@@ -342,6 +383,27 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
                   ],
                 ),
               ),
+              if (revenue.description != null &&
+                  revenue.description!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      Icon(Icons.note,
+                          size: 14, color: Colors.grey.shade500),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          revenue.description!,
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade600),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
@@ -349,24 +411,23 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value, IconData icon, Color iconColor) {
+  Widget _detailRow(
+      String label, String value, IconData icon, Color iconColor) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: iconColor),
+        Icon(icon, size: 14, color: iconColor),
         const SizedBox(width: 6),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-              ),
-              Text(
-                value,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                overflow: TextOverflow.ellipsis,
-              ),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 10, color: Colors.grey.shade600)),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w500),
+                  overflow: TextOverflow.ellipsis),
             ],
           ),
         ),
@@ -376,62 +437,75 @@ class _RevenuesDetailsScreenState extends State<RevenuesDetailsScreen> {
 
   Widget _buildPagination() {
     if (_currentData == null) return const SizedBox.shrink();
-
     final totalPages = (_currentData!.total / _pageSize).ceil();
-    final canGoPrevious = _currentPage > 0;
-    final canGoNext = _currentPage < totalPages - 1;
-
+    final canPrev = _currentPage > 0;
+    final canNext = _currentPage < totalPages - 1;
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           ElevatedButton(
-            onPressed: canGoPrevious
+            onPressed: canPrev
                 ? () {
-                    setState(() {
-                      _currentPage--;
-                    });
+                    setState(() => _currentPage--);
                     _loadRevenuesData();
                   }
                 : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: canGoPrevious ? AppColors.mistyBlue : Colors.grey,
+              backgroundColor:
+                  canPrev ? AppColors.mistyBlue : Colors.grey,
               foregroundColor: Colors.white,
             ),
-            child: const Text('← Précédent'),
+            child: Text('← ${context.l10n.previous}'),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'Page ${_currentPage + 1} / $totalPages',
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF1F2937),
-              ),
-            ),
-          ),
+          Text('${_currentPage + 1} / $totalPages'),
           ElevatedButton(
-            onPressed: canGoNext
+            onPressed: canNext
                 ? () {
-                    setState(() {
-                      _currentPage++;
-                    });
+                    setState(() => _currentPage++);
                     _loadRevenuesData();
                   }
                 : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: canGoNext ? AppColors.mistyBlue : Colors.grey,
+              backgroundColor:
+                  canNext ? AppColors.mistyBlue : Colors.grey,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Suivant →'),
+            child: Text('${context.l10n.next} →'),
           ),
         ],
       ),
     );
+  }
+
+  IconData _manualCategoryIcon(String category) {
+    switch (category) {
+      case 'milk':
+        return Symbols.water_drop;
+      case 'crops':
+        return Symbols.grass;
+      case 'services':
+        return Symbols.handyman;
+      case 'subsidies':
+        return Symbols.account_balance;
+      default:
+        return Symbols.attach_money;
+    }
+  }
+
+  String _manualCategoryLabel(String category, BuildContext ctx) {
+    switch (category) {
+      case 'milk':
+        return ctx.l10n.revenueCategoryMilk;
+      case 'crops':
+        return ctx.l10n.revenueCategoryCrops;
+      case 'services':
+        return ctx.l10n.revenueCategoryServices;
+      case 'subsidies':
+        return ctx.l10n.revenueCategorySubsidies;
+      default:
+        return ctx.l10n.other;
+    }
   }
 }

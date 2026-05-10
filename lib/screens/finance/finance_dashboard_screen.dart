@@ -8,6 +8,7 @@ import '../../utils/constants.dart';
 import '../expenses/add_expense_screen.dart';
 import 'revenues_details_screen.dart';
 import 'expenses_details_screen.dart';
+import 'add_revenue_screen.dart';
 
 class FinanceDashboardScreen extends StatefulWidget {
   const FinanceDashboardScreen({super.key});
@@ -243,12 +244,7 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
           if (_selectedFieldId != null) {
             final fieldProvider = Provider.of<FieldProvider>(context, listen: false);
             final field = fieldProvider.fields.firstWhere((f) => f.id == _selectedFieldId);
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => AddExpenseScreen(field: field),
-              ),
-            ).then((_) => _loadDashboard());
+            _showAddMenu(context, field);
           }
         },
         backgroundColor: AppColors.mistyBlue,
@@ -257,8 +253,82 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
     );
   }
 
-  Widget _buildPeriodSelector() {
-    return Row(
+  void _showAddMenu(BuildContext context, dynamic field) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.remove_circle_outline,
+                      color: Colors.red.shade600),
+                ),
+                title: const Text('Ajouter une dépense',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Alimentation, santé, équipement...'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AddExpenseScreen(field: field),
+                    ),
+                  ).then((_) => _loadDashboard());
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.add_circle_outline,
+                      color: Colors.green.shade600),
+                ),
+                title: const Text('Ajouter un revenu',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Lait, cultures, services, subventions...'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AddRevenueScreen(field: field),
+                    ),
+                  ).then((_) => _loadDashboard());
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPeriodSelector() {    return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _buildPeriodButton('month', 'Mois', Icons.calendar_today),
@@ -424,6 +494,10 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
                           builder: (context) => RevenuesDetailsScreen(
                             fieldId: _selectedFieldId!,
                             fieldName: fieldName ?? 'Champ',
+                            field: fieldProvider.fields.firstWhere(
+                              (f) => f.id == _selectedFieldId,
+                              orElse: () => fieldProvider.fields.first,
+                            ),
                           ),
                         ),
                       );

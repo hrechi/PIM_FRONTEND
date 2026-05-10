@@ -1,18 +1,23 @@
+/// Sensor graph screen — displays real-time sensor history charts for an animal.
+library;
+
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../models/sensor_history.dart';
 import '../../services/animal_health_service.dart';
+import '../../theme/app_colors.dart';
+import '../../l10n/l10n_extensions.dart';
 
 class SensorGraphScreen extends StatefulWidget {
   final String animalId;
   final String animalName;
 
   const SensorGraphScreen({
-    Key? key,
+    super.key,
     required this.animalId,
     required this.animalName,
-  }) : super(key: key);
+  });
 
   @override
   State<SensorGraphScreen> createState() => _SensorGraphScreenState();
@@ -41,11 +46,13 @@ class _SensorGraphScreenState extends State<SensorGraphScreen> {
         widget.animalId,
         periodHours: _selectedPeriod,
       );
+      if (!mounted) return;
       setState(() {
         _history = history;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -57,21 +64,21 @@ class _SensorGraphScreenState extends State<SensorGraphScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Capteurs — ${widget.animalName}'),
+        title: Text(context.l10n.sensorsTitle(widget.animalName)),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadData,
-            tooltip: 'Actualiser',
+            tooltip: context.l10n.refreshTooltip,
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: FieldlyColors.primary))
           : _error != null
               ? _buildError()
               : _history == null
-                  ? const Center(child: Text('Aucune donnée'))
+                  ? Center(child: Text(context.l10n.noSensorData))
                   : _buildContent(),
     );
   }
@@ -87,7 +94,7 @@ class _SensorGraphScreenState extends State<SensorGraphScreen> {
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: _loadData,
-            child: const Text('Réessayer'),
+            child: Text(context.l10n.retry),
           ),
         ],
       ),
@@ -116,38 +123,29 @@ class _SensorGraphScreenState extends State<SensorGraphScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('Période : ', style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(context.l10n.sensorPeriod, style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(width: 8),
           ChoiceChip(
-            label: const Text('6h'),
+            label: Text(context.l10n.period6h),
             selected: _selectedPeriod == 6,
             onSelected: (selected) {
-              if (selected) {
-                setState(() => _selectedPeriod = 6);
-                _loadData();
-              }
+              if (selected) { setState(() => _selectedPeriod = 6); _loadData(); }
             },
           ),
           const SizedBox(width: 8),
           ChoiceChip(
-            label: const Text('24h'),
+            label: Text(context.l10n.period24h),
             selected: _selectedPeriod == 24,
             onSelected: (selected) {
-              if (selected) {
-                setState(() => _selectedPeriod = 24);
-                _loadData();
-              }
+              if (selected) { setState(() => _selectedPeriod = 24); _loadData(); }
             },
           ),
           const SizedBox(width: 8),
           ChoiceChip(
-            label: const Text('7j'),
+            label: Text(context.l10n.period7d),
             selected: _selectedPeriod == 168,
             onSelected: (selected) {
-              if (selected) {
-                setState(() => _selectedPeriod = 168);
-                _loadData();
-              }
+              if (selected) { setState(() => _selectedPeriod = 168); _loadData(); }
             },
           ),
         ],
@@ -319,7 +317,7 @@ class _SensorGraphScreenState extends State<SensorGraphScreen> {
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: color.withOpacity(0.1),
+                        color: color.withValues(alpha: 0.1),
                       ),
                     ),
                   ],
@@ -368,7 +366,7 @@ class _SensorGraphScreenState extends State<SensorGraphScreen> {
                             HorizontalRangeAnnotation(
                               y1: normalRange[0],
                               y2: normalRange[1],
-                              color: Colors.green.withOpacity(0.1),
+                              color: Colors.green.withValues(alpha: 0.1),
                             ),
                           ]
                         : [],
@@ -376,7 +374,7 @@ class _SensorGraphScreenState extends State<SensorGraphScreen> {
                         .map((zone) => VerticalRangeAnnotation(
                               x1: zone.startTime.millisecondsSinceEpoch.toDouble(),
                               x2: zone.endTime.millisecondsSinceEpoch.toDouble(),
-                              color: _getAlertColor(zone.level).withOpacity(0.2),
+                              color: _getAlertColor(zone.level).withValues(alpha: 0.2),
                             ))
                         .toList(),
                   ),
@@ -426,7 +424,7 @@ class _SensorGraphScreenState extends State<SensorGraphScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: _getAlertColor(zone.level).withOpacity(0.1),
+        color: _getAlertColor(zone.level).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: _getAlertColor(zone.level)),
       ),

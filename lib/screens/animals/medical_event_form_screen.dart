@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/vaccine_models.dart' show MedicalEvent;
 import '../../services/medical_event_service.dart';
+import '../../utils/constants.dart';
+import 'animals_design.dart';
 
 class MedicalEventFormScreen extends StatefulWidget {
   final String animalId;
@@ -146,12 +148,13 @@ class _MedicalEventFormScreenState extends State<MedicalEventFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.wheatWarmClay,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.sageGreen,
+        foregroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+          icon: const Icon(Icons.arrow_back_ios_new, size: AnimalsDesign.labelIconSize, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
@@ -159,11 +162,13 @@ class _MedicalEventFormScreenState extends State<MedicalEventFormScreen> {
           children: [
             Text(
               _isEdit ? 'Edit Event' : 'New Medical Event',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
             ),
             Text(
               widget.animalName,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w400),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w400),
             ),
           ],
         ),
@@ -176,7 +181,7 @@ class _MedicalEventFormScreenState extends State<MedicalEventFormScreen> {
           else
             TextButton(
               onPressed: _submit,
-              child: const Text('Save', style: TextStyle(color: _kGreen, fontWeight: FontWeight.bold, fontSize: 15)),
+              child: const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
             ),
         ],
       ),
@@ -283,36 +288,67 @@ class _MedicalEventFormScreenState extends State<MedicalEventFormScreen> {
             const SizedBox(height: 16),
 
             // ── Vet + Cost on same row ────────────────────
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: _buildField(
-                    controller: _vetNameCtrl,
-                    label: 'Veterinarian',
-                    hint: 'Dr. Benali',
-                    icon: Icons.person_outline,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: _buildField(
-                    controller: _costCtrl,
-                    label: 'Cost (TND)',
-                    hint: '150',
-                    icon: Icons.payments_outlined,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    validator: (v) {
-                      if (v != null && v.isNotEmpty && double.tryParse(v) == null) {
-                        return 'Invalid number';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 390;
+                if (compact) {
+                  return Column(
+                    children: [
+                      _buildField(
+                        controller: _vetNameCtrl,
+                        label: 'Veterinarian',
+                        hint: 'Dr. Benali',
+                        icon: Icons.person_outline,
+                      ),
+                      const SizedBox(height: AnimalsDesign.formGap),
+                      _buildField(
+                        controller: _costCtrl,
+                        label: 'Cost (TND)',
+                        hint: '150',
+                        icon: Icons.payments_outlined,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        validator: (v) {
+                          if (v != null && v.isNotEmpty && double.tryParse(v) == null) {
+                            return 'Invalid number';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: _buildField(
+                        controller: _vetNameCtrl,
+                        label: 'Veterinarian',
+                        hint: 'Dr. Benali',
+                        icon: Icons.person_outline,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: _buildField(
+                        controller: _costCtrl,
+                        label: 'Cost (TND)',
+                        hint: '150',
+                        icon: Icons.payments_outlined,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        validator: (v) {
+                          if (v != null && v.isNotEmpty && double.tryParse(v) == null) {
+                            return 'Invalid number';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
 
             const SizedBox(height: 16),

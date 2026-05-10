@@ -13,6 +13,7 @@ import '../../providers/animal_health_provider.dart';
 import '../../providers/vaccine_provider.dart';
 import '../../services/animal_health_service.dart';
 import '../../services/sensor_simulator_service.dart';
+import '../../theme/app_colors.dart';
 import 'add_animal_screen.dart';
 import 'animal_finance_screen.dart';
 import 'sell_animal_screen.dart';
@@ -83,12 +84,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
   }
 
   Color _healthColor(String s) {
-    switch (s.toUpperCase()) {
-      case 'OPTIMAL': return const Color(0xFF16A34A);
-      case 'WARNING': return const Color(0xFFD97706);
-      case 'CRITICAL': return const Color(0xFFDC2626);
-      default: return _kLight;
-    }
+    return FieldlyColors.healthStatus(s);
   }
 
   String? _resolveImage(String? p) {
@@ -456,10 +452,14 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
     final isLoading  = provider.isLoading(_animal.id);
     final error      = provider.errorFor(_animal.id);
 
-    // Score en temps réel depuis le provider, sinon depuis l'animal
+    // Score en temps réel depuis le provider, sinon depuis l'animal.
+    // NB: _animal.healthRiskScore vient de la DB comme un health score (0-100,
+    // 100 = sain). On le convertit en risk score (0-1) pour l'affichage.
     final score = diagResult != null
         ? diagResult.riskScore
-        : (_animal.healthRiskScore ?? 0.0);
+        : ((_animal.healthRiskScore != null)
+            ? ((100.0 - _animal.healthRiskScore!) / 100.0).clamp(0.0, 1.0)
+            : 0.0);
 
     Color color;
     String label;
@@ -669,7 +669,7 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF6A1B9A).withAlpha(20),
+                          color: const Color(0xFF6A1B9A).withValues(alpha: 0.078),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(Icons.science, color: Color(0xFF6A1B9A), size: 20),
@@ -736,9 +736,9 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6A1B9A).withAlpha(12),
+                      color: const Color(0xFF6A1B9A).withValues(alpha: 0.047),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFF6A1B9A).withAlpha(40)),
+                      border: Border.all(color: const Color(0xFF6A1B9A).withValues(alpha: 0.156)),
                     ),
                     child: Row(
                       children: [
@@ -1812,32 +1812,6 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
     );
   }
 
-  Widget _medicalItem(String title, String date, IconData icon, Color color, {String? subtitle}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withAlpha(25), shape: BoxShape.circle),
-            child: Icon(icon, size: 16, color: color),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF212121))),
-                if (subtitle != null) Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF757575))),
-              ],
-            ),
-          ),
-          Text(date, style: const TextStyle(fontSize: 11, color: Color(0xFF9E9E9E))),
-        ],
-      ),
-    );
-  }
-
   // ── NOTES CARD ───────────────────────────────────────────
 
   Widget _buildNotesCard() {
@@ -1918,8 +1892,10 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
                   onTap: _isDeleting ? null : _deleteAnimal,
                   flex: 1,
                 ),
-                // Fattening (only if active and not already fattening)
-                if (_animal.status == 'active' && _animal.isFattening != true) ...[
+                // Fattening (only for cow and sheep — seasonal sales)
+                if (_animal.status == 'active' &&
+                    _animal.isFattening != true &&
+                    ['cow', 'sheep'].contains(_animal.animalType.toLowerCase())) ...[
                   const SizedBox(width: 8),
                   _actionBtn(
                     icon: Symbols.trending_up,

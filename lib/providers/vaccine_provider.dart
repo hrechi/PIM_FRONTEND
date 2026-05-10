@@ -77,18 +77,20 @@ class VaccineProvider extends ChangeNotifier {
     }
   }
 
-  Future<List<dynamic>> loadVaccines() async {
+  Future<List<Map<String, String>>> loadVaccines() async {
     _setLoading(true);
     try {
       final res = await _service.getVaccines();
       _vaccines = res;
       _error = null;
       notifyListeners();
-      return res.map((v) => {'code': v.code, 'nameFr': v.nameFr}).toList();
+      return res
+          .map((v) => {'code': v.code, 'nameFr': v.nameFr})
+          .toList();
     } catch (e) {
       _error = e.toString();
       notifyListeners();
-      return [];
+      return const [];
     } finally {
       _setLoading(false);
     }

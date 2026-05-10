@@ -613,6 +613,212 @@ class AppLocalizations {
   String get username => _t('username');
   String get goPro => _t('goPro');
   String get rateApp => _t('rateApp');
+
+  // ─── Seasonal Sales ───────────────────────────────────────────────────────
+  String get seasonalSales => _t('seasonalSales');
+  String get allParcels => _t('allParcels');
+  String animalSoldSuccessName(String name) => _tp('animalSoldSuccessName', {'name': name});
+  String errorPrefix(String message) => _tp('errorPrefix', {'message': message});
+  String get noFatteningAnimals => _t('noFatteningAnimals');
+  String fatteningDays(int days) => _tp('fatteningDays', {'days': days.toString()});
+  String get targetSaleDateLabel => _t('targetSaleDateLabel');
+  String get notDefined => _t('notDefined');
+  String get ready => _t('ready');
+  String get details => _t('details');
+  String get sell => _t('sell');
+  String get sellAnimalTitle => _t('sellAnimalTitle');
+  String sellAnimalConfirm(String name) => _tp('sellAnimalConfirm', {'name': name});
+
+  // ─── Finance ──────────────────────────────────────────────────────────────
+  String financeTitle(String name) => _tp('financeTitle', {'name': name});
+  String get birthCostLabel => _t('birthCostLabel');
+  String get purchasePriceLabel => _t('purchasePriceLabel');
+  String get totalCost => _t('totalCost');
+  String get realizedMargin => _t('realizedMargin');
+  String get currentCostVsValue => _t('currentCostVsValue');
+  String soldFor(String price) => _tp('soldFor', {'price': price});
+  String get duration => _t('duration');
+  String durationDays(int days) => _tp('durationDays', {'days': days.toString()});
+  String get costPerDay => _t('costPerDay');
+  String get expensesBreakdown => _t('expensesBreakdown');
+  String get feedAndNutrition => _t('feedAndNutrition');
+  String get veterinary => _t('veterinary');
+  String get medicationAndVaccines => _t('medicationAndVaccines');
+  String get equipmentAndServices => _t('equipmentAndServices');
+  String get labor => _t('labor');
+  String get other => _t('other');
+  String get missingBirthCost => _t('missingBirthCost');
+  String get missingPurchasePrice => _t('missingPurchasePrice');
+  String get noExpensesTracked => _t('noExpensesTracked');
+
+  // ─── Medical Events ───────────────────────────────────────────────────────
+  String get medicalEventTypeVisit => _t('medicalEventTypeVisit');
+  String get medicalEventTypeDisease => _t('medicalEventTypeDisease');
+  String get medicalEventTypeSurgery => _t('medicalEventTypeSurgery');
+  String get medicalEventTypeTreatment => _t('medicalEventTypeTreatment');
+  String get medicalEventTypeCheckup => _t('medicalEventTypeCheckup');
+  String get medicalEventTypeOther => _t('medicalEventTypeOther');
+  String get editEvent => _t('editEvent');
+  String get newMedicalEvent => _t('newMedicalEvent');
+  String get eventType => _t('eventType');
+  String get eventDate => _t('eventDate');
+  String get diagnosisLabel => _t('diagnosisLabel');
+  String get diagnosisHint => _t('diagnosisHint');
+  String get treatmentLabel => _t('treatmentLabel');
+  String get treatmentHint => _t('treatmentHint');
+  String get veterinarianLabel => _t('veterinarianLabel');
+  String get veterinarianHint => _t('veterinarianHint');
+  String get costTnd => _t('costTnd');
+  String get costHint => _t('costHint');
+  String get invalidNumber => _t('invalidNumber');
+  String get additionalNotes => _t('additionalNotes');
+  String get eventUpdated => _t('eventUpdated');
+  String get eventAdded => _t('eventAdded');
+
+  // ─── AI Diagnosis ─────────────────────────────────────────────────────────
+  String get aiDiagnosis => _t('aiDiagnosis');
+  String get alertLevelCritical => _t('alertLevelCritical');
+  String get alertLevelModerate => _t('alertLevelModerate');
+  String get alertLevelHealthy => _t('alertLevelHealthy');
+  String get diagnosisSummary => _t('diagnosisSummary');
+  String get sensorReadings1h => _t('sensorReadings1h');
+  String get sensorTemperature => _t('sensorTemperature');
+  String get sensorHeartRate => _t('sensorHeartRate');
+  String get sensorActivityScore => _t('sensorActivityScore');
+  String get sensorLyingTime => _t('sensorLyingTime');
+  String get sensorGaitAsymmetry => _t('sensorGaitAsymmetry');
+  String get anomalyTriggers => _t('anomalyTriggers');
+  String get triggersSubtitle => _t('triggersSubtitle');
+  String get diseaseProbabilities => _t('diseaseProbabilities');
+  String get probabilitiesSubtitle => _t('probabilitiesSubtitle');
+  String clinicalSigns(String disease) => _tp('clinicalSigns', {'disease': disease});
+  String get urgentActionRequired => _t('urgentActionRequired');
+  String get recommendation => _t('recommendation');
+  String get staticFallbackWarning => _t('staticFallbackWarning');
+  String get nonBovineNote => _t('nonBovineNote');
+  String confidenceAndAnomaly(int conf, int anomaly) => _tp('confidenceAndAnomaly', {'conf': conf.toString(), 'anomaly': anomaly.toString()});
+
+  // ─── Weight Tracking ──────────────────────────────────────────────────────
+  String get weightTracking => _t('weightTracking');
+  String get addMeasurementTooltip => _t('addMeasurementTooltip');
+  String get addWeightRecord => _t('addWeightRecord');
+  String get weightKgLabel => _t('weightKgLabel');
+  String get measuredByLabel => _t('measuredByLabel');
+  String get pleaseEnterValidWeight => _t('pleaseEnterValidWeight');
+  String get weightRecordAdded => _t('weightRecordAdded');
+  String get deleteWeightRecord => _t('deleteWeightRecord');
+  String get deleteWeightRecordConfirm => _t('deleteWeightRecordConfirm');
+  String get weightMeasurements => _t('weightMeasurements');
+  String get noMeasurementsYet => _t('noMeasurementsYet');
+  String get weightEvolution => _t('weightEvolution');
+  String get noDataForPeriod => _t('noDataForPeriod');
+  String get current => _t('current');
+  String get min => _t('min');
+  String get max => _t('max');
+  String get trend => _t('trend');
+  String kgPerWeek(String value) => _tp('kgPerWeek', {'value': value});
+
+  // ─── Sensor Graph ─────────────────────────────────────────────────────────
+  String get sensorPeriod => _t('sensorPeriod');
+  String get period6h => _t('period6h');
+  String get period24h => _t('period24h');
+  String get period7d => _t('period7d');
+  String get sensorTemperatureLabel => _t('sensorTemperatureLabel');
+  String get sensorHeartRateLabel => _t('sensorHeartRateLabel');
+  String get sensorActivityLabel => _t('sensorActivityLabel');
+  String get noSensorData => _t('noSensorData');
+  String get noSensorDataAvailable => _t('noSensorDataAvailable');
+  String get sensorTempChart => _t('sensorTempChart');
+  String get sensorHrChart => _t('sensorHrChart');
+  String get sensorActivityChart => _t('sensorActivityChart');
+  String normalRange(String range) => _tp('normalRange', {'range': range});
+  String get alertsDetected => _t('alertsDetected');
+  String get anomalyDetected => _t('anomalyDetected');
+  String confidence(String value) => _tp('confidence', {'value': value});
+  String get refreshTooltip => _t('refreshTooltip');
+  String sensorsTitle(String name) => _tp('sensorsTitle', {'name': name});
+
+  // ─── Animal Details ───────────────────────────────────────────────────────
+  String get markAsDeceased => _t('markAsDeceased');
+  String markAsDeceasedConfirm(String name) => _tp('markAsDeceasedConfirm', {'name': name});
+  String get causeNotesOptional => _t('causeNotesOptional');
+  String markedAsDeceased(String name) => _tp('markedAsDeceased', {'name': name});
+  String get runAiDiagnostic => _t('runAiDiagnostic');
+  String get analysing => _t('analysing');
+  String get simulateSensorData => _t('simulateSensorData');
+  String get seeFullExplanation => _t('seeFullExplanation');
+  String get aiServiceOffline => _t('aiServiceOffline');
+  String get sensorSimulator => _t('sensorSimulator');
+  String get sensorSimulatorSubtitle => _t('sensorSimulatorSubtitle');
+  String get scenario => _t('scenario');
+
+  // ─── Dashboard ────────────────────────────────────────────────────────────
+  String get dashboardTotalAnimals => _t('dashboardTotalAnimals');
+  String get dashboardActive => _t('dashboardActive');
+  String get dashboardHealthAlerts => _t('dashboardHealthAlerts');
+  String get dashboardHighRisk => _t('dashboardHighRisk');
+  String get dashboardVaccinesDue => _t('dashboardVaccinesDue');
+  String get dashboardSchedulingPending => _t('dashboardSchedulingPending');
+  String get dashboardMonthlySpend => _t('dashboardMonthlySpend');
+  String get dashboardRequireAttention => _t('dashboardRequireAttention');
+  String get noLivestockData => _t('noLivestockData');
+  String get animalsNeedingAttention => _t('animalsNeedingAttention');
+  String get viewAll => _t('viewAll');
+  String get alertBadge => _t('alertBadge');
+  String get healthScoreLabel => _t('healthScoreLabel');
+  String get todaysMilk => _t('todaysMilk');
+  String vsYesterdayLiters(String liters) => _tp('vsYesterdayLiters', {'liters': liters});
+  String get todaysReminders => _t('todaysReminders');
+
+  // ─── Milk Analytics ───────────────────────────────────────────────────────
+  String get milkAnalyticsTitle => _t('milkAnalyticsTitle');
+  String get selectYear => _t('selectYear');
+  String get selectMonth => _t('selectMonth');
+  String totalLitersIn(String period) => _tp('totalLitersIn', {'period': period});
+  String get liters => _t('liters');
+  String vsLastPeriod(String period) => _tp('vsLastPeriod', {'period': period});
+  String get weeklyProduction => _t('weeklyProduction');
+  String get monToSunAverage => _t('monToSunAverage');
+  String get lPerDay => _t('lPerDay');
+  String get dayMon => _t('dayMon');
+  String get dayTue => _t('dayTue');
+  String get dayWed => _t('dayWed');
+  String get dayThu => _t('dayThu');
+  String get dayFri => _t('dayFri');
+  String get daySat => _t('daySat');
+  String get daySun => _t('daySun');
+  String get productionTrendYearly => _t('productionTrendYearly');
+  String get productionTrendMonthly => _t('productionTrendMonthly');
+  String get yearlyPerformance => _t('yearlyPerformance');
+  String get avgDailyYield => _t('avgDailyYield');
+  String get activeCattle => _t('activeCattle');
+  String get head => _t('head');
+  String get weeklyHerdBreakdown => _t('weeklyHerdBreakdown');
+  String get topProducingCows => _t('topProducingCows');
+  String get tagIdPrefix => _t('tagIdPrefix');
+  String get totalPerWeek => _t('totalPerWeek');
+  String get totalPerYear => _t('totalPerYear');
+
+  // ─── Revenues (manual) ────────────────────────────────────────────────────
+  String get addRevenue => _t('addRevenue');
+  String get revenueAddedSuccess => _t('revenueAddedSuccess');
+  String get noRevenuesFound => _t('noRevenuesFound');
+  String get revenueSourceManual => _t('revenueSourceManual');
+  String get revenueSourceAnimalSale => _t('revenueSourceAnimalSale');
+  String get revenueCategoryMilk => _t('revenueCategoryMilk');
+  String get revenueCategoryCrops => _t('revenueCategoryCrops');
+  String get revenueCategoryServices => _t('revenueCategoryServices');
+  String get revenueCategorySubsidies => _t('revenueCategorySubsidies');
+  String get revenueDescription => _t('revenueDescription');
+  String get revenueDescriptionHint => _t('revenueDescriptionHint');
+  String get revenueSearchHint => _t('revenueSearchHint');
+  String get amount => _t('amount');
+  String get amountRequired => _t('amountRequired');
+  String get date => _t('date');
+  String get period => _t('period');
+  String get periodMonth => _t('periodMonth');
+  String get periodQuarter => _t('periodQuarter');
+  String get periodYear => _t('periodYear');
 }
 
 // ─── Delegate ─────────────────────────────────────────────────────────────────

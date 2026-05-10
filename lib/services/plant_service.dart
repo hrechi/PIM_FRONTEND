@@ -4,11 +4,8 @@ import 'package:http/http.dart' as http;
 import '../utils/constants.dart';
 
 class PlantService {
-  // 🚨 REPLACE THIS WITH YOUR MAC'S IP ADDRESS 🚨
-  // Run 'ifconfig' (Mac) or 'ipconfig' (Windows) in terminal to find it.
-  // Example: http://192.168.100.9:8000
-  // Update this line:
-  static const String baseUrl = 'http://192.168.100.9:8000';
+  static String get baseUrl =>
+      'http://${AppConfig.serverHost}:${AppConfig.plantDoctorPort}';
   static Future<Map<String, dynamic>> scanPlant(File imageFile) async {
     try {
       var request = http.MultipartRequest(

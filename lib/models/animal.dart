@@ -38,8 +38,8 @@ class Animal {
   final DateTime? feedIntakeRecorded;
   final DateTime? dewormingScheduled;
   final String? productionHabit;
-  final List<Map<String, dynamic>>? vaccines; // Keep as JSON for now or use VaccineRecord?
-  final List<Map<String, dynamic>>? birthHistory;
+  final List<Map<String, dynamic>> vaccines; // Keep as JSON for now or use VaccineRecord?
+  final List<Map<String, dynamic>> birthHistory;
 
   // Species-specific: COW
   final double? dailyMilkAvgL;
@@ -82,8 +82,8 @@ class Animal {
 
   // Related models as IDs or placeholder Lists
   // (In a full implementation, these would be separate model classes)
-  final List<vms.VaccineRecord>? vaccineRecords;
-  final List<vms.MedicalEvent>? medicalEvents;
+  final List<vms.VaccineRecord> vaccineRecords;
+  final List<vms.MedicalEvent> medicalEvents;
 
   Animal({
     required this.id,
@@ -119,8 +119,8 @@ class Animal {
     this.feedIntakeRecorded,
     this.dewormingScheduled,
     this.productionHabit,
-    this.vaccines,
-    this.birthHistory,
+    this.vaccines = const [],
+    this.birthHistory = const [],
     this.dailyMilkAvgL,
     this.milkPeakDate,
     this.lactationNumber,
@@ -147,8 +147,8 @@ class Animal {
     this.fatherId,
     this.birthWeightKg,
     this.birthCost,
-    this.vaccineRecords,
-    this.medicalEvents,
+    this.vaccineRecords = const [],
+    this.medicalEvents = const [],
   });
 
   static double? _toDouble(dynamic value) {
@@ -212,8 +212,8 @@ class Animal {
       feedIntakeRecorded: json['feedIntakeRecorded'] != null ? DateTime.parse(json['feedIntakeRecorded']) : null,
       dewormingScheduled: json['dewormingScheduled'] != null ? DateTime.parse(json['dewormingScheduled']) : null,
       productionHabit: json['productionHabit'],
-      vaccines: json['vaccines'] != null ? (json['vaccines'] as List).map((v) => Map<String, dynamic>.from(v)).toList() : null,
-      birthHistory: json['birthHistory'] != null ? (json['birthHistory'] as List).map((v) => Map<String, dynamic>.from(v)).toList() : null,
+      vaccines: json['vaccines'] != null ? (json['vaccines'] as List).map((v) => Map<String, dynamic>.from(v)).toList() : const [],
+      birthHistory: json['birthHistory'] != null ? (json['birthHistory'] as List).map((v) => Map<String, dynamic>.from(v)).toList() : const [],
       dailyMilkAvgL: _toDouble(json['dailyMilkAvgL']),
       milkPeakDate: json['milkPeakDate'] != null ? DateTime.parse(json['milkPeakDate']) : null,
       lactationNumber: _toInt(json['lactationNumber']),
@@ -240,12 +240,12 @@ class Animal {
       birthCost: _toDouble(json['birthCost']),
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
-      vaccineRecords: json['vaccineRecords'] != null 
-          ? (json['vaccineRecords'] as List).map((v) => vms.VaccineRecord.fromJson(v)).toList() 
-          : null,
-      medicalEvents: json['medicalEvents'] != null 
-          ? (json['medicalEvents'] as List).map((v) => vms.MedicalEvent.fromJson(v)).toList() 
-          : null,
+      vaccineRecords: json['vaccineRecords'] != null
+          ? (json['vaccineRecords'] as List).map((v) => vms.VaccineRecord.fromJson(v)).toList()
+          : const [],
+      medicalEvents: json['medicalEvents'] != null
+          ? (json['medicalEvents'] as List).map((v) => vms.MedicalEvent.fromJson(v)).toList()
+          : const [],
     );
   }
 
@@ -311,49 +311,5 @@ class Animal {
   double get temperature => bodyTemp ?? 0.0;
   String get formattedHeartRate => '85 bpm'; // Mock value for now
 
-  static List<Animal> getMockData() {
-    return [
-      Animal(
-        id: '1',
-        nodeId: 'COW-001',
-        farmerId: 'FARMER-1',
-        name: 'Marguerite',
-        animalType: 'cow',
-        breed: 'Holstein',
-        age: 36,
-        ageYears: 3,
-        sex: 'female',
-        weight: 650.0,
-        healthStatus: 'OPTIMAL',
-        vitalityScore: 92,
-        bodyTemp: 38.5,
-        activityLevel: 'MODERATE',
-        vaccination: true,
-        status: 'active',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-      Animal(
-        id: '2',
-        nodeId: 'HOR-002',
-        farmerId: 'FARMER-1',
-        name: 'Éclair',
-        animalType: 'horse',
-        breed: 'Pur-sang',
-        age: 60,
-        ageYears: 5,
-        sex: 'male',
-        weight: 520.0,
-        healthStatus: 'WARNING',
-        vitalityScore: 75,
-        bodyTemp: 39.2,
-        activityLevel: 'HIGH',
-        vaccination: true,
-        status: 'active',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-    ];
-  }
 }
 

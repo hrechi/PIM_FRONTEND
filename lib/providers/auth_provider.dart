@@ -1,3 +1,28 @@
+/// ============================================================
+/// AUTH PROVIDER — Gestion de l'état d'authentification
+/// ============================================================
+///
+/// Ce Provider gère tout le cycle de vie de l'authentification :
+///
+///   • Inscription (signUp)  → POST /auth/signup
+///   • Connexion (signIn)    → POST /auth/signin
+///   • Déconnexion (signOut) → Suppression des tokens locaux
+///   • Restauration de session au démarrage (initialize)
+///   • Récupération du profil (fetchProfile) → GET /user/profile
+///
+/// Sécurité :
+///   • Mots de passe hashés côté backend (bcrypt, 10 rounds)
+///   • Tokens JWT stockés dans SharedPreferences
+///   • Refresh automatique des tokens expirés (via ApiService)
+///   • Option "Se souvenir de moi" → persiste la session entre les lancements
+///
+/// Intégration Firebase :
+///   • FCM token envoyé au backend après connexion
+///   • Permet les notifications push (alertes santé animale, vaccins…)
+///
+/// Pattern utilisé : ChangeNotifier (Provider package)
+///   → Les widgets s'abonnent via Consumer<AuthProvider> ou context.watch<AuthProvider>()
+/// ============================================================
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';

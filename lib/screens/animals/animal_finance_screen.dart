@@ -5,6 +5,7 @@ import '../../models/animal.dart';
 import '../../services/expense_service.dart';
 import '../../utils/constants.dart';
 import '../expenses/add_expense_screen.dart';
+import 'animals_design.dart';
 
 class AnimalFinanceScreen extends StatefulWidget {
   final Animal animal;
@@ -42,28 +43,23 @@ class _AnimalFinanceScreenState extends State<AnimalFinanceScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.wheatWarmClay,
-      appBar: AppBar(
-        title: Text('Finance: ${widget.animal.name}', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: const BackButton(color: Colors.black),
-      ),
+      appBar: AnimalsDesign.animalsAppBar(title: 'Finance: ${widget.animal.name}'),
       body: _isLoading 
-        ? const Center(child: CircularProgressIndicator())
+        ? const Center(child: CircularProgressIndicator(color: AppColors.mistyBlue))
         : _error != null
           ? Center(child: Text('Error: $_error', style: const TextStyle(color: Colors.red)))
           : RefreshIndicator(
               onRefresh: _fetchSummary,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(AnimalsDesign.screenHorizontalPadding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildHeaderCards(),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AnimalsDesign.sectionGap),
                     _buildCategoriesChart(),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AnimalsDesign.sectionGap),
                     _buildMissingDataHints(),
                   ],
                 ),
@@ -94,10 +90,10 @@ class _AnimalFinanceScreenState extends State<AnimalFinanceScreen> {
         const SizedBox(height: 16),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AnimalsDesign.cardPadding),
           decoration: BoxDecoration(
             gradient: LinearGradient(colors: margin >= 0 ? [Colors.green.shade400, Colors.green.shade700] : [Colors.red.shade400, Colors.red.shade700]),
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: AnimalsDesign.radius,
             boxShadow: [BoxShadow(color: (margin >= 0 ? Colors.green : Colors.red).withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 5))],
           ),
           child: Column(
@@ -132,18 +128,18 @@ class _AnimalFinanceScreenState extends State<AnimalFinanceScreen> {
   Widget _buildStatCard(String title, String value, Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AnimalsDesign.cardPadding),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: AnimalsDesign.radius,
           border: Border.all(color: Colors.grey.shade200),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+            Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w900)),
+            Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w900)),
           ],
         ),
       ),
@@ -157,10 +153,10 @@ class _AnimalFinanceScreenState extends State<AnimalFinanceScreen> {
     if (total == 0) return const SizedBox.shrink();
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AnimalsDesign.cardPadding),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: AnimalsDesign.radius,
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
@@ -190,10 +186,13 @@ class _AnimalFinanceScreenState extends State<AnimalFinanceScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-              Text('${_nf.format(amount)} (${(pct * 100).toStringAsFixed(1)}%)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+              Expanded(
+                child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(width: 8),
+              Text('${_nf.format(amount)} (${(pct * 100).toStringAsFixed(1)}%)', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
             ],
           ),
           const SizedBox(height: 8),
@@ -253,7 +252,7 @@ class _AnimalFinanceScreenState extends State<AnimalFinanceScreen> {
         children: [
           Icon(icon, color: color),
           const SizedBox(width: 12),
-          Expanded(child: Text(msg, style: TextStyle(color: color.withAlpha(200), fontWeight: FontWeight.w600, fontSize: 13))),
+          Expanded(child: Text(msg, style: TextStyle(color: color.withValues(alpha: 0.8), fontWeight: FontWeight.w600, fontSize: 13))),
         ],
       ),
     );

@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../models/animal.dart';
 import '../../services/animal_health_service.dart';
 import '../../utils/constants.dart';
+import 'animals_design.dart';
 
 class WeightTrackingScreen extends StatefulWidget {
   final Animal animal;
@@ -231,35 +232,37 @@ class _WeightTrackingScreenState extends State<WeightTrackingScreen> {
     return Scaffold(
       backgroundColor: _kBg,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.sageGreen,
         elevation: 0,
-        leading: const BackButton(color: _kDark),
+        leading: const BackButton(color: Colors.white),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Weight Tracking',
               style: const TextStyle(
-                  color: _kDark,
+                  color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 17),
             ),
             Text(
               widget.animal.name,
-              style: const TextStyle(color: _kMid, fontSize: 13),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Symbols.add_circle, color: _kGreen),
+            icon: const Icon(Symbols.add_circle, color: Colors.white, size: AnimalsDesign.actionIconSize),
             tooltip: 'Add measurement',
             onPressed: _showAddDialog,
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: AppColors.mistyBlue))
           : _error != null
               ? _buildError()
               : RefreshIndicator(
@@ -319,7 +322,7 @@ class _WeightTrackingScreenState extends State<WeightTrackingScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFFFFF3E0),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _kOrange.withOpacity(0.4)),
+        border: Border.all(color: _kOrange.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [
@@ -351,39 +354,34 @@ class _WeightTrackingScreenState extends State<WeightTrackingScreen> {
             ? Symbols.trending_up
             : Symbols.trending_down;
 
-    return Row(
-      children: [
-        _statCard('Current', '${_nf.format(s.latestKg ?? widget.animal.weight ?? 0)} kg',
-            Symbols.scale, _kGreen),
-        const SizedBox(width: 10),
-        _statCard('Min', s.minKg != null ? '${_nf.format(s.minKg!)} kg' : '--',
-            Symbols.arrow_downward, Colors.blue),
-        const SizedBox(width: 10),
-        _statCard('Max', s.maxKg != null ? '${_nf.format(s.maxKg!)} kg' : '--',
-            Symbols.arrow_upward, Colors.purple),
-        const SizedBox(width: 10),
-        _statCard(
-          'Trend',
-          trend != null
-              ? '${trend > 0 ? '+' : ''}${_nf.format(trend)} kg/w'
-              : '--',
-          trendIcon,
-          trendColor,
-        ),
-      ],
+    final cards = <Widget>[
+      _statCard('Current', '${_nf.format(s.latestKg ?? widget.animal.weight ?? 0)} kg', Symbols.scale, _kGreen),
+      _statCard('Min', s.minKg != null ? '${_nf.format(s.minKg!)} kg' : '--', Symbols.arrow_downward, Colors.blue),
+      _statCard('Max', s.maxKg != null ? '${_nf.format(s.maxKg!)} kg' : '--', Symbols.arrow_upward, Colors.purple),
+      _statCard('Trend', trend != null ? '${trend > 0 ? '+' : ''}${_nf.format(trend)} kg/w' : '--', trendIcon, trendColor),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 390;
+        final width = compact ? (constraints.maxWidth - 12) / 2 : (constraints.maxWidth - 36) / 4;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: cards.map((c) => SizedBox(width: width, child: c)).toList(),
+        );
+      },
     );
   }
 
   Widget _statCard(String label, String value, IconData icon, Color color) {
-    return Expanded(
-      child: Container(
+    return Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 6,
                 offset: const Offset(0, 2))
           ],
@@ -393,18 +391,21 @@ class _WeightTrackingScreenState extends State<WeightTrackingScreen> {
             Icon(icon, color: color, size: 20),
             const SizedBox(height: 4),
             Text(value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                     color: color,
                     fontWeight: FontWeight.bold,
                     fontSize: 12),
                 textAlign: TextAlign.center),
             Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: _kMid, fontSize: 10),
                 textAlign: TextAlign.center),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildPeriodSelector() {
@@ -433,7 +434,7 @@ class _WeightTrackingScreenState extends State<WeightTrackingScreen> {
                 boxShadow: selected
                     ? [
                         BoxShadow(
-                            color: _kGreen.withOpacity(0.3),
+                            color: _kGreen.withValues(alpha: 0.3),
                             blurRadius: 6,
                             offset: const Offset(0, 2))
                       ]
@@ -464,7 +465,7 @@ class _WeightTrackingScreenState extends State<WeightTrackingScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 8,
                 offset: const Offset(0, 2))
           ],
@@ -496,7 +497,7 @@ class _WeightTrackingScreenState extends State<WeightTrackingScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2))
         ],
@@ -595,7 +596,7 @@ class _WeightTrackingScreenState extends State<WeightTrackingScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 4,
               offset: const Offset(0, 1))
         ],
@@ -607,7 +608,7 @@ class _WeightTrackingScreenState extends State<WeightTrackingScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: _kGreen.withOpacity(0.1),
+              color: _kGreen.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(Symbols.scale, color: _kGreen, size: 20),
@@ -726,7 +727,7 @@ class _WeightChartPainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [lineColor.withOpacity(0.25), lineColor.withOpacity(0.02)],
+        colors: [lineColor.withValues(alpha: 0.25), lineColor.withValues(alpha: 0.02)],
       ).createShader(Rect.fromLTWH(0, 0, chartW, chartH));
     canvas.drawPath(fillPath, fillPaint);
 

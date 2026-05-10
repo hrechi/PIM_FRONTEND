@@ -99,7 +99,7 @@ class AppTheme {
           elevation: 2,
           shadowColor: AppColors.mistyBlue.withValues(alpha: 0.25),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
           ),
           textStyle: GoogleFonts.inter(
             fontWeight: FontWeight.w600,
@@ -134,7 +134,7 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
           minimumSize: const Size(64, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
           ),
           textStyle: GoogleFonts.inter(
             fontWeight: FontWeight.w600,
@@ -179,7 +179,7 @@ class AppTheme {
         elevation: 0,
         margin: EdgeInsets.zero,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       dividerTheme: DividerThemeData(
         color: AppColors.secondaryText.withValues(alpha: 0.15),
@@ -193,17 +193,17 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.wheatWarmClay,
-        surfaceTintColor: AppColors.wheatWarmClay,
+        backgroundColor: AppColors.sageGreen,
+        surfaceTintColor: AppColors.sageGreen,
         scrolledUnderElevation: 0,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: GoogleFonts.inter(
-          color: AppColors.primaryText,
-          fontWeight: FontWeight.w700,
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
           fontSize: 20,
         ),
-        iconTheme: const IconThemeData(color: AppColors.primaryText),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
     );
   }

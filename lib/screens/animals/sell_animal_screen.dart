@@ -5,6 +5,8 @@ import '../../models/animal.dart';
 import '../../services/animal_service.dart';
 import '../../utils/constants.dart';
 import '../../l10n/l10n_extensions.dart';
+import '../../theme/app_colors.dart';
+import 'animals_design.dart';
 
 class SellAnimalScreen extends StatefulWidget {
   final Animal animal;
@@ -38,11 +40,21 @@ class _SellAnimalScreenState extends State<SellAnimalScreen> {
     setState(() => _isLoading = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
+      final salePrice = double.tryParse(_priceController.text.trim());
+      final saleWeight = _weightController.text.isNotEmpty
+          ? double.tryParse(_weightController.text.trim())
+          : null;
+      if (salePrice == null) {
+        throw const FormatException('Invalid sale price');
+      }
+      if (_weightController.text.isNotEmpty && saleWeight == null) {
+        throw const FormatException('Invalid sale weight');
+      }
       final payload = <String, dynamic>{
-        'salePrice': double.parse(_priceController.text),
+        'salePrice': salePrice,
         'saleDate': _saleDate.toIso8601String(),
         if (_buyerController.text.isNotEmpty) 'buyerName': _buyerController.text,
-        if (_weightController.text.isNotEmpty) 'saleWeightKg': double.parse(_weightController.text),
+        if (saleWeight != null) 'saleWeightKg': saleWeight,
         if (_notesController.text.isNotEmpty) 'notes': _notesController.text,
       };
       await AnimalService().sellAnimal(widget.animal.nodeId, payload);
@@ -64,17 +76,9 @@ class _SellAnimalScreenState extends State<SellAnimalScreen> {
     final l = context.l10n;
     return Scaffold(
       backgroundColor: AppColors.wheatWarmClay,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: const BackButton(color: Colors.black),
-        title: Text(
-          '${l.sellAnimal} — ${widget.animal.name}',
-          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-      ),
+      appBar: AnimalsDesign.animalsAppBar(title: '${l.sellAnimal} — ${widget.animal.name}'),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AnimalsDesign.screenHorizontalPadding),
         child: Form(
           key: _formKey,
           child: Column(
@@ -108,15 +112,21 @@ class _SellAnimalScreenState extends State<SellAnimalScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Symbols.calendar_today, color: AppColors.mistyBlue),
+                      const Icon(Symbols.calendar_today, color: AppColors.mistyBlue, size: AnimalsDesign.inlineIconSize),
                       const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(l.saleDate, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                          Text(DateFormat('dd MMM yyyy').format(_saleDate),
-                              style: const TextStyle(fontWeight: FontWeight.bold)),
-                        ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(l.saleDate, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                            Text(
+                              DateFormat('dd MMM yyyy').format(_saleDate),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -136,15 +146,12 @@ class _SellAnimalScreenState extends State<SellAnimalScreen> {
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
-                height: 56,
+                height: AnimalsDesign.buttonHeight,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
+                  style: AnimalsDesign.primaryButtonStyle(),
                   child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? const CircularProgressIndicator(color: FieldlyColors.primary)
                       : Text(l.confirmSale,
                           style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                 ),

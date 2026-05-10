@@ -10,6 +10,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../utils/animal_utils.dart';
 import 'package:intl/intl.dart';
 import 'milk_record_success_screen.dart';
+import 'animals_design.dart';
 
 class MilkProductionScreen extends StatefulWidget {
   const MilkProductionScreen({super.key});
@@ -64,8 +65,8 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${context.l10n.error}: $e')),
         );
+        setState(() => _isLoading = false);
       }
-      setState(() => _isLoading = false);
     }
   }
 
@@ -396,11 +397,11 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
       drawer: const AppDrawer(),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator(color: AppColors.mistyBlue))
             : RefreshIndicator(
                 onRefresh: _loadData,
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: const EdgeInsets.all(AnimalsDesign.screenHorizontalPadding),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -409,14 +410,21 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
                       _buildStatsGrid(l),
                       const SizedBox(height: 32),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(l.productionHistory,
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                          Expanded(
+                            child: Text(
+                              l.productionHistory,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           TextButton.icon(
                             onPressed: () => _showEntryDialog(),
-                            icon: const Icon(Icons.add_rounded, size: 20),
-                            label: Text(l.addEntry),
+                            icon: const Icon(Icons.add_rounded, size: AnimalsDesign.inlineIconSize),
+                            label: Text(l.addEntry, overflow: TextOverflow.ellipsis),
                             style: TextButton.styleFrom(foregroundColor: AppColors.mistBlue),
                           ),
                         ],

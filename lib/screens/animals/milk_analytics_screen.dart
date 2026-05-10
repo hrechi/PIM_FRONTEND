@@ -6,6 +6,7 @@ import '../../utils/animal_utils.dart';
 import '../../services/milk_production_service.dart';
 import 'milk_production_screen.dart';
 import '../../widgets/app_drawer.dart';
+import 'animals_design.dart';
 
 class MilkAnalyticsScreen extends StatefulWidget {
   const MilkAnalyticsScreen({super.key});
@@ -127,22 +128,23 @@ class _MilkAnalyticsScreenState extends State<MilkAnalyticsScreen> with SingleTi
       backgroundColor: AppColors.wheatWarmClay,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.sageGreen,
+        foregroundColor: Colors.white,
         elevation: 0,
         leading: Builder(
           builder: (context) => IconButton(
-            icon: const Icon(Icons.menu_rounded, color: Color(0xFF1E293B)),
+            icon: const Icon(Icons.menu_rounded, color: Colors.white, size: AnimalsDesign.actionIconSize),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
         title: const Text(
           'Milk Analytics',
-          style: TextStyle(color: Color(0xFF1E293B), fontWeight: FontWeight.w800),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: AnimalsDesign.screenHorizontalPadding, vertical: 8),
             child: _buildTimeframeTabs(),
           ),
         ),
@@ -152,7 +154,7 @@ class _MilkAnalyticsScreenState extends State<MilkAnalyticsScreen> with SingleTi
         : RefreshIndicator(
             onRefresh: _fetchData,
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(AnimalsDesign.screenHorizontalPadding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -256,7 +258,7 @@ class _MilkAnalyticsScreenState extends State<MilkAnalyticsScreen> with SingleTi
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -504,10 +506,28 @@ class _MilkAnalyticsScreenState extends State<MilkAnalyticsScreen> with SingleTi
     return Column(
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(_currentTimeframe == 'week' ? 'Weekly Herd Breakdown' : 'Top Producing Cows', style: const TextStyle(color: Color(0xFF1E293B), fontSize: 18, fontWeight: FontWeight.w800)),
-            TextButton(onPressed: () {}, child: Row(children: [const Text('View All', style: TextStyle(color: AppColors.mistBlue, fontWeight: FontWeight.bold)), const SizedBox(width: 4), const Icon(Icons.arrow_forward, size: 14, color: AppColors.mistBlue)])),
+            Expanded(
+              child: Text(
+                _currentTimeframe == 'week' ? 'Weekly Herd Breakdown' : 'Top Producing Cows',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Color(0xFF1E293B), fontSize: 18, fontWeight: FontWeight.w800),
+              ),
+            ),
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: () {},
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('View All', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.mistBlue, fontWeight: FontWeight.bold)),
+                  SizedBox(width: 4),
+                  Icon(Icons.arrow_forward, size: 14, color: AppColors.mistBlue),
+                ],
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -534,16 +554,16 @@ class _MilkAnalyticsScreenState extends State<MilkAnalyticsScreen> with SingleTi
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(animal['name'], style: const TextStyle(color: Color(0xFF1E293B), fontSize: 16, fontWeight: FontWeight.bold)),
-                Text('Tag ID: #${animal['nodeId']}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                Text(animal['name'], maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF1E293B), fontSize: 16, fontWeight: FontWeight.bold)),
+                Text('Tag ID: #${animal['nodeId']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('${animal['totalL']} L', style: const TextStyle(color: Color(0xFF1E293B), fontSize: 16, fontWeight: FontWeight.w800)),
-              Text('TOTAL / ${_currentTimeframe == 'week' ? 'WK' : 'YR'}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold)),
+              Text('${animal['totalL']} L', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF1E293B), fontSize: 16, fontWeight: FontWeight.w800)),
+              Text('TOTAL / ${_currentTimeframe == 'week' ? 'WK' : 'YR'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold)),
             ],
           ),
         ],

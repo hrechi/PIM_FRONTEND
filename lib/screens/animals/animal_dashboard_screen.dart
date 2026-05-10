@@ -204,6 +204,12 @@ class _AnimalDashboardScreenState extends State<AnimalDashboardScreen> {
     return FutureBuilder<Map<String, dynamic>>(
       future: _statsFuture,
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 260,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
         final stats = snapshot.data;
         return GridView.count(
           crossAxisCount: 2,
@@ -384,6 +390,12 @@ class _AnimalDashboardScreenState extends State<AnimalDashboardScreen> {
     return FutureBuilder<Map<String, dynamic>>(
       future: _statsFuture,
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 80,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
         final list = snapshot.data?['needingAttention'] as List<dynamic>?;
         if (list == null || list.isEmpty) return const SizedBox();
 
@@ -510,6 +522,16 @@ class _AnimalDashboardScreenState extends State<AnimalDashboardScreen> {
     return FutureBuilder<Map<String, dynamic>>(
       future: _statsFuture,
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            height: 200,
+            decoration: BoxDecoration(
+              color: AppColors.mistBlue.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(32),
+            ),
+            child: const Center(child: CircularProgressIndicator(color: Colors.white)),
+          );
+        }
         final stats = snapshot.data;
         final double today = _toDouble(stats?['todayMilk']);
         final double yesterday = _toDouble(stats?['yesterdayMilk']);
@@ -686,6 +708,12 @@ class _AnimalDashboardScreenState extends State<AnimalDashboardScreen> {
     return FutureBuilder<Map<String, dynamic>>(
       future: _statsFuture,
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 60,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
         final reminders = snapshot.data?['reminders'] as List<dynamic>?;
         if (reminders == null || reminders.isEmpty) return const SizedBox();
 

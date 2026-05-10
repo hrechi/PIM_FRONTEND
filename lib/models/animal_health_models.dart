@@ -25,14 +25,25 @@ class SensorSnapshot {
 
   factory SensorSnapshot.fromJson(Map<String, dynamic> json) {
     return SensorSnapshot(
-      temperature:   (json['temperature']   as num?)?.toDouble() ?? 38.5,
-      heartRate:     (json['heartRate']     as num?)?.toDouble() ?? 70.0,
-      activityScore: (json['activityScore'] as num?)?.toDouble() ?? 60.0,
-      lyingPct6h:    (json['lyingPct6h']    as num?)?.toDouble() ?? 45.0,
-      accAsymmetry:  (json['accAsymmetry']  as num?)?.toDouble() ?? 0.05,
-      deltaTemp:     (json['deltaTemp']     as num?)?.toDouble() ?? 0.0,
-      deltaHr:       (json['deltaHr']       as num?)?.toDouble() ?? 0.0,
-      activityDrop:  (json['activityDrop']  as num?)?.toDouble() ?? 0.0,
+      temperature: (json['temperature'] as num?)?.toDouble() ?? 38.5,
+      heartRate:
+          ((json['heartRate'] ?? json['heart_rate']) as num?)?.toDouble() ?? 70.0,
+      activityScore: ((json['activityScore'] ?? json['activity_score']) as num?)
+              ?.toDouble() ??
+          60.0,
+      lyingPct6h: ((json['lyingPct6h'] ?? json['lying_pct_6h']) as num?)
+              ?.toDouble() ??
+          45.0,
+      accAsymmetry: ((json['accAsymmetry'] ?? json['acc_asymmetry']) as num?)
+              ?.toDouble() ??
+          0.05,
+      deltaTemp:
+          ((json['deltaTemp'] ?? json['delta_temp']) as num?)?.toDouble() ?? 0.0,
+      deltaHr:
+          ((json['deltaHr'] ?? json['delta_hr']) as num?)?.toDouble() ?? 0.0,
+      activityDrop: ((json['activityDrop'] ?? json['activity_drop']) as num?)
+              ?.toDouble() ??
+          0.0,
     );
   }
 }
@@ -61,7 +72,8 @@ class DiagnosisTrigger {
       label:       json['label']?.toString()       ?? '',
       value:       (json['value'] as num?)?.toDouble() ?? 0.0,
       unit:        json['unit']?.toString()        ?? '',
-      normalRange: json['normalRange']?.toString() ?? '',
+      normalRange:
+          json['normalRange']?.toString() ?? json['normal_range']?.toString() ?? '',
       direction:   json['direction']?.toString()   ?? '↑',
       severity:    json['severity']?.toString()    ?? 'medium',
     );
@@ -113,12 +125,15 @@ class DiagnosisExplanation {
   });
 
   factory DiagnosisExplanation.fromJson(Map<String, dynamic> json) {
+    final sensorJson = json['sensorReadings'] ?? json['sensor_readings'];
+    final diseaseJson = json['diseaseInfo'] ?? json['disease_info'];
+    final anomaly = json['anomalyScorePct'] ?? json['anomaly_score_pct'];
     return DiagnosisExplanation(
       summary:         json['summary']?.toString()         ?? '',
       recommendation:  json['recommendation']?.toString()  ?? '',
-      anomalyScorePct: (json['anomalyScorePct'] as num?)?.toDouble() ?? 0.0,
-      sensorReadings: json['sensorReadings'] != null
-          ? SensorSnapshot.fromJson(json['sensorReadings'] as Map<String, dynamic>)
+      anomalyScorePct: (anomaly as num?)?.toDouble() ?? 0.0,
+      sensorReadings: sensorJson != null
+          ? SensorSnapshot.fromJson(sensorJson as Map<String, dynamic>)
           : const SensorSnapshot(
               temperature: 38.5, heartRate: 70, activityScore: 60,
               lyingPct6h: 45, accAsymmetry: 0.05,
@@ -128,8 +143,8 @@ class DiagnosisExplanation {
               ?.map((e) => DiagnosisTrigger.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      diseaseInfo: json['diseaseInfo'] != null
-          ? DiseaseInfo.fromJson(json['diseaseInfo'] as Map<String, dynamic>)
+      diseaseInfo: diseaseJson != null
+          ? DiseaseInfo.fromJson(diseaseJson as Map<String, dynamic>)
           : const DiseaseInfo(label: '', description: '', symptoms: []),
     );
   }
@@ -145,6 +160,9 @@ class DiagnosisResult {
   final double confidence;
   final double isoScore;
   final bool isStaticFallback;
+  final bool bovineModelApplied;
+  final String? speciesNote;
+  final double? anomalyScoreNorm;
   final Map<String, double> allProbabilities;
   final DiagnosisExplanation? explanation;
   final DateTime timestamp;
@@ -157,6 +175,9 @@ class DiagnosisResult {
     required this.confidence,
     required this.isoScore,
     required this.isStaticFallback,
+    this.bovineModelApplied = true,
+    this.speciesNote,
+    this.anomalyScoreNorm,
     required this.allProbabilities,
     this.explanation,
     required this.timestamp,
@@ -165,21 +186,50 @@ class DiagnosisResult {
   /// Risk score in [0, 1] — derived from healthScore (100 = no risk → 0.0, 0 = max risk → 1.0).
   double get riskScore => (1.0 - (healthScore / 100.0)).clamp(0.0, 1.0);
 
+  static double _clampHealthScore(double score) => score.clamp(0.0, 100.0);
+
   factory DiagnosisResult.fromJson(Map<String, dynamic> json) {
     // Parse allProbabilities — values may come as int or double
-    final rawProbs = json['allProbabilities'] as Map<String, dynamic>? ?? {};
-    final probs = rawProbs.map(
+    final rawProbs = json['allProbabilities'] ?? json['all_probabilities'];
+    final probMap = rawProbs is Map<String, dynamic>
+        ? rawProbs
+        : <String, dynamic>{};
+    final probs = probMap.map(
       (k, v) => MapEntry(k, (v as num).toDouble()),
     );
 
+    final rawAlert =
+        json['alertLevel']?.toString() ?? json['alert_level']?.toString() ?? 'healthy';
+    final alertLevel =
+        rawAlert == 'low' ? 'healthy' : rawAlert;
+
+    final anomalyNorm = json['anomalyScoreNorm'] ?? json['anomaly_score_norm'];
+
     return DiagnosisResult(
-      animalId:        json['animalId']?.toString()        ?? '',
-      healthScore:     (json['healthScore'] as num?)?.toDouble() ?? 100.0,
-      alertLevel:      json['alertLevel']?.toString()      ?? 'healthy',
-      predictedDisease: json['predictedDisease']?.toString(),
-      confidence:      (json['confidence'] as num?)?.toDouble() ?? 0.0,
-      isoScore:        (json['isoScore'] as num?)?.toDouble() ?? 0.0,
-      isStaticFallback: json['isStaticFallback'] as bool? ?? false,
+      animalId:
+          json['animalId']?.toString() ?? json['animal_id']?.toString() ?? '',
+      healthScore: _clampHealthScore(
+        ((json['healthScore'] ?? json['health_score']) as num?)?.toDouble() ??
+            100.0,
+      ),
+      alertLevel: alertLevel,
+      predictedDisease: json['predictedDisease']?.toString() ??
+          json['predicted_disease']?.toString(),
+      confidence:
+          (json['confidence'] as num?)?.toDouble() ?? 0.0,
+      isoScore:
+          ((json['isoScore'] ?? json['iso_score']) as num?)?.toDouble() ?? 0.0,
+      isStaticFallback:
+          json['isStaticFallback'] as bool? ??
+              json['is_static_fallback'] as bool? ??
+              false,
+      bovineModelApplied:
+          json['bovineModelApplied'] as bool? ??
+              json['bovine_model_applied'] as bool? ??
+              true,
+      speciesNote: json['speciesNote']?.toString() ??
+          json['species_note']?.toString(),
+      anomalyScoreNorm: (anomalyNorm as num?)?.toDouble(),
       allProbabilities: probs,
       explanation: json['explanation'] != null
           ? DiagnosisExplanation.fromJson(

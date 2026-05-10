@@ -75,8 +75,10 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
   Future<void> _loadAnimals() async {
     try {
       final animals = await _animalService.getAnimals();
+      if (!mounted) return;
       setState(() { _animals = animals; _loading = false; });
     } catch (_) {
+      if (!mounted) return;
       setState(() => _loading = false);
     }
   }
@@ -472,39 +474,6 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
   }
 }
 
-// ─── Stat card ───────────────────────────────────────────────────────────────
-class _StatCard extends StatelessWidget {
-  final String label, value;
-  final IconData icon;
-  final Color color;
-  const _StatCard({required this.label, required this.value, required this.icon, required this.color});
-
-  @override
-  Widget build(BuildContext context) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          const SizedBox(height: 10),
-          Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: color, letterSpacing: -0.8)),
-          Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8), letterSpacing: 0.3)),
-        ],
-      ),
-    ),
-  );
-}
-
 // ─── Animal vaccine row ─────────────────────────────────────────────────────
 class _AnimalVaccineRow extends StatelessWidget {
   final Animal animal;
@@ -678,7 +647,7 @@ class _BulkMarkDoneSheetState extends State<_BulkMarkDoneSheet> {
     try {
       final res = await context.read<VaccineProvider>().loadVaccines();
       setState(() { 
-        _availableVaccines = res.map((v) => {'code': v.code, 'nameEn': v.nameEn ?? v.nameFr}).toList(); 
+        _availableVaccines = res.map((v) => {'code': v['code'] ?? '', 'nameEn': v['nameFr'] ?? v['code'] ?? ''}).toList(); 
         _loadingVaccines = false; 
       });
     } catch (_) {

@@ -66,9 +66,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   String? _selectedFatherId;
   List<Animal> _potentialParents = [];
 
-  // Vaccine list (legacy/manual)
-  List<Map<String, dynamic>> _vaccines = [];
-
   // Dynamic Vaccine Regulations
   List<VaccineRegulation> _regulations = [];
   bool _isLoadingRegulations = false;
@@ -107,16 +104,12 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
       _selectedFatherId = a.fatherId;
       _birthWeightController.text = a.birthWeightKg?.toString() ?? '';
       _birthCostController.text = a.birthCost?.toString() ?? '';
-      _birthCostController.text = a.birthCost?.toString() ?? '';
       _purchasePriceController.text = a.purchasePrice?.toString() ?? '';
       _salePriceController.text = a.salePrice?.toString() ?? '';
       
       // Prefer vaccineRecords for modern sync
       if (a.vaccineRecords != null && a.vaccineRecords!.isNotEmpty) {
-        _vaccines = a.vaccineRecords!.map((v) => {
-          'name': (v.vaccine?.code == 'OTHER' ? v.notes : v.vaccine?.nameFr) ?? v.notes ?? 'Vaccin',
-          'date': v.administeredAt.toIso8601String().split('T')[0],
-        }).toList();
+        // vaccineRecords are loaded into _vaccineSelections via _fetchRegulations()
       }
       
       _isPregnant = a.isPregnant;
@@ -137,11 +130,11 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   Future<void> _fetchPotentialParents() async {
     try {
       final animals = await _animalService.getAnimals();
-      setState(() {
+      if (mounted) setState(() {
         _potentialParents = animals;
       });
-    } catch (e) {
-      debugPrint('Error fetching potential parents: $e');
+    } catch (_) {
+      // Silently fail — parents list is optional
     }
   }
 
@@ -157,8 +150,8 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           _selectedFieldId = widget.animal?.fieldId;
         }
       });
-    } catch (e) {
-      debugPrint('Error fetching fields: $e');
+    } catch (_) {
+      // Silently fail — fields list is optional
     }
   }
 
@@ -211,8 +204,8 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           }
         }
       });
-    } catch (e) {
-      debugPrint('Error fetching regulations: $e');
+    } catch (_) {
+      // Silently fail — regulations will be empty
     } finally {
       setState(() => _isLoadingRegulations = false);
     }
@@ -287,18 +280,14 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
       // ── Upload photo ──
       if (_selectedImage != null || _webImageBytes != null) {
         try {
-          debugPrint('📸 Uploading photo for animal ${animal.nodeId}...');
           if (kIsWeb && _webImageBytes != null) {
             animal = await _animalService.uploadAnimalPhotoBytes(
                 animal.nodeId, _webImageBytes!);
-            debugPrint('✅ Photo uploaded (web): ${animal.profileImage}');
           } else if (_selectedImage != null) {
             animal = await _animalService.uploadAnimalPhoto(
                 animal.nodeId, _selectedImage!);
-            debugPrint('✅ Photo uploaded (mobile): ${animal.profileImage}');
           }
         } catch (e) {
-          debugPrint('❌ Photo upload failed: $e');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -325,7 +314,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
             notes: sel['isOther'] == true ? sel['name'] : null, // Store name in notes for OTHER
           );
         } catch (ve) {
-          debugPrint('Failed to record vaccine ${entry.key}: $ve');
+          // Silently skip failed vaccine records
         }
       }
 
@@ -336,7 +325,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         try {
           await _vaccineService.generateSmartPlan(animal.id);
         } catch (pe) {
-          debugPrint('Failed to generate smart plan: $pe');
+          // Silently skip smart plan generation failure
         }
       }
 
@@ -358,12 +347,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _addVaccine() {
-    setState(() {
-      _vaccines.add({'name': '', 'date': DateTime.now().toIso8601String().split('T')[0]});
-    });
   }
 
   @override
@@ -2080,26 +2063,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
             ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildDatePickerField(TextEditingController controller, String label, Function(DateTime) onPicked) {
-    return GestureDetector(
-      onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: DateTime.now(),
-          firstDate: DateTime(2020),
-          lastDate: DateTime(2030),
-        );
-        if (picked != null) onPicked(picked);
-      },
-      child: _buildTextField(
-        controller,
-        label,
-        readOnly: true,
-        prefixIcon: Symbols.calendar_month,
       ),
     );
   }

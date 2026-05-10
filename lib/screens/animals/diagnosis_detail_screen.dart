@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../../models/animal_health_models.dart';
+import '../../utils/constants.dart';
+import 'animals_design.dart';
 
 /// Écran d'explication complète du diagnostic IA
 class DiagnosisDetailScreen extends StatelessWidget {
@@ -46,25 +48,30 @@ class DiagnosisDetailScreen extends StatelessWidget {
     final exp = result.explanation;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.wheatWarmClay,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.sageGreen,
+        foregroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: Color(0xFF0F172A)),
+          icon: const Icon(Icons.arrow_back_ios_new, size: AnimalsDesign.labelIconSize, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('AI Diagnosis', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-            Text(animalName, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w400)),
+            const Text('AI Diagnosis', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+            Text(animalName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w400)),
           ],
         ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (!result.bovineModelApplied) ...[
+            _buildNonBovineInfoCard(),
+            const SizedBox(height: 16),
+          ],
 
           // ── 1. Score global ──────────────────────────────
           _buildScoreCard(),
@@ -105,6 +112,35 @@ class DiagnosisDetailScreen extends StatelessWidget {
 
           const SizedBox(height: 32),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNonBovineInfoCard() {
+    return Material(
+      color: const Color(0xFFE3F2FD),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.info_outline, color: Color(0xFF1565C0)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                result.speciesNote ??
+                    'Le modèle PastureAI (pathologies bovines) ne s\'applique pas à cette espèce. '
+                    'Le score affiché est une surveillance heuristique basée sur les références physiologiques de l\'espèce.',
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.4,
+                  color: Color(0xFF0D47A1),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -354,13 +390,16 @@ class DiagnosisDetailScreen extends StatelessWidget {
       'fievre':           'Fever',
       'boiterie':         'Lameness',
       'stress_thermique': 'Heat Stress',
+      'surveillance_non_bovine': 'Species monitoring (non-bovine)',
     };
 
     return _card(
       icon: Symbols.bar_chart,
       color: const Color(0xFF6A1B9A),
       title: 'Disease Probabilities',
-      subtitle: 'XGBoost classification output',
+      subtitle: result.bovineModelApplied
+          ? 'XGBoost classification output (bovine model)'
+          : 'No bovine pathology model — monitoring mode only',
       child: Column(
         children: sorted.map((e) {
           final color = diseaseColors[e.key] ?? const Color(0xFF309448);

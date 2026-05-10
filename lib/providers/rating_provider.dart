@@ -40,6 +40,12 @@ class RatingProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
     } catch (e) {
+      // Endpoint not yet implemented on backend (404) — stop polling silently.
+      final msg = e.toString();
+      if (msg.contains('404') || msg.contains('Not Found')) {
+        _pollTimer?.cancel();
+        return;
+      }
       // Keep stale data; surface error only on first load.
       if (_ratings.isEmpty) {
         _error = 'Could not load ratings.';

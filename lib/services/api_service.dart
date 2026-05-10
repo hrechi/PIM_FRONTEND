@@ -1,3 +1,29 @@
+/// ============================================================
+/// API SERVICE — Couche de communication HTTP avec le backend
+/// ============================================================
+///
+/// Ce service centralise tous les appels HTTP de l'application Flutter
+/// vers le backend NestJS. Il gère :
+///
+///   • Résolution dynamique de l'URL selon la plateforme :
+///     - Web (Chrome/Edge)    → IP configurée dans AppConfig.serverHost
+///     - Android émulateur    → 10.0.2.2 (alias de localhost sur l'hôte)
+///     - Android physique     → IP WiFi du serveur
+///     - iOS simulateur       → localhost
+///
+///   • Gestion des tokens JWT :
+///     - Stockage sécurisé dans SharedPreferences
+///     - Refresh automatique sur erreur 401 (token expiré)
+///     - Retry de la requête originale après refresh
+///
+///   • Méthodes HTTP : GET, POST, PATCH, DELETE, upload multipart
+///
+///   • Gestion centralisée des erreurs (ApiException)
+///
+/// Usage :
+///   final data = await ApiService.get('/animals?fieldId=xxx', withAuth: true);
+///   final result = await ApiService.post('/expenses', body, withAuth: true);
+/// ============================================================
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -15,7 +41,12 @@ class ApiService {
     final port = AppConfig.serverPort;
 
     if (kIsWeb) {
-      return 'http://localhost:$port/api';
+      // On web, use the configured host (same IP as other platforms).
+      // localhost only works if the backend runs on the same machine as the browser.
+      final webHost = (host == 'localhost' || host == '127.0.0.1')
+          ? 'localhost'
+          : host;
+      return 'http://$webHost:$port/api';
     }
     if (Platform.isAndroid) {
       // Emulator uses 10.0.2.2; real device uses the WiFi IP
@@ -35,7 +66,12 @@ class ApiService {
   static String get mediaBaseUrl {
     final host = AppConfig.serverHost;
     final port = AppConfig.serverPort;
-    if (kIsWeb) return 'http://localhost:$port';
+    if (kIsWeb) {
+      final webHost = (host == 'localhost' || host == '127.0.0.1')
+          ? 'localhost'
+          : host;
+      return 'http://$webHost:$port';
+    }
     if (Platform.isAndroid) {
       final isEmulator = host == 'localhost' || host == '127.0.0.1';
       return isEmulator ? 'http://10.0.2.2:$port' : 'http://$host:$port';

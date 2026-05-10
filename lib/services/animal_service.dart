@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart'; // for MediaType
 import '../utils/constants.dart';
@@ -42,55 +41,44 @@ class AnimalService {
     
     try {
       final response = await ApiService.get(endpoint, withAuth: true);
-      debugPrint('📡 Response type: ${response.runtimeType}');
-      debugPrint('📡 Response: $response');
       
       final List<dynamic> data = response is List ? response : (response['data'] ?? []);
-      debugPrint('📡 Data type: ${data.runtimeType}, length: ${data.length}');
       
       List<Animal> animals = [];
       for (var json in data) {
         try {
           animals.add(Animal.fromJson(json));
         } catch (e) {
-          debugPrint('⚠️ Failed to parse animal: $e, json: $json');
+          // Skip malformed animal entries silently
         }
       }
       
-      debugPrint('✅ Parsed ${animals.length} animals from response');
-      
       // If fieldId was requested but no animals found, fallback to all farmer animals
       if (animals.isEmpty && fieldId != null) {
-        debugPrint('⚠️ No animals found for fieldId=$fieldId, fetching all farmer animals...');
         try {
           final fallbackResponse = await ApiService.get('/animals', withAuth: true);
-          debugPrint('📡 Fallback response type: ${fallbackResponse.runtimeType}');
           
           final List<dynamic> fallbackData = fallbackResponse is List ? fallbackResponse : (fallbackResponse['data'] ?? []);
-          debugPrint('📡 Fallback data length: ${fallbackData.length}');
           
           for (var json in fallbackData) {
             try {
               animals.add(Animal.fromJson(json));
             } catch (e) {
-              debugPrint('⚠️ Failed to parse fallback animal: $e');
+              // Skip malformed entries
             }
           }
-          
-          debugPrint('📌 Fallback: found ${animals.length} total farmer animals');
         } catch (e) {
-          debugPrint('❌ Fallback fetch failed: $e');
+          // Fallback failed — return empty list
         }
       }
       
-      // For safety, apply a local case-insensitive filter as fallback
+      // Apply a local case-insensitive filter as fallback
       if (animalType != null) {
         animals = animals.where((a) => a.animalType.toUpperCase() == animalType.toUpperCase()).toList();
       }
       
       return animals;
     } catch (e) {
-      debugPrint('❌ Fatal error in getAnimals: $e');
       return [];
     }
   }
@@ -175,28 +163,21 @@ class AnimalService {
 
   Future<Animal> uploadAnimalPhoto(String nodeId, File imageFile) async {
     final token = await ApiService.getAccessToken() ?? '';
-    debugPrint('📸 Upload token: ${token.isEmpty ? "EMPTY!" : token.substring(0, 20)}...');
-    debugPrint('📸 Upload nodeId: $nodeId');
-    debugPrint('📸 Upload file: ${imageFile.path}');
 
     final uri = Uri.parse(
       'http://${AppConfig.serverHost}:${AppConfig.serverPort}/api/animals/$nodeId/upload-photo',
     );
-    debugPrint('📸 Upload URI: $uri');
 
     final request = http.MultipartRequest('POST', uri)
       ..headers['Authorization'] = 'Bearer $token'
       ..files.add(await http.MultipartFile.fromPath(
         'photo',
         imageFile.path,
-        contentType: MediaType('image', 'jpeg'), // explicit MIME type
+        contentType: MediaType('image', 'jpeg'),
       ));
 
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
-
-    debugPrint('📸 Upload response status: ${response.statusCode}');
-    debugPrint('📸 Upload response body: ${response.body}');
 
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('Photo upload failed (${response.statusCode}): ${response.body}');
@@ -208,13 +189,10 @@ class AnimalService {
   Future<Animal> uploadAnimalPhotoBytes(
       String nodeId, Uint8List bytes) async {
     final token = await ApiService.getAccessToken() ?? '';
-    debugPrint('📸 Upload (web) token: ${token.isEmpty ? "EMPTY!" : token.substring(0, 20)}...');
-    debugPrint('📸 Upload (web) nodeId: $nodeId');
 
     final uri = Uri.parse(
       'http://${AppConfig.serverHost}:${AppConfig.serverPort}/api/animals/$nodeId/upload-photo',
     );
-    debugPrint('📸 Upload (web) URI: $uri');
 
     final request = http.MultipartRequest('POST', uri)
       ..headers['Authorization'] = 'Bearer $token'
@@ -222,14 +200,11 @@ class AnimalService {
         'photo',
         bytes,
         filename: 'animal_photo.jpg',
-        contentType: MediaType('image', 'jpeg'), // explicit MIME type
+        contentType: MediaType('image', 'jpeg'),
       ));
 
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
-
-    debugPrint('📸 Upload (web) response status: ${response.statusCode}');
-    debugPrint('📸 Upload (web) response body: ${response.body}');
 
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('Photo upload failed (${response.statusCode}): ${response.body}');
