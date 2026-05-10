@@ -445,21 +445,26 @@ class _AnimalListScreenState extends State<AnimalListScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Icon(AnimalUtils.getAnimalIcon(animal.animalType), size: 16, color: const Color(0xFF94A3B8)),
-                              const SizedBox(width: 8),
-                              const Icon(Symbols.event_repeat, size: 16, color: Color(0xFF94A3B8)),
-                              if (animal.isFattening == true) ...[
+                          Flexible(
+                            child: Row(
+                              children: [
+                                Icon(AnimalUtils.getAnimalIcon(animal.animalType), size: 16, color: const Color(0xFF94A3B8)),
                                 const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(12)),
-                                  child: Text(context.l10n.fattening,
-                                      style: const TextStyle(color: Color(0xFF0369A1), fontSize: 11, fontWeight: FontWeight.w600)),
-                                ),
+                                const Icon(Symbols.event_repeat, size: 16, color: Color(0xFF94A3B8)),
+                                if (animal.isFattening == true) ...[
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(12)),
+                                      child: Text(context.l10n.fattening,
+                                          style: const TextStyle(color: Color(0xFF0369A1), fontSize: 11, fontWeight: FontWeight.w600),
+                                          overflow: TextOverflow.ellipsis),
+                                    ),
+                                  ),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
                           if (animal.status.toLowerCase() == 'sold')
                             GestureDetector(
@@ -525,7 +530,12 @@ class _AnimalListScreenState extends State<AnimalListScreen>
   }
 
   Widget _buildFallbackIcon(String type) {
-    return Center(child: Icon(AnimalUtils.getAnimalIcon(type), size: 40, color: AppColors.mistBlue.withValues(alpha: 0.3)));
+    return Center(
+      child: Text(
+        AnimalUtils.getAnimalEmoji(type),
+        style: const TextStyle(fontSize: 40),
+      ),
+    );
   }
 
   Widget _buildHealthBadge(int score) {

@@ -475,10 +475,9 @@ class _PlannedSalesScreenState extends State<PlannedSalesScreen> {
 
   Widget _buildFallbackIcon(String type) {
     return Center(
-      child: Icon(
-        AnimalUtils.getAnimalIcon(type),
-        size: 40,
-        color: AppColors.mistBlue.withValues(alpha: 0.3),
+      child: Text(
+        AnimalUtils.getAnimalEmoji(type),
+        style: const TextStyle(fontSize: 40),
       ),
     );
   }

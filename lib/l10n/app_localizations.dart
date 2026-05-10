@@ -196,6 +196,7 @@ class AppLocalizations {
   String get salesCatalogues => _t('salesCatalogues');
   String get newCatalogue => _t('newCatalogue');
   String get createCatalogue => _t('createCatalogue');
+  String get editCatalogue => _t('editCatalogue');
   String get publishCatalogue => _t('publishCatalogue');
   String get deleteCatalogue => _t('deleteCatalogue');
   String get noCataloguesYet => _t('noCataloguesYet');

@@ -32,7 +32,8 @@ class MetricCard extends StatelessWidget {
     // Determine values to display
     final String displayTitle = title ?? animal?.name ?? 'Unknown';
     final String displayValue = value ?? animal?.formattedTemperature ?? '--';
-    final IconData displayIcon = icon ?? _getAnimalIcon(animal?.animalType ?? '');
+    final IconData? displayIcon = icon;
+    final String? displayEmoji = icon == null ? AnimalUtils.getAnimalEmoji(animal?.animalType) : null;
     final Color displayColor = color ?? (animal?.isHealthy ?? true ? AppColorPalette.healthGlow : AppColorPalette.alertError);
 
     return GestureDetector(
@@ -77,11 +78,13 @@ class MetricCard extends StatelessWidget {
                 ),
               ),
               child: Center(
-                child: Icon(
-                  displayIcon,
-                  size: 48,
-                  color: displayColor,
-                ),
+                child: displayEmoji != null
+                    ? Text(displayEmoji, style: const TextStyle(fontSize: 48))
+                    : Icon(
+                        displayIcon,
+                        size: 48,
+                        color: displayColor,
+                      ),
               ),
             ),
 

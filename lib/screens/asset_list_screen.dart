@@ -106,14 +106,25 @@ class _AssetListScreenState extends State<AssetListScreen> {
 
     if (!mounted || qrValue == null || qrValue.isEmpty) return;
 
+    // ── Feedback de chargement pendant l'appel API ────────────────────────
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
     final provider = context.read<AssetProvider>();
     final result = await provider.getByQrValue(qrValue);
 
     if (!mounted) return;
+    Navigator.of(context).pop(); // Ferme le loading
 
     if (result == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.assetNotFound)),
+        SnackBar(
+          content: Text(context.l10n.assetNotFound),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
@@ -121,11 +132,50 @@ class _AssetListScreenState extends State<AssetListScreen> {
     final asset = result['asset'] as AssetItem;
     final aiMessage = result['aiMessage']?.toString() ?? '';
 
+    // ── Dialog résultat avec bouton "Utiliser" ────────────────────────────
     showDialog<void>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Asset Found', style: AppTextStyles.h4()),
+      builder: (ctx) => AlertDialog(
+        title: Text(context.l10n.assetFound, style: AppTextStyles.h4()),
         content: _AssetPreview(asset: asset, aiMessage: aiMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(context.l10n.close),
+          ),
+          // Bouton "Utiliser" — démarre la session directement depuis le scan
+          if (!asset.isInUse)
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF61C06F),
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.play_arrow, size: 18),
+              label: Text(context.l10n.startUsing),
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                try {
+                  await provider.startUsageSession(assetId: asset.id);
+                  await provider.fetchAssets();
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Started using ${asset.name}'),
+                      backgroundColor: const Color(0xFF61C06F),
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+        ],
       ),
     );
   }

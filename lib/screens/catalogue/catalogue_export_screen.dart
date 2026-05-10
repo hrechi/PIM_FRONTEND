@@ -464,6 +464,35 @@ class _CatalogueExportScreenState extends State<CatalogueExportScreen> {
       return;
     }
 
+    // Fix #4 — Demander confirmation si le catalogue est encore en DRAFT
+    // car générer un lien le publie automatiquement côté backend
+    if (widget.catalogue.status.toUpperCase() == 'DRAFT') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: Text(context.l10n.publishCatalogue),
+          content: const Text(
+            'Generating a share link will publish your catalogue and make it visible to anyone with the link. Continue?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(context.l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _kGreen,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Publish & Share'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
     setState(() => _isSharing = true);
 
     try {

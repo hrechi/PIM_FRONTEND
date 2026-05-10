@@ -547,7 +547,9 @@ class _MilkAnalyticsScreenState extends State<MilkAnalyticsScreen> with SingleTi
             radius: 24,
             backgroundImage: animal['profileImage'] != null ? NetworkImage(animal['profileImage']) : null,
             backgroundColor: const Color(0xFFF1F5F9),
-            child: animal['profileImage'] == null ? Icon(AnimalUtils.getAnimalIcon(animal['animalType'] as String?), color: AppColors.mistBlue) : null,
+            child: animal['profileImage'] == null
+                ? Text(AnimalUtils.getAnimalEmoji(animal['animalType'] as String?), style: const TextStyle(fontSize: 22))
+                : null,
           ),
           const SizedBox(width: 16),
           Expanded(

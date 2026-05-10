@@ -169,7 +169,7 @@ class _MilkProductionScreenState extends State<MilkProductionScreen> {
                                         itemBuilder: (context, index) {
                                           final cow = filteredCows[index];
                                           return ListTile(
-                                            leading: Icon(AnimalUtils.getAnimalIcon('cow'), color: AppColors.mistBlue),
+                                            leading: Text(AnimalUtils.getAnimalEmoji('cow'), style: const TextStyle(fontSize: 22)),
                                             title: Text(cow.name),
                                             subtitle: Text('ID: ${cow.nodeId}'),
                                             onTap: () => Navigator.pop(context, cow),

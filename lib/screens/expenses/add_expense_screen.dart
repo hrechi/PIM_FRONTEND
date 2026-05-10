@@ -25,7 +25,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final _amountController = TextEditingController();
   final _notesController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
-  String _selectedCategory = 'Alimentation';
+  String _selectedCategory = 'feed';
   String? _selectedAnimalId;
   Animal? _selectedAnimal;
   File? _receiptImage;
@@ -36,12 +36,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   String _currencySymbol = '\$'; // Default to USD
 
   final List<Map<String, dynamic>> _categories = [
-    {'id': 'Alimentation', 'label': 'Alimentation', 'icon': Symbols.grass},
-    {'id': 'Santé',        'label': 'Santé',        'icon': Symbols.medical_services},
-    {'id': 'Équipement',   'label': 'Équipement',   'icon': Symbols.handyman},
-    {'id': 'Bâtiment',     'label': 'Bâtiment',     'icon': Symbols.foundation},
-    {'id': 'Main d\'œuvre', 'label': 'Main d\'œuvre', 'icon': Symbols.groups},
-    {'id': 'Autre',        'label': 'Autre',        'icon': Symbols.more_horiz},
+    {'id': 'feed',  'label': 'Alimentation',  'icon': Symbols.grass},
+    {'id': 'vet',   'label': 'Santé',         'icon': Symbols.medical_services},
+    {'id': 'equip', 'label': 'Équipement',    'icon': Symbols.handyman},
+    {'id': 'meds',  'label': 'Bâtiment',      'icon': Symbols.foundation},
+    {'id': 'labor', 'label': "Main d'œuvre",  'icon': Symbols.groups},
+    {'id': 'other', 'label': 'Autre',         'icon': Symbols.more_horiz},
   ];
 
   @override
@@ -82,9 +82,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       _animalsError = null;
     });
     try {
-      debugPrint('📌 Fetching animals for fieldId: ${widget.field.id}');
       final animals = await AnimalService().getAnimals(fieldId: widget.field.id);
-      debugPrint('✅ Animals fetched: ${animals.length} found');
       if (mounted) {
         setState(() {
           _animals = animals;
@@ -92,7 +90,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         });
       }
     } catch (e) {
-      debugPrint('❌ Error fetching animals: $e');
       if (mounted) {
         setState(() {
           _animalsError = 'Erreur lors de la récupération des animaux';
@@ -127,7 +124,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         'date': _selectedDate.toIso8601String(),
         'animalId': _selectedAnimalId,
         'notes': _notesController.text,
-        'receiptUrl': null, // Logic for image upload would go here
+        'receiptUrl': null,
       };
 
       await ExpenseService.createExpense(data);
@@ -138,7 +135,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       if (mounted) {
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Dépense enregistrée !'), backgroundColor: AppColors.success),
+          const SnackBar(
+            content: Text('Dépense enregistrée !'),
+            backgroundColor: AppColors.success,
+          ),
         );
       }
     } catch (e) {
@@ -165,12 +165,19 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         ),
         title: const Text(
           'Ajouter une dépense',
-          style: TextStyle(color: Color(0xFF1F2937), fontWeight: FontWeight.w800, fontSize: 18),
+          style: TextStyle(
+            color: Color(0xFF1F2937),
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: _isLoading ? null : _submit,
-            child: const Text('Enregistrer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            child: const Text(
+              'Enregistrer',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
           ),
           const SizedBox(width: 8),
         ],
@@ -201,7 +208,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       children: [
         const Text(
           'MONTANT',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF94A3B8), letterSpacing: 1),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF94A3B8),
+            letterSpacing: 1,
+          ),
         ),
         const SizedBox(height: 12),
         Row(
@@ -210,14 +222,23 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           children: [
             Text(
               _currencySymbol,
-              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Color(0xFF1F2937)),
+              style: const TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF1F2937),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: TextField(
                 controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w900, color: Color(0xFF1F2937)),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                style: const TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF1F2937),
+                ),
                 decoration: const InputDecoration(
                   hintText: '0.00',
                   hintStyle: TextStyle(color: Color(0xFFE2E8F0)),
@@ -238,24 +259,37 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       children: [
         const Text(
           'CATÉGORIE',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF94A3B8), letterSpacing: 1),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF94A3B8),
+            letterSpacing: 1,
+          ),
         ),
         const SizedBox(height: 16),
         Wrap(
           spacing: 12,
           runSpacing: 12,
           children: _categories.map((cat) {
-            final isSelected = _selectedCategory == cat['id'];
+            final isSelected = _selectedCategory == cat['id'] as String;
             return GestureDetector(
-              onTap: () => setState(() => _selectedCategory = cat['id']),
+              onTap: () =>
+                  setState(() => _selectedCategory = cat['id'] as String),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.mistyBlue : const Color(0xFFF8FAFC),
+                  color: isSelected
+                      ? AppColors.mistyBlue
+                      : const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: isSelected ? AppColors.mistyBlue : const Color(0xFFF1F5F9),
+                    color: isSelected
+                        ? AppColors.mistyBlue
+                        : const Color(0xFFF1F5F9),
                     width: 1.5,
                   ),
                 ),
@@ -263,16 +297,20 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      cat['icon'],
+                      cat['icon'] as IconData,
                       size: 20,
-                      color: isSelected ? Colors.white : const Color(0xFF64748B),
+                      color: isSelected
+                          ? Colors.white
+                          : const Color(0xFF64748B),
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      cat['label'],
+                      cat['label'] as String,
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: isSelected ? Colors.white : const Color(0xFF64748B),
+                        color: isSelected
+                            ? Colors.white
+                            : const Color(0xFF64748B),
                         fontSize: 13,
                       ),
                     ),
@@ -295,7 +333,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             children: [
               const Text(
                 'DATE',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF94A3B8), letterSpacing: 1),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF94A3B8),
+                  letterSpacing: 1,
+                ),
               ),
               const SizedBox(height: 12),
               GestureDetector(
@@ -317,11 +360,21 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Symbols.calendar_month, size: 20, color: Color(0xFF64748B)),
+                      const Icon(
+                        Symbols.calendar_month,
+                        size: 20,
+                        color: Color(0xFF64748B),
+                      ),
                       const SizedBox(width: 12),
-                      Text(
-                        DateFormat('d MMMM y').format(_selectedDate),
-                        style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF1F2937)),
+                      Expanded(
+                        child: Text(
+                          DateFormat('d MMMM y').format(_selectedDate),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1F2937),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
@@ -337,7 +390,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             children: [
               const Text(
                 'ANIMAL (OPTIONNEL)',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF94A3B8), letterSpacing: 1),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF94A3B8),
+                  letterSpacing: 1,
+                ),
               ),
               const SizedBox(height: 12),
               GestureDetector(
@@ -351,16 +409,22 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Symbols.pets, size: 20, color: Color(0xFF64748B)),
+                      const Icon(
+                        Symbols.pets,
+                        size: 20,
+                        color: Color(0xFF64748B),
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           _selectedAnimal?.name ?? 'Sélectionner...',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            color: _selectedAnimal != null ? const Color(0xFF1F2937) : const Color(0xFF94A3B8),
-                            overflow: TextOverflow.ellipsis,
+                            color: _selectedAnimal != null
+                                ? const Color(0xFF1F2937)
+                                : const Color(0xFF94A3B8),
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -380,7 +444,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       children: [
         const Text(
           'NOTE & JUSTIFICATIF',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF94A3B8), letterSpacing: 1),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF94A3B8),
+            letterSpacing: 1,
+          ),
         ),
         const SizedBox(height: 16),
         Container(
@@ -397,17 +466,23 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 maxLength: 50,
                 decoration: const InputDecoration(
                   hintText: 'Ex: Foin livraison semaine 12',
-                  hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                  hintStyle: TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontSize: 14,
+                  ),
                   border: InputBorder.none,
                   counterText: '',
                 ),
-                style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF1F2937)),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1F2937),
+                ),
               ),
               const Divider(height: 24),
               Row(
                 children: [
                   GestureDetector(
-                    onTap: () => {}, // Placeholder for camera
+                    onTap: () {},
                     child: Container(
                       width: 48,
                       height: 48,
@@ -416,14 +491,22 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
-                      child: const Icon(Symbols.camera_alt, color: Color(0xFF64748B), size: 20),
+                      child: const Icon(
+                        Symbols.camera_alt,
+                        color: Color(0xFF64748B),
+                        size: 20,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Text(
                       'Ajouter une photo du reçu',
-                      style: TextStyle(color: Color(0xFF64748B), fontSize: 14, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: Color(0xFF64748B),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -437,8 +520,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   Widget _buildIntelligentPrompts() {
     final amount = double.tryParse(_amountController.text) ?? 0;
-    final showSmallPrompt = amount > 500 && (_notesController.text.isEmpty && _receiptImage == null);
-    final showAnimalPrompt = _selectedCategory == 'Santé' && _selectedAnimalId == null;
+    final showSmallPrompt =
+        amount > 500 && (_notesController.text.isEmpty && _receiptImage == null);
+    final showAnimalPrompt =
+        _selectedCategory == 'vet' && _selectedAnimalId == null;
 
     if (!showSmallPrompt && !showAnimalPrompt) return const SizedBox.shrink();
 
@@ -478,39 +563,36 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(color: Color(0xFF92400E), fontSize: 13, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                color: Color(0xFF92400E),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-          if (onTap != null) const Icon(Symbols.chevron_right, size: 16, color: Colors.orange),
+          if (onTap != null)
+            const Icon(Symbols.chevron_right, size: 16, color: Colors.orange),
         ],
       ),
     );
   }
 
   void _showAnimalPicker() {
-    // Show error if animals failed to load
     if (_animalsError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_animalsError!),
-          action: SnackBarAction(
-            label: 'Réessayer',
-            onPressed: _fetchAnimals,
-          ),
+          action: SnackBarAction(label: 'Réessayer', onPressed: _fetchAnimals),
         ),
       );
       return;
     }
-
-    // Show loading if still loading
     if (_isLoadingAnimals) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Chargement des animaux...')),
       );
       return;
     }
-
-    // Show empty message if no animals
     if (_animals.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Aucun animal trouvé pour ce champ')),
@@ -527,7 +609,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         builder: (context, setModalState) {
           final filtered = _animals.where((a) {
             return a.name.toLowerCase().contains(query.toLowerCase()) ||
-                   (a.tagNumber?.toLowerCase().contains(query.toLowerCase()) ?? false);
+                (a.tagNumber?.toLowerCase().contains(query.toLowerCase()) ??
+                    false);
           }).toList();
 
           return Container(
@@ -539,14 +622,30 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 12),
-                Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(2))),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
                 Padding(
                   padding: const EdgeInsets.all(24),
                   child: Row(
                     children: [
-                      const Text('Concernant quel animal ?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                      const Text(
+                        'Concernant quel animal ?',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                       const Spacer(),
-                      IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Symbols.close)),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Symbols.close),
+                      ),
                     ],
                   ),
                 ),
@@ -554,7 +653,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(16)),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: TextField(
                       onChanged: (v) => setModalState(() => query = v),
                       decoration: const InputDecoration(
@@ -569,8 +671,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   Expanded(
                     child: Center(
                       child: Text(
-                        query.isEmpty ? 'Aucun animal trouvé' : 'Aucun résultat pour "$query"',
-                        style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 16),
+                        query.isEmpty
+                            ? 'Aucun animal trouvé'
+                            : 'Aucun résultat pour "$query"',
+                        style: const TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                   )
@@ -591,10 +698,21 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                             Navigator.pop(context);
                           },
                           leading: CircleAvatar(
-                            backgroundColor: AppColors.mistyBlue.withValues(alpha: 0.1),
-                            child: Text(a.name.isNotEmpty ? a.name[0].toUpperCase() : '?', style: const TextStyle(color: AppColors.mistyBlue)),
+                            backgroundColor:
+                                AppColors.mistyBlue.withValues(alpha: 0.1),
+                            child: Text(
+                              a.name.isNotEmpty
+                                  ? a.name[0].toUpperCase()
+                                  : '?',
+                              style:
+                                  const TextStyle(color: AppColors.mistyBlue),
+                            ),
                           ),
-                          title: Text(a.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          title: Text(
+                            a.name,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           subtitle: Text(a.tagNumber ?? a.nodeId),
                         );
                       },

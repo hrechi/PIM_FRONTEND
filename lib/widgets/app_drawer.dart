@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/field_provider.dart';
+import '../models/field_model.dart';
 import '../services/api_service.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
@@ -43,6 +45,8 @@ import '../screens/vaccines/vaccine_dashboard_screen.dart';
 
 // Finance & Catalogue
 import '../screens/finance/finance_dashboard_screen.dart';
+import '../screens/finance/add_revenue_screen.dart';
+import '../screens/expenses/add_expense_screen.dart';
 import '../screens/catalogue/catalogue_list_screen.dart';
 
 // Security
@@ -62,12 +66,14 @@ class _DrawerItem {
   final String title;
   final WidgetBuilder? builder;
   final String? routeName;
+  final VoidCallback? onTap;
 
   const _DrawerItem({
     required this.icon,
     required this.title,
     this.builder,
     this.routeName,
+    this.onTap,
   });
 }
 
@@ -495,6 +501,10 @@ class _AppDrawerState extends State<AppDrawer>
   // ───────────────────────────── Navigation ────────────────────────────────
 
   void _navigate(_DrawerItem item) {
+    if (item.onTap != null) {
+      item.onTap!();
+      return;
+    }
     Navigator.pop(context);
     if (item.routeName != null) {
       Navigator.pushNamed(context, item.routeName!);
@@ -503,6 +513,38 @@ class _AppDrawerState extends State<AppDrawer>
     if (item.builder != null) {
       Navigator.push(context, MaterialPageRoute(builder: item.builder!));
     }
+  }
+
+  /// Navigate to a screen that requires a [FieldModel].
+  /// Picks the first available field from [FieldProvider].
+  /// If no field is loaded yet, loads them first.
+  Future<void> _navigateToFieldScreen(
+    Widget Function(FieldModel field) screenBuilder,
+  ) async {
+    Navigator.pop(context); // close drawer first
+    final fieldProvider = context.read<FieldProvider>();
+
+    if (fieldProvider.fields.isEmpty) {
+      await fieldProvider.loadFields();
+    }
+
+    if (!mounted) return;
+
+    if (fieldProvider.fields.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.noFieldFound),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final field = fieldProvider.fields.first;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => screenBuilder(field)),
+    );
   }
 
   Future<void> _signOut(BuildContext context) async {
@@ -590,6 +632,16 @@ class _AppDrawerState extends State<AppDrawer>
               items: [
                 _DrawerItem(icon: Icons.attach_money_rounded, title: l.financeDetails,
                     builder: (_) => const FinanceDashboardScreen()),
+                _DrawerItem(
+                  icon: Icons.trending_up_rounded,
+                  title: l.addRevenue,
+                  onTap: () => _navigateToFieldScreen((field) => AddRevenueScreen(field: field)),
+                ),
+                _DrawerItem(
+                  icon: Icons.trending_down_rounded,
+                  title: l.addExpense,
+                  onTap: () => _navigateToFieldScreen((field) => AddExpenseScreen(field: field)),
+                ),
                 _DrawerItem(icon: Icons.menu_book_outlined, title: l.catalogues,
                     builder: (_) => const CatalogueListScreen()),
               ],
@@ -732,6 +784,8 @@ class _LeafTile extends StatelessWidget {
                   item.title,
                   style: AppTextStyles.bodyLarge(color: color)
                       .copyWith(fontWeight: FontWeight.w500),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
             ],
@@ -844,7 +898,7 @@ class _CollapsibleCategoryState extends State<_CollapsibleCategory>
               duration: const Duration(milliseconds: 220),
               opacity: _open ? 1 : 0,
               child: Padding(
-                padding: const EdgeInsets.only(left: 18, top: 2, bottom: 4),
+                padding: const EdgeInsets.only(left: 12, top: 2, bottom: 4),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [

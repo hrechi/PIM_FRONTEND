@@ -98,35 +98,11 @@ class _CatalogueSettingsSheetState extends State<CatalogueSettingsSheet> {
                   ),
                   const SizedBox(height: 24),
                   _buildSection(
-                    'Layout & Design',
-                    [
-                      _buildSwitchTile(
-                        'Two Column Layout',
-                        'Display animals in a two-column grid',
-                        _settings.twoColumnLayout,
-                        (value) => _updateSettings(twoColumnLayout: value),
-                      ),
-                      _buildSwitchTile(
-                        'Show QR Codes',
-                        'Include QR codes linking to detailed animal info',
-                        _settings.showQrCodes,
-                        (value) => _updateSettings(showQrCodes: value),
-                      ),
-                      _buildSwitchTile(
-                        'Include Contact Info',
-                        'Add farm contact information to the catalogue',
-                        _settings.showContactInfo,
-                        (value) => _updateSettings(showContactInfo: value),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  _buildSection(
-                    'Advanced Options',
+                    'Display Options',
                     [
                       _buildSwitchTile(
                         'Show Prices',
-                        'Display pricing information (if available)',
+                        'Display pricing information for each animal',
                         _settings.showPrices,
                         (value) => _updateSettings(showPrices: value),
                       ),
@@ -138,7 +114,7 @@ class _CatalogueSettingsSheetState extends State<CatalogueSettingsSheet> {
                       ),
                       _buildSwitchTile(
                         'Compact Mode',
-                        'Use smaller text and tighter spacing',
+                        'Use smaller photos and tighter spacing',
                         _settings.compactMode,
                         (value) => _updateSettings(compactMode: value),
                       ),

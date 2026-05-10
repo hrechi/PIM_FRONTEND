@@ -39,7 +39,7 @@ class _VaccineHistoryScreenState extends State<VaccineHistoryScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Health Record', style: TextStyle(color: Color(0xFF1E293B), fontSize: 16, fontWeight: FontWeight.w800)),
+            const Text('Vaccine History', style: TextStyle(color: Color(0xFF1E293B), fontSize: 16, fontWeight: FontWeight.w800)),
             Text(widget.animalName, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
           ],
         ),

@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../../providers/vaccine_provider.dart';
 import '../../models/vaccine_models.dart';
 import '../../utils/constants.dart';
+import '../../services/animal_service.dart';
+import '../../models/animal.dart';
 
 class VaccineCalendarScreen extends StatefulWidget {
   const VaccineCalendarScreen({super.key});
@@ -58,12 +60,25 @@ class _VaccineCalendarScreenState extends State<VaccineCalendarScreen> {
   void _onMonthChanged(int delta) {
     setState(() {
       _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + delta);
-      // Auto-select the same day in the new month if possible, else the 1st
       int day = _selectedDay.day;
       final lastDayOfNewMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0).day;
       if (day > lastDayOfNewMonth) day = lastDayOfNewMonth;
       _selectedDay = DateTime(_focusedMonth.year, _focusedMonth.month, day);
     });
+  }
+
+  void _showAddScheduleSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _AddScheduleSheet(
+        preselectedDate: _selectedDay,
+        onCreated: () {
+          context.read<VaccineProvider>().loadGlobalSchedules();
+        },
+      ),
+    );
   }
 
   @override
@@ -81,7 +96,7 @@ class _VaccineCalendarScreenState extends State<VaccineCalendarScreen> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.mistBlue,
         elevation: 6,
-        onPressed: () {},
+        onPressed: () => _showAddScheduleSheet(),
         child: const Icon(Icons.add_rounded, color: Colors.white, size: 30),
       ),
       body: SafeArea(
@@ -554,6 +569,353 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
       child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: fg)),
+    );
+  }
+}
+
+// ── Add Schedule Sheet ────────────────────────────────────────────────────────
+
+class _AddScheduleSheet extends StatefulWidget {
+  final DateTime preselectedDate;
+  final VoidCallback onCreated;
+
+  const _AddScheduleSheet({
+    required this.preselectedDate,
+    required this.onCreated,
+  });
+
+  @override
+  State<_AddScheduleSheet> createState() => _AddScheduleSheetState();
+}
+
+class _AddScheduleSheetState extends State<_AddScheduleSheet> {
+  final AnimalService _animalService = AnimalService();
+
+  List<Animal> _animals = [];
+  List<Map<String, String>> _vaccines = [];
+  bool _loadingData = true;
+
+  String? _selectedAnimalId;
+  String? _selectedVaccineCode;
+  late DateTime _scheduledDate;
+  bool _isMandatory = false;
+  bool _isRecurring = false;
+  int _recurrenceDays = 365;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduledDate = widget.preselectedDate;
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final results = await Future.wait([
+        _animalService.getAnimals(),
+        context.read<VaccineProvider>().loadVaccines(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _animals = results[0] as List<Animal>;
+        _vaccines = results[1] as List<Map<String, String>>;
+        _loadingData = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingData = false);
+    }
+  }
+
+  Future<void> _save() async {
+    if (_selectedAnimalId == null || _selectedVaccineCode == null) return;
+    setState(() => _saving = true);
+
+    final ok = await context.read<VaccineProvider>().createSchedule(
+      animalId: _selectedAnimalId!,
+      vaccineCode: _selectedVaccineCode!,
+      scheduledDate: _scheduledDate,
+      isMandatory: _isMandatory,
+      isRecurring: _isRecurring,
+      recurrenceDays: _isRecurring ? _recurrenceDays : null,
+    );
+
+    setState(() => _saving = false);
+    if (mounted) {
+      Navigator.pop(context);
+      if (ok) widget.onCreated();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ok ? '✅ Planning créé' : '❌ Erreur'),
+        backgroundColor: ok ? AppColors.mistBlue : Colors.red,
+      ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fmt = DateFormat('dd MMM yyyy', 'fr_FR');
+
+    return Container(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40, height: 5,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Title
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.mistBlue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(Icons.event_available_rounded, color: AppColors.mistBlue, size: 22),
+                ),
+                const SizedBox(width: 12),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Planifier un vaccin',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF141E15))),
+                    Text('Créer un planning manuellement',
+                        style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            if (_loadingData)
+              const Center(child: CircularProgressIndicator(color: AppColors.mistBlue))
+            else ...[
+              // Animal picker
+              const Text('ANIMAL', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF94A3B8), letterSpacing: 1)),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.pets_rounded, color: AppColors.mistBlue, size: 20),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.mistBlue, width: 2)),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                ),
+                hint: const Text('Sélectionner un animal'),
+                items: _animals.map((a) => DropdownMenuItem(
+                  value: a.id,
+                  child: Text(a.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                )).toList(),
+                onChanged: (v) => setState(() => _selectedAnimalId = v),
+                dropdownColor: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              const SizedBox(height: 16),
+
+              // Vaccine picker
+              const Text('VACCIN', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF94A3B8), letterSpacing: 1)),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.vaccines_rounded, color: AppColors.mistBlue, size: 20),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.mistBlue, width: 2)),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                ),
+                hint: const Text('Sélectionner un vaccin'),
+                items: _vaccines.map((v) => DropdownMenuItem(
+                  value: v['code'],
+                  child: Text(v['nameFr'] ?? v['code'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
+                )).toList(),
+                onChanged: (v) => setState(() => _selectedVaccineCode = v),
+                dropdownColor: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              const SizedBox(height: 16),
+
+              // Date picker
+              const Text('DATE PRÉVUE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF94A3B8), letterSpacing: 1)),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _scheduledDate,
+                    firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                    lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
+                    builder: (ctx, child) => Theme(
+                      data: Theme.of(ctx).copyWith(
+                        colorScheme: const ColorScheme.light(primary: AppColors.mistBlue),
+                      ),
+                      child: child!,
+                    ),
+                  );
+                  if (picked != null) setState(() => _scheduledDate = picked);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today_rounded, color: AppColors.mistBlue, size: 18),
+                      const SizedBox(width: 12),
+                      Text(
+                        fmt.format(_scheduledDate),
+                        style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Options
+              Row(
+                children: [
+                  Expanded(
+                    child: _OptionToggle(
+                      label: 'Obligatoire',
+                      value: _isMandatory,
+                      onChanged: (v) => setState(() => _isMandatory = v),
+                      icon: Icons.priority_high_rounded,
+                      activeColor: const Color(0xFFDC2626),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _OptionToggle(
+                      label: 'Récurrent',
+                      value: _isRecurring,
+                      onChanged: (v) => setState(() => _isRecurring = v),
+                      icon: Icons.repeat_rounded,
+                      activeColor: AppColors.mistBlue,
+                    ),
+                  ),
+                ],
+              ),
+
+              if (_isRecurring) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Text('Tous les', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 80,
+                      child: TextFormField(
+                        initialValue: '$_recurrenceDays',
+                        keyboardType: TextInputType.number,
+                        onChanged: (v) => _recurrenceDays = int.tryParse(v) ?? 365,
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.mistBlue)),
+                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text('jours', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ],
+
+              const SizedBox(height: 28),
+
+              // Save button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.mistBlue,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  onPressed: (_saving || _selectedAnimalId == null || _selectedVaccineCode == null)
+                      ? null
+                      : _save,
+                  child: _saving
+                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                      : const Text('Créer le planning', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OptionToggle extends StatelessWidget {
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final IconData icon;
+  final Color activeColor;
+
+  const _OptionToggle({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    required this.icon,
+    required this.activeColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => onChanged(!value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: value ? activeColor.withValues(alpha: 0.1) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: value ? activeColor : const Color(0xFFE2E8F0),
+            width: value ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: value ? activeColor : const Color(0xFF94A3B8)),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: value ? activeColor : const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

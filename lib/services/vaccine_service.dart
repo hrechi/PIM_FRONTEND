@@ -97,6 +97,25 @@ class VaccineService {
     return VaccineSchedule.fromJson(data);
   }
 
+  Future<VaccineSchedule> createScheduleManual({
+    required String animalId,
+    required String vaccineCode,
+    required DateTime scheduledDate,
+    bool isMandatory = false,
+    bool isRecurring = false,
+    int? recurrenceDays,
+  }) async {
+    final data = await ApiService.post('/vaccine-schedules', {
+      'animalId': animalId,
+      'vaccineCode': vaccineCode,
+      'scheduledDate': scheduledDate.toIso8601String(),
+      'isMandatory': isMandatory,
+      'isRecurring': isRecurring,
+      if (recurrenceDays != null) 'recurrenceDays': recurrenceDays,
+    }, withAuth: true);
+    return VaccineSchedule.fromJson(data);
+  }
+
   Future<VaccineRecord> markDone(String scheduleId, {
     required String administeredBy,
     required double doseGiven,
