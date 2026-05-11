@@ -1003,12 +1003,22 @@ class _HomeScreenState extends State<HomeScreen>
                             weatherProvider.selectedFieldId == field.id;
                         return GestureDetector(
                           onTap: () async {
-                            await weatherProvider.selectField(field.id);
+                            try {
+                              await weatherProvider.selectField(field.id);
+                            } catch (e) {
+                              debugPrint('Error selecting field: $e');
+                            }
                             if (!mounted) return;
-                            setState(() => _selectedFieldName = field.name);
                             Navigator.pop(context);
-                            _fetchAnimalsForField(field.id);
-                            _fetchSoilAndCropData();
+                            // Use addPostFrameCallback so the home screen is
+                            // fully visible before we trigger state updates.
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (!mounted) return;
+                              setState(() => _selectedFieldName = field.name);
+                              _fetchAnimalsForField(field.id);
+                              _fetchSoilAndCropData();
+                              _syncWeatherWithAdviceField();
+                            });
                           },
                           child: Container(
                             margin: const EdgeInsets.symmetric(

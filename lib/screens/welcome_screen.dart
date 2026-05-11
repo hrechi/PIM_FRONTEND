@@ -68,7 +68,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   void _handleGetStarted() async {
     await _markWelcomeAsViewed();
     if (mounted) {
-      Navigator.of(context).pushReplacementNamed('/owner_dashboard');
+      Navigator.of(context).pushReplacementNamed('/login');
     }
   }
 

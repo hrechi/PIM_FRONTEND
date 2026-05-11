@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/notification_provider.dart';
 import '../services/api_service.dart';
 import '../theme/color_palette.dart';
 import '../theme/text_styles.dart';
@@ -16,6 +17,7 @@ import '../screens/farmer_home_screen_v2.dart';
 import '../screens/worker_home_improved.dart';
 import '../screens/profile_screen.dart';
 import '../screens/signin_screen.dart';
+import '../screens/notification_center_screen.dart';
 
 // Farm
 import '../screens/parcel_list_screen.dart';
@@ -340,6 +342,52 @@ class _AppDrawerState extends State<AppDrawer>
                     ).copyWith(fontWeight: FontWeight.w700),
                   ),
                   const Spacer(),
+                  // ── Notification bell with unread badge ──
+                  Consumer<NotificationProvider>(
+                    builder: (ctx, notifProvider, _) {
+                      final unread = notifProvider.unreadCount;
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          IconButton(
+                            splashRadius: 18,
+                            onPressed: () {
+                              Navigator.of(ctx).maybePop();
+                              Navigator.of(ctx).push(MaterialPageRoute(
+                                builder: (_) => const NotificationCenterScreen(),
+                              ));
+                            },
+                            icon: const Icon(
+                              Icons.notifications_outlined,
+                              color: AppColorPalette.white,
+                            ),
+                          ),
+                          if (unread > 0)
+                            Positioned(
+                              top: 6,
+                              right: 6,
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFEF4444),
+                                  shape: BoxShape.circle,
+                                ),
+                                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                                child: Text(
+                                  unread > 99 ? '99+' : '$unread',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
                   IconButton(
                     splashRadius: 18,
                     onPressed: () => Navigator.of(context).maybePop(),

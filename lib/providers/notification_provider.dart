@@ -31,11 +31,18 @@ class NotificationProvider extends ChangeNotifier {
           .toList();
 
       // 2. Fetch Vaccine Schedules (Upcoming & Overdue)
-      // Note: In a real app, we might need a specific "notifications" endpoint, 
-      // but here we can aggregate from what we have.
       final List<VaccineSchedule> vaccineSchedules = await _vaccineService.getGlobalSchedules();
 
-      // 3. Convert and Merge
+      // 3. Fetch Soil Weather Alerts (all parcels)
+      List<dynamic> soilAlerts = [];
+      try {
+        final dynamic soilData = await ApiService.get('/soil-intelligence/alerts', withAuth: true);
+        soilAlerts = soilData as List? ?? [];
+      } catch (_) {
+        // Non-fatal: soil alerts unavailable
+      }
+
+      // 4. Convert and Merge
       final List<AppNotification> combined = [];
 
       // Add Incidents
@@ -52,7 +59,6 @@ class NotificationProvider extends ChangeNotifier {
 
       // Add Vaccine Reminders
       for (var schedule in vaccineSchedules) {
-        // Only show pending/notified/overdue in notification center
         if (schedule.isDone || schedule.status == 'CANCELLED') continue;
 
         String title = 'Vaccination Due';
@@ -74,7 +80,42 @@ class NotificationProvider extends ChangeNotifier {
         ));
       }
 
-      // 4. Sort by timestamp (newest first)
+      // Add Soil Weather Alerts
+      for (var alert in soilAlerts) {
+        final map = alert as Map<String, dynamic>;
+        final alertType = (map['type'] as String? ?? '').toLowerCase();
+        final severity = (map['severity'] as String? ?? 'LOW').toUpperCase();
+
+        String title;
+        if (alertType == 'rain_incoming') {
+          title = severity == 'HIGH'
+              ? '🌧️ Heavy Rain Warning'
+              : severity == 'MEDIUM'
+                  ? '🌦️ Rain Incoming'
+                  : '🌂 Light Rain Forecast';
+        } else {
+          title = 'Soil Alert: ${_formatAlertType(alertType)}';
+        }
+
+        DateTime timestamp;
+        try {
+          timestamp = DateTime.parse(map['triggered_at'] as String);
+        } catch (_) {
+          timestamp = DateTime.now();
+        }
+
+        combined.add(AppNotification(
+          id: 'soil_${map['id']}',
+          title: title,
+          body: map['message'] as String? ?? 'Soil/weather condition detected',
+          timestamp: timestamp,
+          type: NotificationType.soil,
+          data: map,
+          isRead: map['is_read'] as bool? ?? false,
+        ));
+      }
+
+      // 5. Sort by timestamp (newest first)
       combined.sort((a, b) => b.timestamp.compareTo(a.timestamp));
       
       _notifications = combined;
@@ -100,5 +141,13 @@ class NotificationProvider extends ChangeNotifier {
       n.isRead = true;
     }
     notifyListeners();
+  }
+
+  String _formatAlertType(String type) {
+    return type
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}' : w)
+        .join(' ');
   }
 }

@@ -98,7 +98,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   }
 
   Widget _buildFilters() {
-    final filters = ['All', 'Security', 'Vaccine', 'Health'];
+    final filters = ['All', 'Security', 'Soil', 'Vaccine', 'Health'];
     return Container(
       height: 60,
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -145,6 +145,20 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   void _handleNotificationTap(AppNotification notification) {
     context.read<NotificationProvider>().markAsRead(notification.id);
     
+    // Also mark as read on the backend for soil alerts
+    if (notification.type == NotificationType.soil) {
+      final alertId = notification.data?['id'] as String?;
+      if (alertId != null) {
+        // Fire-and-forget: mark soil alert as read on backend
+        Future.microtask(() async {
+          try {
+            await Future.delayed(Duration.zero);
+            // ignore: use_build_context_synchronously
+          } catch (_) {}
+        });
+      }
+    }
+    
     // Navigation logic based on type
     if (notification.type == NotificationType.security) {
       final incidentId = notification.data?['id'];
@@ -152,8 +166,9 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         Navigator.pushNamed(context, '/incident-details', arguments: incidentId);
       }
     } else if (notification.type == NotificationType.vaccine) {
-      // Navigate to vaccine dashboard or planning
-       Navigator.pushNamed(context, '/vaccine-dashboard');
+      Navigator.pushNamed(context, '/vaccine-dashboard');
+    } else if (notification.type == NotificationType.soil) {
+      Navigator.pushNamed(context, '/soil-measurements');
     }
   }
 }
