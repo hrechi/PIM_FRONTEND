@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/catalogue_provider.dart';
 import '../../models/catalogue_models.dart';
-
+import '../../widgets/app_drawer.dart';
 import '../../l10n/l10n_extensions.dart';
 
 import 'catalogue_wizard_screen.dart';
@@ -22,6 +22,8 @@ class CatalogueListScreen extends StatefulWidget {
 }
 
 class _CatalogueListScreenState extends State<CatalogueListScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   void initState() {
     super.initState();
@@ -33,7 +35,9 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: _kBg,
+      drawer: const AppDrawer(),
       body: SafeArea(
         child: Column(
           children: [
@@ -82,9 +86,13 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
   Widget _buildAppBar() {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+      padding: const EdgeInsets.fromLTRB(8, 16, 16, 16),
       child: Row(
         children: [
+          IconButton(
+            icon: const Icon(Icons.menu_rounded, color: Color(0xFF64748B), size: 24),
+            onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          ),
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(color: _kGreenLight, borderRadius: BorderRadius.circular(12)),

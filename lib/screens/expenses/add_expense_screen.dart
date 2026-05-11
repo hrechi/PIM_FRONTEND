@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../models/animal.dart';
 import '../../models/field_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/animal_service.dart';
 import '../../services/expense_service.dart';
 import '../../services/field_service.dart';
+import '../../services/api_service.dart';
 import '../../utils/constants.dart';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,6 +33,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   File? _receiptImage;
   bool _isLoading = false;
   bool _isLoadingAnimals = false;
+  bool _isUploadingReceipt = false;
+  String? _receiptUrl;
   String? _animalsError;
   List<Animal> _animals = [];
   String _currencySymbol = '\$'; // Default to USD
@@ -106,6 +110,79 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     super.dispose();
   }
 
+  Future<void> _pickReceipt() async {
+    final picker = ImagePicker();
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Symbols.camera_alt, color: AppColors.mistBlue),
+              title: const Text('Prendre une photo',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Symbols.photo_library, color: AppColors.mistBlue),
+              title: const Text('Choisir depuis la galerie',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    final picked = await picker.pickImage(
+      source: source,
+      imageQuality: 80,
+      maxWidth: 1200,
+    );
+    if (picked == null) return;
+
+    setState(() {
+      _receiptImage = File(picked.path);
+      _isUploadingReceipt = true;
+    });
+
+    try {
+      final result = await ApiService.uploadFile(
+        '/expenses/upload-receipt',
+        picked.path,
+        fieldName: 'file',
+      );
+      // Store the returned URL for submission
+      _receiptUrl = result['receiptUrl'] as String?;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erreur upload: $e"), backgroundColor: Colors.red),
+        );
+        setState(() => _receiptImage = null);
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingReceipt = false);
+    }
+  }
+
   Future<void> _submit() async {
     if (_amountController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -124,7 +201,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         'date': _selectedDate.toIso8601String(),
         'animalId': _selectedAnimalId,
         'notes': _notesController.text,
-        'receiptUrl': null,
+        'receiptUrl': _receiptUrl,
       };
 
       await ExpenseService.createExpense(data);
@@ -482,31 +559,75 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               Row(
                 children: [
                   GestureDetector(
-                    onTap: () {},
+                    onTap: _isUploadingReceipt ? null : _pickReceipt,
                     child: Container(
-                      width: 48,
-                      height: 48,
+                      width: 64,
+                      height: 64,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: _receiptImage != null
+                            ? Colors.transparent
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
-                      child: const Icon(
-                        Symbols.camera_alt,
-                        color: Color(0xFF64748B),
-                        size: 20,
-                      ),
+                      child: _isUploadingReceipt
+                          ? const Padding(
+                              padding: EdgeInsets.all(20),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.mistBlue,
+                              ),
+                            )
+                          : _receiptImage != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(11),
+                                  child: Image.file(
+                                    _receiptImage!,
+                                    fit: BoxFit.cover,
+                                    width: 64,
+                                    height: 64,
+                                  ),
+                                )
+                              : const Icon(
+                                  Symbols.camera_alt,
+                                  color: Color(0xFF64748B),
+                                  size: 20,
+                                ),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Ajouter une photo du reçu',
-                      style: TextStyle(
-                        color: Color(0xFF64748B),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _receiptImage != null
+                              ? 'Reçu ajouté ✓'
+                              : 'Ajouter une photo du reçu',
+                          style: TextStyle(
+                            color: _receiptImage != null
+                                ? AppColors.mistBlue
+                                : const Color(0xFF64748B),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (_receiptImage != null)
+                          GestureDetector(
+                            onTap: () => setState(() {
+                              _receiptImage = null;
+                              _receiptUrl = null;
+                            }),
+                            child: const Text(
+                              'Supprimer',
+                              style: TextStyle(
+                                color: Color(0xFFEF4444),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ],

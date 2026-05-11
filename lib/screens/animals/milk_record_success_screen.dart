@@ -21,13 +21,13 @@ class MilkRecordSuccessScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // Top Nav
+            // ── Top Nav ──────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                    Row(
+                  Row(
                     children: const [
                       Icon(Symbols.agriculture, color: AppColors.mistBlue, size: 32),
                       SizedBox(width: 8),
@@ -42,20 +42,23 @@ class MilkRecordSuccessScreen extends StatelessWidget {
                     ],
                   ),
                   IconButton(
-                    onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+                    onPressed: () =>
+                        Navigator.of(context).popUntil((route) => route.isFirst),
                     icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
                   ),
                 ],
               ),
             ),
-            
+
+            // ── Scrollable body ───────────────────────────────────
             Expanded(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Success Animation/Icon
+                    const SizedBox(height: 32),
+
+                    // Success icon
                     Stack(
                       alignment: Alignment.center,
                       children: [
@@ -70,14 +73,14 @@ class MilkRecordSuccessScreen extends StatelessWidget {
                         Container(
                           width: 100,
                           height: 100,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: AppColors.mistBlue,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Color(0x4D2F7F34), // Keeping this shadow color or maybe adjusting? User asked for "le couleur vert", let's keep shadows as is for now unless they look bad.
+                                color: AppColors.mistBlue.withValues(alpha: 0.3),
                                 blurRadius: 20,
-                                offset: Offset(0, 10),
+                                offset: const Offset(0, 10),
                               ),
                             ],
                           ),
@@ -89,9 +92,9 @@ class MilkRecordSuccessScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 40),
-                    
-                    // Success Message
+                    const SizedBox(height: 32),
+
+                    // Title
                     Text(
                       isUpdate ? 'Updated!' : 'All Set!',
                       style: const TextStyle(
@@ -102,105 +105,116 @@ class MilkRecordSuccessScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      isUpdate ? 'Record updated successfully' : 'Record saved successfully',
+                      isUpdate
+                          ? 'Record updated successfully'
+                          : 'Record saved successfully',
                       style: const TextStyle(
                         fontSize: 16,
                         color: Color(0xFF64748B),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 48),
-                    
-                    // Summary Card
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: AppColors.mistBlue.withValues(alpha: 0.1)),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.02),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
+                    const SizedBox(height: 40),
+
+                    // ── Summary Card ──────────────────────────────
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: AppColors.mistBlue.withValues(alpha: 0.1),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
                           ),
-                          child: Column(
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          // Animal info row
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'ANIMAL RECORD',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w900,
-                                            color: AppColors.mistBlue,
-                                            letterSpacing: 1.2,
-                                          ),
-                                        ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${record.animal?.name ?? "Bessie"} #${record.animal?.nodeId ?? "000"}',
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w800,
-                                        color: Color(0xFF1E293B),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'ANIMAL RECORD',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w900,
+                                        color: AppColors.mistBlue,
+                                        letterSpacing: 1.2,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Daily Milk Record • ${record.totalL} Liters',
+                                      '${record.animal?.name ?? "Bessie"} #${record.animal?.nodeId ?? "000"}',
                                       style: const TextStyle(
-                                        fontSize: 14,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFF1E293B),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Daily Milk Record • ${record.totalL} L',
+                                      style: const TextStyle(
+                                        fontSize: 13,
                                         color: Color(0xFF64748B),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              if (record.animal?.profileImage != null)
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.network(
-                                    record.animal!.profileImage!,
-                                    width: 64,
-                                    height: 64,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              else
-                                Container(
-                                  width: 64,
-                                  height: 64,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF1F5F9),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(Symbols.pets, color: AppColors.mistBlue, size: 32),
-                                ),
+                              const SizedBox(width: 12),
+                              // Animal image
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: record.animal?.profileImage != null
+                                    ? Image.network(
+                                        record.animal!.profileImage!,
+                                        width: 64,
+                                        height: 64,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) =>
+                                            _animalPlaceholder(),
+                                      )
+                                    : _animalPlaceholder(),
+                              ),
                             ],
                           ),
-                          const SizedBox(height: 20),
+
+                          const SizedBox(height: 16),
+
+                          // Divider + timestamp row
                           Container(
                             padding: const EdgeInsets.only(top: 16),
                             decoration: const BoxDecoration(
-                              border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+                              border: Border(
+                                top: BorderSide(color: Color(0xFFF1F5F9)),
+                              ),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(Symbols.schedule, size: 16, color: Color(0xFF94A3B8)),
+                                    const Icon(
+                                      Symbols.schedule,
+                                      size: 16,
+                                      color: Color(0xFF94A3B8),
+                                    ),
                                     const SizedBox(width: 6),
                                     Text(
-                                      DateFormat('MMM d, h:mm a').format(DateTime.now()),
+                                      DateFormat('MMM d, h:mm a')
+                                          .format(DateTime.now()),
                                       style: const TextStyle(
                                         fontSize: 12,
                                         color: Color(0xFF64748B),
@@ -223,60 +237,78 @@ class MilkRecordSuccessScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    
-                    const Spacer(),
-                    
-                    // Buttons
-                    Column(
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          height: 64,
-                          child: ElevatedButton.icon(
-                            onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
-                            icon: const Icon(Icons.done_all_rounded, color: Colors.white),
-                            label: const Text(
-                              'Done',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.mistBlue,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                              elevation: 0,
-                            ),
+
+                    const SizedBox(height: 40),
+
+                    // ── Buttons ───────────────────────────────────
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: () => Navigator.of(context)
+                            .popUntil((route) => route.isFirst),
+                        icon: const Icon(Icons.done_all_rounded,
+                            color: Colors.white),
+                        label: const Text(
+                          'Done',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 64,
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              Navigator.pop(context); // Go back to the production list/dialog
-                            },
-                            icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.mistBlue),
-                            label: const Text(
-                              'Add Another Record',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.mistBlue),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Color(0x332F7F34), width: 2),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                              backgroundColor: Colors.white,
-                            ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.mistBlue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
+                          elevation: 0,
                         ),
-                      ],
+                      ),
                     ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: OutlinedButton.icon(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(
+                          Icons.add_circle_outline_rounded,
+                          color: AppColors.mistBlue,
+                        ),
+                        label: const Text(
+                          'Add Another Record',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.mistBlue,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                            color: AppColors.mistBlue.withValues(alpha: 0.3),
+                            width: 2,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          backgroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+
                     const SizedBox(height: 24),
-                    
+
                     // Footer
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    Wrap(
+                      alignment: WrapAlignment.center,
                       children: [
                         const Text(
                           'Need to make a change? Go to ',
-                          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                          style: TextStyle(
+                            color: Color(0xFF94A3B8),
+                            fontSize: 13,
+                          ),
                         ),
                         GestureDetector(
                           onTap: () => Navigator.pop(context),
@@ -292,9 +324,10 @@ class MilkRecordSuccessScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    
-                    // Home Indicator
+
+                    const SizedBox(height: 24),
+
+                    // Home indicator
                     Container(
                       width: 40,
                       height: 4,
@@ -303,7 +336,7 @@ class MilkRecordSuccessScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
@@ -311,6 +344,18 @@ class MilkRecordSuccessScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _animalPlaceholder() {
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Icon(Symbols.pets, color: AppColors.mistBlue, size: 32),
     );
   }
 }
