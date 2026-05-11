@@ -22,6 +22,7 @@ import '../../services/medical_event_service.dart';
 import 'diagnosis_detail_screen.dart';
 import '../animal_health/sensor_graph_screen.dart';
 import 'weight_tracking_screen.dart';
+import '../../widgets/animal_qr_dialog.dart'; // QR code de l'animal
 
 const _kGreen = Color(0xFF309448);
 const _kDark = Color(0xFF0F172A);
@@ -309,6 +310,15 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
         icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
         onPressed: () => Navigator.pop(context),
       ),
+      // ── Bouton QR code dans l'AppBar ──────────────────────────────────
+      // Permet d'afficher le QR de l'animal à tout moment depuis sa fiche
+      actions: [
+        IconButton(
+          tooltip: 'QR Code',
+          icon: const Icon(Icons.qr_code_2_rounded, color: Colors.white, size: 26),
+          onPressed: () => AnimalQrDialog.show(context, _animal),
+        ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.parallax,
         background: Stack(
@@ -382,10 +392,9 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
     return Container(
       color: const Color(0xFF1B5E20),
       child: Center(
-        child: Icon(
-          AnimalUtils.getAnimalIcon(_animal.animalType),
-          size: 100,
-          color: Colors.white.withAlpha(60),
+        child: Text(
+          AnimalUtils.getAnimalEmoji(_animal.animalType),
+          style: TextStyle(fontSize: 80, color: Colors.white.withAlpha(180)),
         ),
       ),
     );
@@ -1966,13 +1975,24 @@ class _AnimalDetailsScreenState extends State<AnimalDetailsScreen> {
             border: Border.all(color: border),
             boxShadow: [BoxShadow(color: bg.withAlpha(80), blurRadius: 8, offset: const Offset(0, 4))],
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (icon != null) Icon(icon, color: color, size: 20),
-              if (icon != null && label != null) const SizedBox(width: 6),
-              if (label != null) Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 15)),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) Icon(icon, color: color, size: 18),
+                if (icon != null && label != null) const SizedBox(width: 5),
+                if (label != null)
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

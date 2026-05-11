@@ -21,6 +21,7 @@ import '../models/parcel.dart';
 import '../providers/parcel_provider.dart';
 import '../providers/weather_provider.dart';
 import '../providers/notification_provider.dart';
+import '../providers/animal_health_provider.dart';
 import '../services/animal_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/soil_repository.dart';
@@ -33,6 +34,7 @@ import 'animals/animal_list_screen.dart';
 import 'animals/milk_production_screen.dart';
 import 'finance/finance_dashboard_screen.dart';
 import 'vaccines/vaccine_dashboard_screen.dart';
+import 'animal_health/health_alerts_screen.dart';
 import 'profile_screen.dart';
 import 'fields_management_screen.dart';
 import 'mission_list_screen.dart';
@@ -660,7 +662,8 @@ class _HomeScreenState extends State<HomeScreen>
       else ...[
         _buildAnimalStatsGrid(),
         _buildMilkProductionBanner(),
-        _buildLiveHealthMetrics(),
+        // _buildLiveHealthMetrics() supprimé — redondant avec _buildAnimalStatsGrid()
+        // et affiche des données vides sans capteurs IoT (bodyTemp/heartRate non renseignés)
       ],
       const RatingsFlow(),
     ];
@@ -2053,7 +2056,15 @@ class _HomeScreenState extends State<HomeScreen>
                   'Needing attention',
                   Symbols.warning,
                   const Color(0xFFEF4444),
-                  onTap: () {},
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ChangeNotifierProvider(
+                        create: (_) => AnimalHealthProvider(),
+                        child: const HealthAlertsScreen(),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],

@@ -262,8 +262,7 @@ class AnimalCatalogueCard extends StatelessWidget {
       _row('Vitality', '${animal.vitalityScore}/100'),
       if (animal.bodyTemp != null) _row('Temperature', '${animal.bodyTemp!.toStringAsFixed(1)} °C'),
       if (animal.lastVetCheck != null) _row('Last vet check', _date(animal.lastVetCheck!)),
-      _row('Vaccination', animal.vaccination ? '✓ Up to date' : '✗ Not up to date',
-          valueColor: animal.vaccination ? const Color(0xFF2E7D32) : const Color(0xFFC62828)),
+      // Vaccination status is shown in the dedicated Vaccinations section — not duplicated here
     ]);
   }
 
@@ -280,25 +279,62 @@ class AnimalCatalogueCard extends StatelessWidget {
 
   Widget _buildVaccinations() {
     final records = animal.vaccineRecords;
-    if (records == null || records.isEmpty) {
-      return _section('Vaccinations', Icons.vaccines, const Color(0xFF388E3C), [
-        const Text('No vaccination records',
-            style: TextStyle(fontSize: 12, color: Color(0xFF9E9E9E), fontStyle: FontStyle.italic)),
-      ]);
+
+    // Cas 1 : données détaillées disponibles (chargées depuis l'API avec include)
+    if (records != null && records.isNotEmpty) {
+      return _section(
+        'Vaccinations (${records.length})',
+        Icons.vaccines,
+        const Color(0xFF388E3C),
+        records.take(3).map((v) {
+          // Afficher le nom du vaccin — jamais l'ID
+          final vaccineName = v.vaccine?.nameEn?.isNotEmpty == true
+              ? v.vaccine!.nameEn!
+              : (v.vaccine?.nameFr?.isNotEmpty == true
+                  ? v.vaccine!.nameFr!
+                  : (v.vaccine?.code?.isNotEmpty == true
+                      ? v.vaccine!.code!
+                      : 'Vaccine'));
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(children: [
+              const Icon(Icons.check_circle, size: 13, color: Color(0xFF2E7D32)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  vaccineName,
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF212121)),
+                ),
+              ),
+              Text(
+                _date(v.administeredAt),
+                style: const TextStyle(fontSize: 11, color: Color(0xFF9E9E9E)),
+              ),
+            ]),
+          );
+        }).toList(),
+      );
     }
-    return _section('Vaccinations (${records.length})', Icons.vaccines, const Color(0xFF388E3C),
-      records.take(3).map((v) => Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: Row(children: [
-          const Icon(Icons.check_circle, size: 13, color: Color(0xFF2E7D32)),
-          const SizedBox(width: 6),
-          Expanded(child: Text(v.vaccine?.nameEn ?? v.vaccine?.code ?? 'Vaccine',
-              style: const TextStyle(fontSize: 12, color: Color(0xFF212121)))),
-          Text(_date(v.administeredAt),
-              style: const TextStyle(fontSize: 11, color: Color(0xFF9E9E9E))),
-        ]),
-      )).toList(),
-    );
+
+    // Cas 2 : pas de détails — fallback sur le booléen vaccination
+    return _section('Vaccinations', Icons.vaccines, const Color(0xFF388E3C), [
+      Row(children: [
+        Icon(
+          animal.vaccination ? Icons.check_circle : Icons.cancel,
+          size: 14,
+          color: animal.vaccination ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          animal.vaccination ? 'Up to date' : 'Not vaccinated',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: animal.vaccination ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+          ),
+        ),
+      ]),
+    ]);
   }
 
   // ── Production ────────────────────────────────────────────────────────────

@@ -116,6 +116,7 @@
   "salesCatalogues": "كتالوجات البيع",
   "newCatalogue": "كتالوج جديد",
   "createCatalogue": "إنشاء كتالوج",
+  "editCatalogue": "تعديل الكتالوج",
   "publishCatalogue": "نشر الكتالوج",
   "deleteCatalogue": "حذف الكتالوج",
   "noCataloguesYet": "لا توجد كتالوجات بعد",

@@ -21,6 +21,10 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
   bool _isLoading = true;
   String? _error;
 
+  // Cache de tous les animaux vus (toutes les pages de filtre confondues)
+  // Permet de retrouver l'objet Animal complet même après un changement de filtre
+  final Map<String, Animal> _allSeenAnimals = {};
+
   // Filter options
   String? _species;
   String? _sex;
@@ -40,6 +44,10 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
   void initState() {
     super.initState();
     _selectedIds = widget.selectedAnimals.map((a) => a.id).toList();
+    // Pré-remplir le cache avec les animaux déjà sélectionnés
+    for (final a in widget.selectedAnimals) {
+      _allSeenAnimals[a.id] = a;
+    }
     _loadAnimals();
   }
 
@@ -72,6 +80,10 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
       );
 
       if (animals != null) {
+        // Ajouter tous les animaux retournés au cache global
+        for (final a in animals) {
+          _allSeenAnimals[a.id] = a;
+        }
         setState(() {
           _filteredAnimals = animals;
         });
@@ -443,8 +455,12 @@ class _AnimalSelectorScreenState extends State<AnimalSelectorScreen> {
   }
 
   void _confirmSelection() {
-    final selectedAnimals = _filteredAnimals
-        .where((animal) => _selectedIds.contains(animal.id))
+    // Construire la liste finale depuis le cache global (_allSeenAnimals)
+    // et non depuis _filteredAnimals (qui ne contient que le filtre actuel).
+    // Cela préserve les sélections faites avec des filtres précédents.
+    final selectedAnimals = _selectedIds
+        .map((id) => _allSeenAnimals[id])
+        .whereType<Animal>()
         .toList();
 
     Navigator.pop(context, selectedAnimals);

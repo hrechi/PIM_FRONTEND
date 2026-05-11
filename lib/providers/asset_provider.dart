@@ -518,7 +518,7 @@ class AssetProvider with ChangeNotifier {
 
     debugPrint('🔍 Scanning QR code: $qrData');
 
-    // First, try to find locally by serial number
+    // Essai 1 : recherche par numéro de série (cas normal)
     try {
       final response = await ApiService.get(
         '/assets/scan/$qrData',
@@ -542,8 +542,18 @@ class AssetProvider with ChangeNotifier {
         'aiMessage': response['aiMessage']?.toString() ?? '',
       };
     } catch (e) {
-      debugPrint('❌ Asset not found with serial: $qrData ($e)');
-      return null;
+      debugPrint('⚠️ Not found by serial, trying by ID: $qrData ($e)');
     }
+
+    // Essai 2 : fallback — le QR contient peut-être l'UUID de l'asset
+    try {
+      final localMatch = _assets.where((a) => a.id == qrData).toList();
+      if (localMatch.isNotEmpty) {
+        return {'asset': localMatch.first, 'aiMessage': ''};
+      }
+    } catch (_) {}
+
+    debugPrint('❌ Asset not found for QR value: $qrData');
+    return null;
   }
 }

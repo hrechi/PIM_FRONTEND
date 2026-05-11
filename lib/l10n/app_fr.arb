@@ -116,6 +116,7 @@
   "salesCatalogues": "Catalogues de vente",
   "newCatalogue": "Nouveau catalogue",
   "createCatalogue": "Créer un catalogue",
+  "editCatalogue": "Modifier le catalogue",
   "publishCatalogue": "Publier le catalogue",
   "deleteCatalogue": "Supprimer le catalogue",
   "noCataloguesYet": "Aucun catalogue pour l'instant",

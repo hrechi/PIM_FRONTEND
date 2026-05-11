@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/catalogue_provider.dart';
 import '../../models/catalogue_models.dart';
-
+import '../../widgets/app_drawer.dart';
 import '../../l10n/l10n_extensions.dart';
 
 import 'catalogue_wizard_screen.dart';
@@ -22,6 +22,8 @@ class CatalogueListScreen extends StatefulWidget {
 }
 
 class _CatalogueListScreenState extends State<CatalogueListScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   void initState() {
     super.initState();
@@ -33,7 +35,9 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: _kBg,
+      drawer: const AppDrawer(),
       body: SafeArea(
         child: Column(
           children: [
@@ -82,9 +86,13 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
   Widget _buildAppBar() {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+      padding: const EdgeInsets.fromLTRB(8, 16, 16, 16),
       child: Row(
         children: [
+          IconButton(
+            icon: const Icon(Icons.menu_rounded, color: Color(0xFF64748B), size: 24),
+            onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          ),
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(color: _kGreenLight, borderRadius: BorderRadius.circular(12)),
@@ -267,8 +275,11 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
                             () => _openPreview(context, catalogue)),
                         const SizedBox(width: 8),
                         _quickBtn(Icons.edit_outlined, context.l10n.edit, () {
-                          Navigator.push(context, MaterialPageRoute(
-                            builder: (_) => CatalogueWizardScreen(catalogue: catalogue)));
+                          Navigator.push<bool>(context, MaterialPageRoute(
+                            builder: (_) => CatalogueWizardScreen(catalogue: catalogue),
+                          )).then((_) {
+                            if (mounted) context.read<CatalogueProvider>().loadCatalogues();
+                          });
                         }),
                       ],
                     ),
@@ -358,8 +369,11 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
                 () { Navigator.pop(context); _openPreview(context, catalogue); }),
             _actionTile(Icons.edit_outlined, context.l10n.edit, const Color(0xFF757575), () {
               Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => CatalogueWizardScreen(catalogue: catalogue)));
+              Navigator.push<bool>(context, MaterialPageRoute(
+                  builder: (_) => CatalogueWizardScreen(catalogue: catalogue),
+              )).then((_) {
+                if (mounted) context.read<CatalogueProvider>().loadCatalogues();
+              });
             }),
             _actionTile(Icons.ios_share_outlined, context.l10n.exportShare, const Color(0xFF757575), () {
               Navigator.pop(context);
@@ -371,6 +385,14 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
               _actionTile(Icons.publish_outlined, context.l10n.publish, _kGreen, () {
                 Navigator.pop(context);
                 _publish(context, catalogue);
+              }),
+            ],
+            // Fix #5 — Permettre de repasser en brouillon depuis PUBLISHED ou CLOSED
+            if (['published', 'closed'].contains(catalogue.status.toLowerCase())) ...[
+              const Divider(height: 1),
+              _actionTile(Icons.unpublished_outlined, 'Repasser en brouillon', const Color(0xFF757575), () {
+                Navigator.pop(context);
+                context.read<CatalogueProvider>().updateCatalogue(catalogue.id, status: 'DRAFT');
               }),
             ],
             const Divider(height: 1),
@@ -402,7 +424,15 @@ class _CatalogueListScreenState extends State<CatalogueListScreen> {
   // ── Navigation helpers ────────────────────────────────────────────────────
 
   void _goToWizard(BuildContext context) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const CatalogueWizardScreen()));
+    Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const CatalogueWizardScreen()),
+    ).then((created) {
+      // Reload the list after wizard closes so animal counts are up to date
+      if (mounted) {
+        context.read<CatalogueProvider>().loadCatalogues();
+      }
+    });
   }
 
   Future<void> _openPreview(BuildContext context, SaleCatalogue catalogue) async {

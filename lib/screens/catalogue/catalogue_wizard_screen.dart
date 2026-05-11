@@ -75,7 +75,7 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.catalogue != null ? context.l10n.editAnimal : context.l10n.createCatalogue),
+        title: Text(widget.catalogue != null ? context.l10n.editCatalogue : context.l10n.createCatalogue),
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => _confirmExit(context),
@@ -310,19 +310,14 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
           Text(context.l10n.catalogueSettingsTitle, style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 16),
           _buildSettingsSection(context.l10n.sectionsToInclude, [
-            _buildSettingSwitch(context.l10n.animalPhotos, _settings.showPhotos, (v) => setState(() => _settings = _settings.copyWith(showPhotos: v))),
-            _buildSettingSwitch(context.l10n.animalDetailsSection, _settings.showDetails, (v) => setState(() => _settings = _settings.copyWith(showDetails: v))),
-            _buildSettingSwitch(context.l10n.healthRecords, _settings.showHealth, (v) => setState(() => _settings = _settings.copyWith(showHealth: v))),
-            _buildSettingSwitch(context.l10n.vaccinationHistory, _settings.showVaccinations, (v) => setState(() => _settings = _settings.copyWith(showVaccinations: v))),
-            _buildSettingSwitch(context.l10n.productionRecords, _settings.showProduction, (v) => setState(() => _settings = _settings.copyWith(showProduction: v))),
-            _buildSettingSwitch(context.l10n.geneticInformation, _settings.showGenetics, (v) => setState(() => _settings = _settings.copyWith(showGenetics: v))),
+            _buildSettingSwitch(context.l10n.animalPhotos,       _settings.showPhotos,      (v) => setState(() => _settings = _settings.copyWith(showPhotos: v))),
+            _buildSettingSwitch(context.l10n.animalDetailsSection, _settings.showDetails,   (v) => setState(() => _settings = _settings.copyWith(showDetails: v))),
+            _buildSettingSwitch(context.l10n.healthRecords,      _settings.showHealth,      (v) => setState(() => _settings = _settings.copyWith(showHealth: v))),
+            _buildSettingSwitch(context.l10n.vaccinationHistory, _settings.showVaccinations,(v) => setState(() => _settings = _settings.copyWith(showVaccinations: v))),
+            _buildSettingSwitch(context.l10n.productionRecords,  _settings.showProduction,  (v) => setState(() => _settings = _settings.copyWith(showProduction: v))),
+            _buildSettingSwitch(context.l10n.geneticInformation, _settings.showGenetics,    (v) => setState(() => _settings = _settings.copyWith(showGenetics: v))),
           ]),
-          const SizedBox(height: 24),
-          _buildSettingsSection(context.l10n.layoutOptions, [
-            _buildSettingSwitch(context.l10n.twoColumnLayout, _settings.twoColumnLayout, (v) => setState(() => _settings = _settings.copyWith(twoColumnLayout: v))),
-            _buildSettingSwitch(context.l10n.showQrCodes, _settings.showQrCodes, (v) => setState(() => _settings = _settings.copyWith(showQrCodes: v))),
-            _buildSettingSwitch(context.l10n.includeContactInfo, _settings.showContactInfo, (v) => setState(() => _settings = _settings.copyWith(showContactInfo: v))),
-          ]),
+          // Note: twoColumnLayout, showQrCodes, showContactInfo removed — not yet implemented in the renderer
         ],
       ),
     );
@@ -445,10 +440,15 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
     final provider = context.read<CatalogueProvider>();
     SaleCatalogue? result;
 
-    if (widget.catalogue != null) {
-      // Update existing catalogue metadata
+    // Determine if we are editing an existing catalogue OR updating one
+    // that was already created during this wizard session (via _savedCatalogueId).
+    // This prevents creating a duplicate when the user goes Back from the preview step.
+    final existingId = widget.catalogue?.id ?? _savedCatalogueId;
+
+    if (existingId != null) {
+      // Update existing catalogue metadata (edit mode OR already saved in this session)
       result = await provider.updateCatalogue(
-        widget.catalogue!.id,
+        existingId,
         title: _titleController.text.trim(),
         saleDate: _saleDate,
         location: _locationController.text.isEmpty ? null : _locationController.text,
@@ -459,8 +459,11 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
 
       if (result != null) {
         // Sync animal changes: compute diff between original and current selection
-        final existingIds =
-            widget.catalogue!.animals.map((a) => a.animalId).toSet();
+        final originalAnimals = widget.catalogue?.animals ??
+            (provider.currentCatalogue?.id == existingId
+                ? provider.currentCatalogue!.animals
+                : <CatalogueAnimal>[]);
+        final existingIds = originalAnimals.map((a) => a.animalId).toSet();
         final newIds = _selectedAnimalIds.toSet();
 
         final toAdd = newIds.difference(existingIds).toList();
@@ -478,7 +481,7 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
         result = provider.currentCatalogue ?? result;
       }
     } else {
-      // Create new
+      // Create new catalogue (first time through the wizard)
       result = await provider.createCatalogue(
         title: _titleController.text.trim(),
         saleDate: _saleDate,
@@ -545,8 +548,9 @@ class _CatalogueWizardScreenState extends State<CatalogueWizardScreen> {
     final picked = await showDatePicker(
       context: context,
       initialDate: _saleDate ?? DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      // En mode édition, autoriser les dates passées (pour conserver une date existante)
+      firstDate: widget.catalogue != null ? DateTime(2000) : DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
     );
     if (picked != null) {
       setState(() => _saleDate = picked);

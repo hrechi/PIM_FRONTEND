@@ -5,6 +5,7 @@ import '../../utils/constants.dart';
 import '../../utils/animal_utils.dart';
 import '../../services/animal_service.dart';
 import '../../models/animal.dart';
+import '../../providers/parcel_provider.dart';
 import 'vaccine_planning_screen.dart';
 import '../../widgets/app_drawer.dart';
 import 'vaccine_calendar_screen.dart';
@@ -74,7 +75,17 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
 
   Future<void> _loadAnimals() async {
     try {
-      final animals = await _animalService.getAnimals();
+      // Use the active field from ParcelProvider to stay consistent with
+      // VaccineCalendarScreen which also filters by fieldId
+      final parcelProvider = context.read<ParcelProvider>();
+      if (parcelProvider.parcels.isEmpty) {
+        await parcelProvider.fetchParcels();
+      }
+      final activeFieldId = parcelProvider.parcels.isNotEmpty
+          ? parcelProvider.parcels.first.id
+          : null;
+
+      final animals = await _animalService.getAnimals(fieldId: activeFieldId);
       if (!mounted) return;
       setState(() { _animals = animals; _loading = false; });
     } catch (_) {
@@ -368,7 +379,7 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
               const SizedBox(width: 10),
               ...types.map((t) => Padding(
                 padding: const EdgeInsets.only(right: 10),
-                child: _buildFilterChip(typeLabels[t]!, _filterType == t, () => setState(() => _filterType = _filterType == t ? null : t), icon: AnimalUtils.getAnimalIcon(t)),
+                child: _buildFilterChip(typeLabels[t]!, _filterType == t, () => setState(() => _filterType = _filterType == t ? null : t), emoji: AnimalUtils.getAnimalEmoji(t)),
               )),
               const VerticalDivider(width: 20, indent: 10, endIndent: 10, color: Color(0xFFE2E8F0)),
               _buildFilterChip('Male', _filterSex == 'male', () => setState(() => _filterSex = _filterSex == 'male' ? null : 'male'), icon: Icons.male_rounded),
@@ -436,7 +447,7 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
     );
   }
 
-  Widget _buildFilterChip(String label, bool isActive, VoidCallback onTap, {IconData? icon, Color? activeColor}) {
+  Widget _buildFilterChip(String label, bool isActive, VoidCallback onTap, {IconData? icon, String? emoji, Color? activeColor}) {
     final color = activeColor ?? AppColors.mistBlue;
     return GestureDetector(
       onTap: onTap,
@@ -455,7 +466,10 @@ class _VaccineDashboardScreenState extends State<VaccineDashboardScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (icon != null) ...[
+            if (emoji != null) ...[
+              Text(emoji, style: const TextStyle(fontSize: 14)),
+              const SizedBox(width: 6),
+            ] else if (icon != null) ...[
               Icon(icon, size: 16, color: isActive ? Colors.white : color),
               const SizedBox(width: 8),
             ],
@@ -488,8 +502,8 @@ class _AnimalVaccineRow extends StatelessWidget {
     required this.onSelect,
   });
 
-  IconData get _icon {
-    return AnimalUtils.getAnimalIcon(animal.animalType);
+  String get _emoji {
+    return AnimalUtils.getAnimalEmoji(animal.animalType);
   }
 
   @override
@@ -543,7 +557,7 @@ class _AnimalVaccineRow extends StatelessWidget {
               color: AppColors.mistBlue.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(_icon, color: AppColors.mistBlue, size: 22),
+            child: Text(_emoji, style: const TextStyle(fontSize: 22)),
           ),
           const SizedBox(width: 14),
           Expanded(

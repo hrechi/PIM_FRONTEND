@@ -202,6 +202,32 @@ class VaccineProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> createSchedule({
+    required String animalId,
+    required String vaccineCode,
+    required DateTime scheduledDate,
+    bool isMandatory = false,
+    bool isRecurring = false,
+    int? recurrenceDays,
+  }) async {
+    try {
+      await _service.createScheduleManual(
+        animalId: animalId,
+        vaccineCode: vaccineCode,
+        scheduledDate: scheduledDate,
+        isMandatory: isMandatory,
+        isRecurring: isRecurring,
+        recurrenceDays: recurrenceDays,
+      );
+      await loadGlobalSchedules();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
   void clearError() {
     _error = null;
     notifyListeners();

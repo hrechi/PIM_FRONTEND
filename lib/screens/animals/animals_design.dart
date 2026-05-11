@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/color_palette.dart';
 import '../../utils/app_constants.dart';
 
 class AnimalsDesign {
@@ -35,7 +36,7 @@ class AnimalsDesign {
   }) {
     return AppBar(
       elevation: 0,
-      backgroundColor: FieldlyColors.darkGreen,
+      backgroundColor: AppColorPalette.mistyBlue,
       foregroundColor: Colors.white,
       title: Text(
         title,

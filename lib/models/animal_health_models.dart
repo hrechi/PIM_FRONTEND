@@ -264,16 +264,31 @@ class HealthAlert {
   });
 
   factory HealthAlert.fromJson(Map<String, dynamic> json) {
+    // Backend returns animal as a nested object { name, animalType, tagNumber }
+    final animal = json['animal'] as Map<String, dynamic>?;
+    final animalName = animal?['name']?.toString()
+        ?? json['animalName']?.toString()
+        ?? '';
+
+    // Backend uses alertTime, not createdAt
+    final rawDate = json['alertTime'] ?? json['createdAt'];
+    final createdAt = rawDate != null
+        ? DateTime.tryParse(rawDate.toString()) ?? DateTime.now()
+        : DateTime.now();
+
+    // Backend uses predictedDisease, not message
+    final message = json['predictedDisease']?.toString()
+        ?? json['message']?.toString()
+        ?? '';
+
     return HealthAlert(
-      id:          json['id']?.toString()         ?? '',
-      animalId:    json['animalId']?.toString()   ?? '',
-      animalName:  json['animalName']?.toString() ?? '',
-      alertLevel:  json['alertLevel']?.toString() ?? 'healthy',
-      message:     json['message']?.toString()    ?? '',
-      createdAt: json['createdAt'] != null
-          ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
-          : DateTime.now(),
-      isRead: json['isRead'] as bool? ?? false,
+      id:         json['id']?.toString()        ?? '',
+      animalId:   json['animalId']?.toString()  ?? '',
+      animalName: animalName,
+      alertLevel: json['alertLevel']?.toString() ?? 'healthy',
+      message:    message,
+      createdAt:  createdAt,
+      isRead:     json['isRead'] as bool? ?? false,
     );
   }
 }
