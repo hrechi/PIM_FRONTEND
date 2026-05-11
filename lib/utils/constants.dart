@@ -23,9 +23,9 @@ class AppConfig {
 class AppColors {
   // Primary Surface Colors
   static const Color sageTint = Color(0xFFF1F8F5);
-  static const Color sageGreen = Color(0xFF2D5016); // For UI elements
-  static const Color mistBlue = Color(0xFF309448);
-  static const Color mistyBlue = Color(0xFF309448);
+  static const Color sageGreen = Color(0xFF2ECC71); // For UI elements
+  static const Color mistBlue = Color(0xFF2ECC71);
+  static const Color mistyBlue = Color(0xFF2ECC71);
   static const Color wheat = Color(0xFFD4A574);
   static const Color wheatWarmClay = Color(0xFFFAF7F2);
 

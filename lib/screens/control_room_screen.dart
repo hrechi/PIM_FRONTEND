@@ -16,6 +16,7 @@ import '../widgets/drive_button.dart';
 import '../widgets/robot/lidar_map_panel.dart';
 import '../widgets/robot/lidar_radar_panel.dart';
 import 'lidar_field_mapping_screen.dart';
+import 'live_feed_screen.dart';
 
 class ControlRoomScreen extends StatefulWidget {
   const ControlRoomScreen({super.key});
@@ -548,6 +549,29 @@ class _ControlRoomScreenState extends State<ControlRoomScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildHeaderCard(),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const LiveFeedScreen()),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2ECC71),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 2,
+                      ),
+                      icon: const Icon(Icons.videocam_outlined, size: 22),
+                      label: const Text(
+                        'Security Live Feed',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 14),
                   _buildAdaptiveControlArea(),
                   const SizedBox(height: 14),

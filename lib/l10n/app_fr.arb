@@ -75,7 +75,7 @@
   "deceased": "Décédé",
 
   "vaccines": "Vaccins",
-  "vaccineDashboard": "Tableau de bord vaccins",
+  "vaccineDashboard": "Gestion des vaccins",
   "vaccineSchedule": "Calendrier vaccinal",
   "vaccineRecord": "Dossier vaccinal",
   "vaccinesDue": "Vaccins à faire",
@@ -738,5 +738,26 @@
   "period": "Période",
   "periodMonth": "Mois",
   "periodQuarter": "Trimestre",
-  "periodYear": "Année"
+  "periodYear": "Année",
+
+  "newConversation": "Nouvelle conversation",
+  "deleteConversation": "Supprimer la conversation",
+  "deleteConversationConfirm": "Êtes-vous sûr de vouloir supprimer cette conversation ?",
+  "newChat": "Nouveau chat",
+  "create": "Créer",
+
+  "generatingPlan": "Génération de votre plan…",
+  "weeklyOverview": "Aperçu hebdomadaire",
+  "noFieldsFound": "Aucun champ trouvé",
+  "addFieldFirstIrrigation": "Ajoutez d'abord un champ pour générer un planning d'irrigation.",
+  "readyToPlan": "Prêt à planifier",
+
+  "fetchingWeather": "Récupération de la météo...",
+
+  "agriNews": "Actualités Agri",
+  "offlineCachedNews": "Mode hors ligne - Actualités en cache",
+  "noArticlesAvailable": "Aucun article disponible.",
+  "savedArticles": "Articles sauvegardés",
+  "loginToViewSaved": "Veuillez vous connecter pour voir les articles sauvegardés.",
+  "catalogueSettingsTitle": "Paramètres du catalogue"
 }

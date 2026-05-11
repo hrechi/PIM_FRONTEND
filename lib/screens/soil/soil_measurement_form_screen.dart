@@ -637,7 +637,7 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
       appBar: AppBar(
         title: Text(
           isEditing ? 'Edit Measurement' : 'Add Measurement',
-          style: AppTextStyles.h3(),
+          style: AppTextStyles.h3(color: Colors.white),
         ),
       ),
       body: Responsive.constrainedContent(
@@ -1034,7 +1034,7 @@ class _SoilMeasurementFormScreenState extends State<SoilMeasurementFormScreen> {
                       style: AppTextStyles.buttonLarge(),
                     ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 100),
           ],
         ),
       ),

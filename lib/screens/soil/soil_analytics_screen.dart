@@ -115,13 +115,13 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
           children: [
             Text(
               'Soil Analytics',
-              style: AppTextStyles.h3(),
+              style: AppTextStyles.h3(color: Colors.white),
             ),
             if (!isLoading && historicalData.isNotEmpty)
               Text(
                 '${historicalData.length} measurements',
                 style: AppTextStyles.caption(
-                  color: AppColorPalette.softSlate,
+                  color: Colors.white.withOpacity(0.85),
                 ),
               ),
           ],
@@ -208,7 +208,7 @@ class _SoilAnalyticsScreenState extends State<SoilAnalyticsScreen> {
                   // AI Prediction Section
                   _buildAIPredictionSection(),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 120),
                 ],
               ),
             ),

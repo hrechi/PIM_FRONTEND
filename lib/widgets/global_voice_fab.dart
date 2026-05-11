@@ -183,15 +183,15 @@ class _GlobalVoiceFabState extends State<GlobalVoiceFab> {
   Color _colorForState(GlobalVoiceState state) {
     switch (state) {
       case GlobalVoiceState.listening:
-        return const Color(0xFF2EC4B6);
+        return const Color(0xFF2ECC71);
       case GlobalVoiceState.processing:
-        return const Color(0xFF4D96FF);
+        return const Color(0xFF2ECC71);
       case GlobalVoiceState.speaking:
-        return const Color(0xFF6BCB77);
+        return const Color(0xFF2ECC71);
       case GlobalVoiceState.error:
         return const Color(0xFFE53935);
       case GlobalVoiceState.idle:
-        return const Color(0xFF1F6FEB);
+        return const Color(0xFF2ECC71);
     }
   }
 }

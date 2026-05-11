@@ -79,7 +79,7 @@ class _ParcelListScreenState extends State<ParcelListScreen>
             SliverFillRemaining(child: _buildEmptyState())
           else
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 160),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (ctx, i) => FadeTransition(

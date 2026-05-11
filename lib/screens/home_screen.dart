@@ -791,7 +791,17 @@ class _HomeScreenState extends State<HomeScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${context.l10n.hi}, ${context.l10n.timeBasedGreeting}',
+                  () {
+                    final h = DateTime.now().hour;
+                    final greeting = h < 12
+                        ? context.l10n.goodMorning
+                        : h < 17
+                            ? context.l10n.goodAfternoon
+                            : h < 21
+                                ? context.l10n.goodEvening
+                                : context.l10n.goodNight;
+                    return '${context.l10n.hi}, $greeting';
+                  }(),
                   style: AppTextStyles.h3().copyWith(
                     color: AppColorPalette.white,
                   ),
@@ -1401,39 +1411,6 @@ class _HomeScreenState extends State<HomeScreen>
             },
           ),
 
-          // Weather Strip
-          if (displayedWeather != null) ...[
-            const SizedBox(height: 14),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildWeatherChip(
-                    icon: Icons.air,
-                    label: 'Wind',
-                    value:
-                        '${displayedWeather.windSpeed.toStringAsFixed(1)} km/h',
-                    color: const Color(0xFF2196F3),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildWeatherChip(
-                    icon: Icons.thermostat,
-                    label: 'Temp Δ',
-                    value:
-                        '+${(displayedWeather.temperature - 15).toStringAsFixed(1)}°',
-                    color: const Color(0xFFFF6B35),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildWeatherChip(
-                    icon: Icons.opacity,
-                    label: 'Humidity',
-                    value: '${displayedWeather.humidity.toStringAsFixed(0)}%',
-                    color: const Color(0xFF4ECDC4),
-                  ),
-                ],
-              ),
-            ),
-          ],
           const SizedBox(height: 14),
 
           Row(
@@ -1474,45 +1451,6 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWeatherChip({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color, width: 1),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(width: 6),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: AppTextStyles.caption(
-                  color: color,
-                ).copyWith(fontSize: 11),
-              ),
-              Text(
-                value,
-                style: AppTextStyles.bodySmall(
-                  color: color,
-                ).copyWith(fontWeight: FontWeight.bold),
-              ),
-            ],
           ),
         ],
       ),

@@ -281,7 +281,7 @@ class _AddParcelScreenState extends State<AddParcelScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryGreen = Color(0xFF1A4731);
+    const primaryGreen = Color(0xFF2ECC71);
     const accentGreen = Color(0xFF2ECC71);
     final screenSize = MediaQuery.of(context).size;
     final isSmallScreen = screenSize.width < 600;
@@ -497,7 +497,7 @@ class _AddParcelScreenState extends State<AddParcelScreen> {
           child: ElevatedButton(
             onPressed: _isSubmitting || _selectedSoilMeasurement == null ? null : _submit,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1A4731),
+              backgroundColor: const Color(0xFF2ECC71),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               elevation: 0,
@@ -540,7 +540,7 @@ class _AddParcelScreenState extends State<AddParcelScreen> {
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(fontSize: isSmallScreen ? 14 : 16, fontWeight: FontWeight.bold, color: const Color(0xFF1A4731)),
+                  style: TextStyle(fontSize: isSmallScreen ? 14 : 16, fontWeight: FontWeight.bold, color: const Color(0xFF2C3E50)),
                 ),
               ),
             ],
@@ -565,7 +565,7 @@ class _AddParcelScreenState extends State<AddParcelScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(label, style: TextStyle(fontSize: isSmallScreen ? 10 : 11, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
-          Text(value, style: TextStyle(fontSize: isSmallScreen ? 12 : 13, fontWeight: FontWeight.bold, color: const Color(0xFF1A4731))),
+          Text(value, style: TextStyle(fontSize: isSmallScreen ? 12 : 13, fontWeight: FontWeight.bold, color: const Color(0xFF2C3E50))),
         ],
       ),
     );

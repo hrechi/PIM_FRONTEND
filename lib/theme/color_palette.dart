@@ -11,7 +11,7 @@ class AppColorPalette {
   // ============================================
   
   static const Color sageTint = Color(0xFFF128F5);
-  static const Color mistyBlue = Color(0xFF309448);
+  static const Color mistyBlue = Color(0xFF2ECC71);
   static const Color wheatWarmClay = Color(0xFFFAF7F2);
 
   // ============================================

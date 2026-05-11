@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/l10n_extensions.dart';
 import '../providers/irrigation_provider.dart';
 import '../models/irrigation_schedule.dart';
 import '../theme/color_palette.dart';
@@ -29,8 +30,8 @@ class _IrrigationSchedulerScreenState extends State<IrrigationSchedulerScreen> {
   }
 
   // ── Palette ────────────────────────────────────────────────
-  static const _headerStart = Color(0xFF2196F3); // blue
-  static const _headerEnd = Color(0xFF00BCD4); // cyan
+  static const _headerStart = Color(0xFF2ECC71); // green
+  static const _headerEnd = Color(0xFF27AE60); // mid green
   static const _irrigateGreen = Color(0xFF4CAF50);
   static const _skipAmber = Color(0xFFFFA726);
 
@@ -94,7 +95,7 @@ class _IrrigationSchedulerScreenState extends State<IrrigationSchedulerScreen> {
                       childCount: ip.schedule!.schedule.length,
                     ),
                   ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 32)),
+                  const SliverToBoxAdapter(child: SizedBox(height: 120)),
                 ] else
                   SliverFillRemaining(child: _buildPlaceholder()),
               ],
@@ -129,7 +130,7 @@ class _IrrigationSchedulerScreenState extends State<IrrigationSchedulerScreen> {
             isExpanded: true,
             dropdownColor: _headerStart,
             icon: const Icon(Icons.expand_more, color: Colors.white),
-            hint: Text('Select a field',
+            hint: Text(context.l10n.selectField,
                 style: AppTextStyles.bodyMedium()
                     .copyWith(color: Colors.white70)),
             items: ip.fields.map((f) {
@@ -220,7 +221,7 @@ class _IrrigationSchedulerScreenState extends State<IrrigationSchedulerScreen> {
               children: [
                 const Icon(Icons.calendar_month, color: Colors.white, size: 22),
                 const SizedBox(width: 8),
-                Text('Weekly Overview',
+                Text(context.l10n.weeklyOverview,
                     style:
                         AppTextStyles.h4().copyWith(color: Colors.white)),
               ],
@@ -424,11 +425,11 @@ class _IrrigationSchedulerScreenState extends State<IrrigationSchedulerScreen> {
             Icon(Icons.landscape_outlined,
                 size: 64, color: AppColorPalette.softSlate),
             const SizedBox(height: 16),
-            Text('No fields found',
+            Text(context.l10n.noFieldsFound,
                 style: AppTextStyles.h4()
                     .copyWith(color: AppColorPalette.charcoalGreen)),
             const SizedBox(height: 8),
-            Text('Add a field first to generate an irrigation schedule.',
+            Text(context.l10n.addFieldFirstIrrigation,
                 textAlign: TextAlign.center,
                 style: AppTextStyles.bodyMedium()
                     .copyWith(color: AppColorPalette.softSlate)),
@@ -448,7 +449,7 @@ class _IrrigationSchedulerScreenState extends State<IrrigationSchedulerScreen> {
             Icon(Icons.water_drop_outlined,
                 size: 64, color: _headerStart.withOpacity(0.4)),
             const SizedBox(height: 16),
-            Text('Ready to plan',
+            Text(context.l10n.readyToPlan,
                 style: AppTextStyles.h4()
                     .copyWith(color: AppColorPalette.charcoalGreen)),
             const SizedBox(height: 8),

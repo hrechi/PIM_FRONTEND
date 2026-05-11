@@ -75,7 +75,7 @@
   "deceased": "Deceased",
 
   "vaccines": "Vaccines",
-  "vaccineDashboard": "Vaccine Dashboard",
+  "vaccineDashboard": "Vaccine Management",
   "vaccineSchedule": "Vaccine Schedule",
   "vaccineRecord": "Vaccine Record",
   "vaccinesDue": "Vaccines Due",
@@ -738,5 +738,26 @@
   "period": "Period",
   "periodMonth": "Month",
   "periodQuarter": "Quarter",
-  "periodYear": "Year"
+  "periodYear": "Year",
+
+  "newConversation": "New Conversation",
+  "deleteConversation": "Delete Conversation",
+  "deleteConversationConfirm": "Are you sure you want to delete this conversation?",
+  "newChat": "New Chat",
+  "create": "Create",
+
+  "generatingPlan": "Generating your plan\u2026",
+  "weeklyOverview": "Weekly Overview",
+  "noFieldsFound": "No fields found",
+  "addFieldFirstIrrigation": "Add a field first to generate an irrigation schedule.",
+  "readyToPlan": "Ready to plan",
+
+  "fetchingWeather": "Fetching weather...",
+
+  "agriNews": "Agri News",
+  "offlineCachedNews": "Offline Mode - Showing Cached News",
+  "noArticlesAvailable": "No articles available.",
+  "savedArticles": "Saved Articles",
+  "loginToViewSaved": "Please log in to view saved articles.",
+  "catalogueSettingsTitle": "Catalogue Settings"
 }

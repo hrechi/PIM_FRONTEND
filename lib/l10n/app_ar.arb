@@ -75,7 +75,7 @@
   "deceased": "نافق",
 
   "vaccines": "اللقاحات",
-  "vaccineDashboard": "لوحة اللقاحات",
+  "vaccineDashboard": "إدارة اللقاحات",
   "vaccineSchedule": "جدول التطعيم",
   "vaccineRecord": "سجل التطعيم",
   "vaccinesDue": "لقاحات مستحقة",
@@ -738,5 +738,26 @@
   "period": "الفترة",
   "periodMonth": "شهر",
   "periodQuarter": "ربع سنة",
-  "periodYear": "سنة"
+  "periodYear": "سنة",
+
+  "newConversation": "محادثة جديدة",
+  "deleteConversation": "حذف المحادثة",
+  "deleteConversationConfirm": "هل أنت متأكد من حذف هذه المحادثة؟",
+  "newChat": "دردشة جديدة",
+  "create": "إنشاء",
+
+  "generatingPlan": "جاري إنشاء خطتك…",
+  "weeklyOverview": "نظرة عامة أسبوعية",
+  "noFieldsFound": "لا توجد حقول",
+  "addFieldFirstIrrigation": "أضف حقلاً أولاً لإنشاء جدول الري.",
+  "readyToPlan": "جاهز للتخطيط",
+
+  "fetchingWeather": "جاري جلب بيانات الطقس...",
+
+  "agriNews": "أخبار زراعية",
+  "offlineCachedNews": "وضع غير متصل - عرض الأخبار المخزنة",
+  "noArticlesAvailable": "لا توجد مقالات متاحة.",
+  "savedArticles": "المقالات المحفوظة",
+  "loginToViewSaved": "يرجى تسجيل الدخول لعرض المقالات المحفوظة.",
+  "catalogueSettingsTitle": "إعدادات الكتالوج"
 }

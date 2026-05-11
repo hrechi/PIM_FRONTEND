@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_extensions.dart';
+import '../l10n/locale_constants.dart';
 import '../providers/locale_provider.dart';
 
 /// A bottom sheet language picker.

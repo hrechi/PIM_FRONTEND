@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n_extensions.dart';
 import '../models/chat_message.dart';
 import '../models/conversation_model.dart';
 import '../services/chat_service.dart';
@@ -102,7 +103,7 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('New Conversation'),
+        title: Text(context.l10n.newConversation),
         content: TextField(
           controller: _titleController,
           decoration: const InputDecoration(
@@ -113,7 +114,7 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -135,7 +136,7 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
                 _showErrorSnackbar('Failed to create conversation: $e');
               }
             },
-            child: const Text('Create'),
+            child: Text(context.l10n.create),
           ),
         ],
       ),
@@ -146,13 +147,13 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Conversation'),
+        title: Text(context.l10n.deleteConversation),
         content:
-            const Text('Are you sure you want to delete this conversation?'),
+            Text(context.l10n.deleteConversationConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -293,7 +294,7 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fieldly Assistant'),
+        title: Text(context.l10n.chatAssistant),
         backgroundColor: AppColors.mistBlue,
         actions: [
           IconButton(
@@ -440,7 +441,7 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
           child: ElevatedButton.icon(
             onPressed: _createNewConversation,
             icon: const Icon(Icons.add),
-            label: const Text('New Chat'),
+            label: Text(context.l10n.newChat),
             style: ElevatedButton.styleFrom(
               minimumSize: const Size.square(50),
               backgroundColor: AppColors.mistBlue,
@@ -483,7 +484,7 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
             trailing: PopupMenuButton(
               itemBuilder: (context) => [
                 PopupMenuItem(
-                  child: const Text('Delete'),
+                  child: Text(context.l10n.delete),
                   onTap: () =>
                       _deleteConversation(conversation.id),
                 ),

@@ -25,6 +25,7 @@ import 'providers/asset_provider.dart';
 import 'providers/locale_provider.dart';
 import 'providers/animal_health_provider.dart';
 import 'l10n/app_localizations.dart';
+import 'l10n/locale_constants.dart';
 
 import 'providers/rating_provider.dart';
 

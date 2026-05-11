@@ -297,44 +297,53 @@ class _FarmQuizScreenState extends State<FarmQuizScreen> with TickerProviderStat
     final question = _questions[_currentIndex];
     final progress = (_currentIndex + 1) / _questions.length;
 
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          LinearProgressIndicator(
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: LinearProgressIndicator(
             value: progress,
             backgroundColor: Colors.grey[300],
             valueColor: const AlwaysStoppedAnimation(AppColorPalette.fieldFreshMid),
             borderRadius: BorderRadius.circular(10),
             minHeight: 8,
           ),
-          const SizedBox(height: 30),
-          FadeTransition(
-            opacity: _cardAnimation,
-            child: ScaleTransition(
-              scale: _cardAnimation,
-              child: _buildQuestionCard(question),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+            child: FadeTransition(
+              opacity: _cardAnimation,
+              child: ScaleTransition(
+                scale: _cardAnimation,
+                child: _buildQuestionCard(question),
+              ),
             ),
           ),
-          const Spacer(),
-          if (_isAnswered)
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                onPressed: _nextQuestion,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColorPalette.charcoalGreen,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                ),
-                child: Text(
-                  _currentIndex == _questions.length - 1 ? 'VIEW RESULTS' : 'NEXT QUESTION',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        if (_isAnswered)
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: ElevatedButton(
+                  onPressed: _nextQuestion,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColorPalette.charcoalGreen,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  ),
+                  child: Text(
+                    _currentIndex == _questions.length - 1 ? 'VIEW RESULTS' : 'NEXT QUESTION',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 

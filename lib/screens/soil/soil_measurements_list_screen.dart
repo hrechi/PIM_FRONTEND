@@ -381,13 +381,13 @@ class _SoilMeasurementsListScreenState
                 children: [
                   Text(
                     'Soil Measurements',
-                    style: AppTextStyles.h3(),
+                    style: AppTextStyles.h3(color: Colors.white),
                   ),
                   if (provider.meta != null)
                     Text(
                       '${provider.meta!.total} total measurements',
                       style: AppTextStyles.caption(
-                        color: AppColorPalette.softSlate,
+                        color: Colors.white.withOpacity(0.85),
                       ),
                     ),
                 ],
@@ -520,7 +520,7 @@ class _SoilMeasurementsListScreenState
                               : ListView.builder(
                                   controller: _scrollController,
                                   padding: EdgeInsets.only(
-                                    bottom: 80,
+                                    bottom: 140,
                                     left: Responsive.horizontalPadding(context),
                                     right: Responsive.horizontalPadding(context),
                                   ),

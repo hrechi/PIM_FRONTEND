@@ -348,52 +348,6 @@ class _AppDrawerState extends State<AppDrawer>
                     ).copyWith(fontWeight: FontWeight.w700),
                   ),
                   const Spacer(),
-                  // ── Notification bell with unread badge ──
-                  Consumer<NotificationProvider>(
-                    builder: (ctx, notifProvider, _) {
-                      final unread = notifProvider.unreadCount;
-                      return Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          IconButton(
-                            splashRadius: 18,
-                            onPressed: () {
-                              Navigator.of(ctx).maybePop();
-                              Navigator.of(ctx).push(MaterialPageRoute(
-                                builder: (_) => const NotificationCenterScreen(),
-                              ));
-                            },
-                            icon: const Icon(
-                              Icons.notifications_outlined,
-                              color: AppColorPalette.white,
-                            ),
-                          ),
-                          if (unread > 0)
-                            Positioned(
-                              top: 6,
-                              right: 6,
-                              child: Container(
-                                padding: const EdgeInsets.all(3),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFEF4444),
-                                  shape: BoxShape.circle,
-                                ),
-                                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                                child: Text(
-                                  unread > 99 ? '99+' : '$unread',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ),
-                        ],
-                      );
-                    },
-                  ),
                   IconButton(
                     splashRadius: 18,
                     onPressed: () => Navigator.of(context).maybePop(),
@@ -704,8 +658,6 @@ class _AppDrawerState extends State<AppDrawer>
                     builder: (_) => const AddStaffScreen()),
                 _DrawerItem(icon: Icons.history_outlined, title: l.incidentHistory,
                     builder: (_) => const IncidentHistoryScreen()),
-                _DrawerItem(icon: Icons.videocam_outlined, title: l.liveFeed,
-                    builder: (_) => const LiveFeedScreen()),
                 _DrawerItem(icon: Icons.assessment_outlined, title: l.dailyReport,
                     builder: (_) => const DailyReportScreen()),
                 _DrawerItem(icon: Icons.graphic_eq_outlined, title: l.acousticMonitor,
@@ -727,8 +679,6 @@ class _AppDrawerState extends State<AppDrawer>
         _DrawerGroup(
           label: l.profile,
           flatItems: [
-            _DrawerItem(icon: Icons.settings_outlined, title: l.settings,
-                builder: (_) => const ProfileScreen()),
             _DrawerItem(icon: Icons.account_circle_outlined, title: l.profile,
                 builder: (_) => const ProfileScreen()),
           ],

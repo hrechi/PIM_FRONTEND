@@ -344,7 +344,7 @@ class _GoProScreenState extends State<GoProScreen>
   // ── Plan cards ────────────────────────────────────────────────────────────
 
   Widget _planCards() => SizedBox(
-        height: 130,
+        height: 150,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           itemCount: _plans.length,
@@ -804,7 +804,7 @@ class _PlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardW = ((MediaQuery.of(context).size.width - 40 - 30) / 3.4)
-        .clamp(90.0, 130.0);
+        .clamp(110.0, 140.0);
 
     return GestureDetector(
       onTap: onTap,
@@ -844,6 +844,8 @@ class _PlanCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(plan.badge!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.overline(
                       color: selected
                           ? Colors.white
@@ -857,10 +859,14 @@ class _PlanCard extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(plan.displayPrice(annual),
-                    style: AppTextStyles.h3(
-                      color: selected ? Colors.white : const Color(0xFF1F2933),
-                    ).copyWith(fontWeight: FontWeight.w800)),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(plan.displayPrice(annual),
+                      style: AppTextStyles.h3(
+                        color: selected ? Colors.white : const Color(0xFF1F2933),
+                      ).copyWith(fontWeight: FontWeight.w800)),
+                ),
                 if (plan.id != PlanId.enterprise)
                   Text('/ mo',
                       style: AppTextStyles.bodySmall(
@@ -873,6 +879,8 @@ class _PlanCard extends StatelessWidget {
 
             // Plan name
             Text(plan.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.bodySmall(
                   color: selected
                       ? Colors.white.withValues(alpha: 0.9)

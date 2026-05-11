@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/l10n_extensions.dart';
 import '../providers/weather_provider.dart';
 import '../models/weather_info.dart';
 import '../theme/color_palette.dart';
@@ -42,7 +43,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
               // Sky-blue gradient header with back button
               SliverAppBar(
                 floating: true,
-                backgroundColor: const Color(0xFF57A0D3),
+                backgroundColor: AppColorPalette.fieldFreshStart,
                 title: Text(
                   'Weather & Advice',
                   style: AppTextStyles.h3().copyWith(color: Colors.white),
@@ -93,14 +94,14 @@ class _WeatherScreenState extends State<WeatherScreen> {
                   ),
                 )
               else if (wp.isLoading)
-                const SliverFillRemaining(
+                SliverFillRemaining(
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        CircularProgressIndicator(color: Color(0xFF57A0D3)),
-                        SizedBox(height: 16),
-                        Text('Fetching weather...'),
+                        const CircularProgressIndicator(color: AppColorPalette.fieldFreshStart),
+                        const SizedBox(height: 16),
+                        Text(context.l10n.fetchingWeather),
                       ],
                     ),
                   ),
@@ -130,7 +131,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
                                 ? wp.fetchWeather(wp.selectedFieldId!)
                                 : null,
                             icon: const Icon(Icons.refresh),
-                            label: const Text('Retry'),
+                            label: Text(context.l10n.retry),
                           ),
                         ],
                       ),
@@ -154,7 +155,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
                 if (wp.recommendations != null)
                   SliverToBoxAdapter(
                       child: _buildRecommendationsCard(wp.recommendations!)),
-                const SliverToBoxAdapter(child: SizedBox(height: 32)),
+                const SliverToBoxAdapter(child: SizedBox(height: 120)),
               ],
             ],
           );
@@ -236,14 +237,14 @@ class _WeatherScreenState extends State<WeatherScreen> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF57A0D3), Color(0xFF87CEEB)],
+          colors: [AppColorPalette.fieldFreshStart, AppColorPalette.fieldFreshMid],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF57A0D3).withOpacity(0.35),
+            color: AppColorPalette.fieldFreshStart.withOpacity(0.35),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -310,7 +311,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF6DB3E0), Color(0xFF93D1F0)],
+          colors: [AppColorPalette.fieldFreshMid, AppColorPalette.fieldFreshStart],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
@@ -320,7 +321,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF57A0D3).withOpacity(0.2),
+            color: AppColorPalette.fieldFreshStart.withOpacity(0.2),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -408,7 +409,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
             ),
             child: Row(
               children: [
-                Icon(d.icon, color: const Color(0xFF57A0D3), size: 22),
+                Icon(d.icon, color: AppColorPalette.fieldFreshStart, size: 22),
                 const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -610,16 +611,16 @@ class _WeatherScreenState extends State<WeatherScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF57A0D3).withOpacity(0.08),
+                color: AppColorPalette.fieldFreshStart.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(10),
                 border:
-                    Border.all(color: const Color(0xFF57A0D3).withOpacity(0.3)),
+                    Border.all(color: AppColorPalette.fieldFreshStart.withOpacity(0.3)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Icon(Icons.water_drop,
-                      color: Color(0xFF57A0D3), size: 20),
+                      color: AppColorPalette.fieldFreshStart, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -627,7 +628,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
                       children: [
                         Text('Irrigation',
                             style: AppTextStyles.bodyLarge(
-                                    color: const Color(0xFF57A0D3))
+                                    color: AppColorPalette.fieldFreshStart)
                                 .copyWith(fontWeight: FontWeight.w600)),
                         const SizedBox(height: 4),
                         Text(recs.irrigationAdvice,

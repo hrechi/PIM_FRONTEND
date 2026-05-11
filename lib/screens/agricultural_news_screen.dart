@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
+import '../l10n/l10n_extensions.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../widgets/app_drawer.dart';
 
@@ -96,7 +97,7 @@ class _AgriculturalNewsScreenState extends State<AgriculturalNewsScreen> with Si
 
     if (farmerId.isEmpty) {
       setState(() {
-        _errorMessage = 'Please log in to view saved articles.';
+        _errorMessage = context.l10n.loginToViewSaved;
         _isLoading = false;
       });
       return;
@@ -137,7 +138,7 @@ class _AgriculturalNewsScreenState extends State<AgriculturalNewsScreen> with Si
       });
     } else if (mounted) {
       setState(() {
-        _errorMessage = 'No connection. Please check your internet.';
+        _errorMessage = 'Could not load news. $originalError';
         _isLoading = false;
       });
     }
@@ -227,12 +228,12 @@ class _AgriculturalNewsScreenState extends State<AgriculturalNewsScreen> with Si
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.orange.withOpacity(0.3)),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.wifi_off, size: 16, color: Colors.orange),
-                    SizedBox(width: 8),
-                    Text('Offline Mode - Showing Cached News', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w600, fontSize: 12)),
+                    const Icon(Icons.wifi_off, size: 16, color: Colors.orange),
+                    const SizedBox(width: 8),
+                    Text(context.l10n.offlineCachedNews, style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w600, fontSize: 12)),
                   ],
                 ),
               ),
@@ -259,8 +260,8 @@ class _AgriculturalNewsScreenState extends State<AgriculturalNewsScreen> with Si
       ),
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: const EdgeInsetsDirectional.only(start: 16, bottom: 16),
-        title: const Text(
-          'Agri News',
+        title: Text(
+          context.l10n.agriNews,
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 22),
         ),
         background: Container(
@@ -365,14 +366,14 @@ class _AgriculturalNewsScreenState extends State<AgriculturalNewsScreen> with Si
     }
 
     if (_newsArticles.isEmpty) {
-      return const SliverFillRemaining(
+      return SliverFillRemaining(
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.inventory_2_outlined, size: 80, color: Colors.grey),
-              SizedBox(height: 16),
-              Text('No articles available.', style: TextStyle(color: Colors.grey, fontSize: 16)),
+              const Icon(Icons.inventory_2_outlined, size: 80, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text(context.l10n.noArticlesAvailable, style: TextStyle(color: Colors.grey, fontSize: 16)),
             ],
           ),
         ),

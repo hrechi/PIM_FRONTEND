@@ -683,7 +683,7 @@ class _SoilMeasurementDetailsScreenState
       appBar: AppBar(
         title: Text(
           (_isLoadingField || _isLoadingMeasurement) ? 'Loading...' : _displayTitle,
-          style: AppTextStyles.h3(),
+          style: AppTextStyles.h3(color: Colors.white),
         ),
         actions: [
           // Edit button
@@ -786,7 +786,7 @@ class _SoilMeasurementDetailsScreenState
             // Metadata Section
             _buildMetadataSection(),
 
-            const SizedBox(height: 80),
+            const SizedBox(height: 140),
           ],
         ),
       ),
